@@ -219,6 +219,40 @@
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+  @keyframes liquid-float {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(10px, -14px, 0) scale(1.05); }
+  }
+  @keyframes liquid-drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(-14px, 12px, 0) scale(1.08); }
+  }
+  @keyframes glass-shine {
+    0% { transform: translateX(-120%); opacity: 0; }
+    35% { opacity: 0.35; }
+    70% { opacity: 0.1; }
+    100% { transform: translateX(120%); opacity: 0; }
+  }
+  .liquid-float {
+    animation: liquid-float 9s ease-in-out infinite;
+  }
+  .liquid-drift {
+    animation: liquid-drift 11s ease-in-out infinite;
+  }
+  .glass-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-shine::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    width: 34%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.38), transparent);
+    animation: glass-shine 5.8s ease-in-out infinite;
+    pointer-events: none;
+  }
   .page-enter {
     animation: fade-up 200ms ease-out both;
   }

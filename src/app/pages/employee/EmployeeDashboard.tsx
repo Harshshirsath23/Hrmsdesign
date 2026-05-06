@@ -1,288 +1,160 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { employees } from "../../components/employees/mockData";
+import { ReactNode } from "react";
 import {
-  Clock, LogIn, LogOut, CalendarDays, Wallet,
-  TrendingUp, CheckCircle2, AlertCircle,
+  CalendarDays,
+  ClipboardList,
+  FolderOpen,
+  Settings2,
+  Crown,
 } from "lucide-react";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
-/* ── Mock data ─────────────────────────────────────────────── */
-const RECENT_ACTIVITY = [
-  { day: "Mon 5 May",  status: "Present", checkIn: "09:10 AM", checkOut: "06:05 PM", hours: "8h 55m" },
-  { day: "Tue 6 May",  status: "Present", checkIn: "09:02 AM", checkOut: "06:12 PM", hours: "9h 10m" },
-  { day: "Wed 7 May",  status: "Leave",   checkIn: "—",        checkOut: "—",        hours: "—"      },
-  { day: "Thu 8 May",  status: "Present", checkIn: "09:25 AM", checkOut: "06:00 PM", hours: "8h 35m" },
-  { day: "Fri 9 May",  status: "Present", checkIn: "09:08 AM", checkOut: "06:20 PM", hours: "9h 12m" },
+const SIDEBAR_ITEMS = [CalendarDays, ClipboardList, FolderOpen, Crown, Settings2];
+const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI"];
+const DATES = ["28", "29", "30", "31", "1", "2"];
+const TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00"];
+const EVENTS = [
+  { day: 1, start: 0, span: 2, title: "Perkenalan tim", subtitle: "Finance", time: "08:00 - 10:00" },
+  { day: 2, start: 1, span: 2, title: "Weekly Sync", subtitle: "Design", time: "09:15 - 10:45" },
+  { day: 3, start: 0, span: 3, title: "Project Standup", subtitle: "Marketing", time: "08:00 - 10:30" },
+  { day: 4, start: 2, span: 3, title: "Planning Review", subtitle: "HR", time: "10:00 - 12:30" },
+  { day: 5, start: 0, span: 2, title: "Client Session", subtitle: "Ops", time: "08:00 - 10:00" },
 ];
 
-const WEEKLY_HOURS = [
-  { day: "Mon", hours: 8.9 },
-  { day: "Tue", hours: 9.2 },
-  { day: "Wed", hours: 0   },
-  { day: "Thu", hours: 8.6 },
-  { day: "Fri", hours: 9.2 },
-];
-
-const UPCOMING = {
-  Events: [
-    { title: "Team Lunch",         date: "Tomorrow, 1 PM" },
-    { title: "Townhall Q2",        date: "Friday, 10 AM"  },
-    { title: "Project Alpha Sync", date: "May 15"         },
-  ],
-  Holidays: [
-    { title: "Eid al-Adha",      date: "May 27" },
-    { title: "Independence Day", date: "Aug 15" },
-  ],
-  Birthdays: [
-    { title: "Rajesh Kumar", date: "Today"  },
-    { title: "Divya Pillai", date: "May 28" },
-  ],
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  Present: "bg-[#212529] text-[#F8F9FA]",
-  Leave:   "bg-[#CED4DA] text-[#212529]",
-  Absent:  "bg-[#ADB5BD] text-[#212529]",
-};
-
-/* ── Custom Tooltip ────────────────────────────────────────── */
-const ChartTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
+function GlassCard({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <div className="bg-foreground text-primary-foreground text-xs px-3 py-2 rounded-lg shadow-lg">
-      <p className="text-primary-foreground/60 mb-0.5">{label}</p>
-      <p className="font-semibold">{payload[0].value}h worked</p>
+    <div
+      className={`bg-white/70 border border-white/40 backdrop-blur-[30px] shadow-[0_16px_40px_rgba(15,23,42,0.12)] rounded-2xl ${className ?? ""}`}
+    >
+      {children}
     </div>
-  );
-};
-
-/* ── Live Clock ─────────────────────────────────────────────── */
-function LiveClock() {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <span className="font-mono text-lg font-bold text-foreground tabular-nums">
-      {time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-    </span>
   );
 }
 
-/* ── Main Component ─────────────────────────────────────────── */
 export function EmployeeDashboard() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"Events" | "Holidays" | "Birthdays">("Events");
-  const [checkedIn, setCheckedIn] = useState(true);
-  const [checkInTime] = useState("09:12 AM");
-  const [elapsed] = useState("6h 32m");
-
-  const emp       = employees.find((e) => e.id === user?.employeeId) || employees[0];
-  const firstName = emp.name.split(" ")[0];
-  const feed      = UPCOMING[activeTab] || [];
-
   return (
-    <div className="p-6 space-y-6">
-
-      {/* ── Hero / Greeting ─────────────────────────────── */}
-      <div className="flat-card bg-card p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              Good morning, {firstName}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary border border-border rounded-lg">
-                <div className={`w-2 h-2 rounded-full ${checkedIn ? "bg-[#212529]" : "bg-[#ADB5BD]"} animate-pulse`} />
-                <span className="text-sm font-medium text-foreground">
-                  {checkedIn ? `Working · Checked in ${checkInTime}` : "Not checked in"}
-                </span>
-              </div>
-              {checkedIn && (
-                <div className="px-3 py-1.5 bg-secondary border border-border rounded-lg">
-                  <span className="text-sm font-mono font-medium text-foreground">{elapsed} elapsed</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Live clock + Check-in/out */}
-          <div className="flex flex-col items-start md:items-end gap-3">
-            <LiveClock />
-            <button
-              onClick={() => setCheckedIn(!checkedIn)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                checkedIn
-                  ? "bg-secondary text-foreground border border-border hover:bg-[#CED4DA]"
-                  : "bg-foreground text-primary-foreground hover:bg-accent"
-              }`}
-            >
-              {checkedIn
-                ? <><LogOut className="w-4 h-4" /> Check Out</>
-                : <><LogIn className="w-4 h-4" /> Check In</>
-              }
-            </button>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        {checkedIn && (
-          <div className="mt-6">
-            <div className="relative h-2 bg-secondary rounded-full overflow-hidden border border-border">
-              <div className="absolute left-0 top-0 h-full bg-foreground rounded-full" style={{ width: "72.5%" }} />
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground font-medium">
-              <span>Scheduled: 9h</span>
-              <span className="font-semibold text-foreground">{elapsed} worked</span>
-              <span>Remaining: 2h 28m</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── KPI quick stats ─────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { icon: CheckCircle2, label: "Present This Month", value: "19 / 28", },
-          { icon: CalendarDays, label: "Leave Balance",      value: "12 days"  },
-          { icon: AlertCircle,  label: "Late Arrivals",      value: "2 times"  },
-          { icon: Wallet,       label: "Last Net Salary",    value: "₹58,500"  },
-        ].map(({ icon: Icon, label, value }) => (
-          <div key={label} className="flat-card bg-card p-4 flex items-start gap-3">
-            <div className="w-9 h-9 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-              <Icon className="w-4 h-4 text-foreground" />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</p>
-              <p className="text-lg font-bold text-foreground mt-0.5">{value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Charts + Feed ───────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {/* Weekly hours chart */}
-        <div className="flat-card bg-card p-5 lg:col-span-2">
-          <h2 className="text-sm font-semibold text-foreground mb-1">Weekly Hours</h2>
-          <p className="text-xs text-muted-foreground mb-5">Hours worked this week</p>
-          <ResponsiveContainer width="100%" height={160}>
-            <AreaChart data={WEEKLY_HOURS} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-              <defs>
-                <linearGradient id="hoursGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="var(--foreground)" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="var(--foreground)" stopOpacity={0}    />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} domain={[0, 10]} />
-              <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--border)" }} />
-              <Area
-                type="monotone" dataKey="hours"
-                stroke="var(--foreground)" strokeWidth={2}
-                fill="url(#hoursGrad)"
-                dot={{ fill: "var(--foreground)", r: 3, strokeWidth: 0 }}
-                activeDot={{ fill: "var(--foreground)", r: 5, strokeWidth: 0 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Upcoming feed */}
-        <div className="flat-card bg-card p-5 flex flex-col">
-          <h2 className="text-sm font-semibold text-foreground mb-4">What's Coming</h2>
-
-          <div className="flex gap-1 p-1 bg-secondary rounded-lg mb-4">
-            {(["Events", "Holidays", "Birthdays"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${
-                  activeTab === tab
-                    ? "bg-card text-foreground shadow-sm border border-border"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex-1 space-y-2 overflow-y-auto">
-            {feed.map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-secondary transition-colors"
-              >
-                <span className="text-sm font-medium text-foreground">{item.title}</span>
-                <span className="text-[11px] font-semibold text-muted-foreground bg-secondary border border-border px-2 py-0.5 rounded-md">
-                  {item.date}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Recent Activity Table ────────────────────────── */}
-      <div className="flat-card bg-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground">Recent Attendance</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Last 5 working days</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-secondary border-b border-border">
-                {["Day", "Status", "Check In", "Check Out", "Hours"].map((h) => (
-                  <th key={h} className="text-left px-6 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {RECENT_ACTIVITY.map((row, i) => (
-                <tr key={i} className="hover:bg-secondary transition-colors duration-150">
-                  <td className="px-6 py-3.5 text-sm font-medium text-foreground">{row.day}</td>
-                  <td className="px-6 py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium ${STATUS_BADGE[row.status] || ""}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {row.checkIn !== "—" ? (
-                      <div className="flex items-center gap-1.5">
-                        <LogIn className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm text-foreground">{row.checkIn}</span>
-                      </div>
-                    ) : <span className="text-sm text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    {row.checkOut !== "—" ? (
-                      <div className="flex items-center gap-1.5">
-                        <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm text-foreground">{row.checkOut}</span>
-                      </div>
-                    ) : <span className="text-sm text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-6 py-3.5 text-sm font-medium text-foreground">{row.hours}</td>
-                </tr>
+    <div className="p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-3xl min-h-[calc(100vh-8.5rem)] p-4 md:p-8 bg-gradient-to-br from-[#85B4BC] via-[#9DBFC8] to-[#A7AEB0]">
+        <div className="absolute inset-0 backdrop-blur-[6px]" />
+        <div className="relative grid grid-cols-1 xl:grid-cols-[74px_minmax(0,1fr)_360px] gap-5">
+          <GlassCard className="p-3 h-fit xl:h-[560px]">
+            <nav className="flex xl:flex-col gap-3 justify-center">
+              {SIDEBAR_ITEMS.map((Icon, idx) => (
+                <button
+                  key={idx}
+                  className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all duration-200 ease-in-out ${
+                    idx === 0 ? "bg-white/55 text-slate-700" : "text-slate-500 hover:bg-white/40 hover:text-slate-700"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
               ))}
-            </tbody>
-          </table>
+            </nav>
+          </GlassCard>
+
+          <GlassCard className="p-6 md:p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-600 tracking-wide">2026</p>
+                <h1 className="text-5xl md:text-6xl font-semibold text-slate-900 mt-2">Agustus</h1>
+              </div>
+              <button className="px-5 py-2 rounded-full text-sm bg-white/80 text-slate-700 hover:bg-white transition-all duration-200 ease-in-out">
+                New Event
+              </button>
+            </div>
+
+            <div className="mt-8">
+              <div className="grid grid-cols-[72px_repeat(6,minmax(0,1fr))] gap-2 text-xs text-slate-500">
+                <div />
+                {DAYS.map((day, index) => (
+                  <div key={day} className={index === 0 ? "text-left" : "text-center"}>{day}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-[72px_repeat(6,minmax(0,1fr))] gap-2 text-sm text-slate-700 mt-2">
+                <div />
+                {DATES.map((day, index) => (
+                  <div key={day} className={index === 0 ? "text-left" : "text-center"}>{day}</div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-[72px_repeat(6,minmax(0,1fr))] gap-2">
+                <div className="space-y-5 text-xs text-slate-500 pt-1">
+                  {TIME_SLOTS.map((slot) => (
+                    <p key={slot}>{slot}</p>
+                  ))}
+                </div>
+
+                <div className="col-span-6 grid grid-cols-6 gap-2 relative min-h-[318px]">
+                  {Array.from({ length: 6 }).map((_, col) => (
+                    <div key={col} className="h-full rounded-xl bg-white/22 border border-white/20" />
+                  ))}
+
+                  {EVENTS.map((event) => (
+                    <div
+                      key={`${event.title}-${event.day}`}
+                      className="absolute bg-white/72 border border-white/40 rounded-2xl p-3 shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
+                      style={{
+                        left: `calc(${(event.day - 1) * (100 / 6)}% + 4px)`,
+                        width: `calc(${100 / 6}% - 8px)`,
+                        top: `${event.start * 52}px`,
+                        height: `${event.span * 52 - 8}px`,
+                      }}
+                    >
+                      <p className="text-xs font-medium text-slate-700">{event.title}</p>
+                      <p className="text-[10px] text-sky-700 mt-1">{event.subtitle}</p>
+                      <p className="text-[10px] text-slate-500 mt-1">{event.time}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+
+          <div className="space-y-5">
+            <GlassCard className="p-6">
+              <p className="text-sm font-semibold text-slate-800">Task Reminder</p>
+              <p className="text-4xl/[1.12] font-medium text-slate-700 mt-4">
+                Ultrices nisi amet ac lorem cumsan enim.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-6">
+                <button className="px-5 py-2 rounded-full border border-white/60 bg-white/55 text-sm text-slate-700 hover:bg-white/80 transition-all duration-200 ease-in-out">
+                  Snooze
+                </button>
+                <button className="px-5 py-2 rounded-full border border-white/60 bg-white/55 text-sm text-slate-700 hover:bg-white/80 transition-all duration-200 ease-in-out">
+                  Mark as Completed
+                </button>
+              </div>
+            </GlassCard>
+
+            <GlassCard className="p-6">
+              <h2 className="text-4xl font-medium text-slate-800">To-do list</h2>
+              <label className="flex items-start gap-3 mt-5">
+                <input type="checkbox" className="mt-1 h-4 w-4 rounded border-white/60 bg-white/60" />
+                <span className="text-2xl/[1.35] text-slate-700">
+                  Justo non faucibus dictumst sed sem quis in etiam eget. Ultrices nisi amet accumsan enim.
+                </span>
+              </label>
+
+              <div className="grid grid-cols-[1fr_96px] gap-3 mt-5">
+                <img
+                  src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=900&auto=format&fit=crop"
+                  alt="discussion visual"
+                  className="h-44 w-full object-cover rounded-2xl"
+                />
+                <img
+                  src="https://images.unsplash.com/photo-1516939884455-1445c8652f83?q=80&w=600&auto=format&fit=crop"
+                  alt="task preview"
+                  className="h-44 w-full object-cover rounded-2xl"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3 mt-5">
+                <button className="px-5 py-2 rounded-full border border-white/60 bg-white/55 text-sm text-slate-700 hover:bg-white/80 transition-all duration-200 ease-in-out">
+                  See Discussion
+                </button>
+                <button className="px-5 py-2 rounded-full border border-white/60 bg-white/55 text-sm text-slate-700 hover:bg-white/80 transition-all duration-200 ease-in-out">
+                  Due: Today
+                </button>
+              </div>
+            </GlassCard>
+          </div>
         </div>
       </div>
     </div>
