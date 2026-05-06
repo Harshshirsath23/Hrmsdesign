@@ -1,0 +1,229 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+
+  /* ── Coolors Monochrome Palette ─────────────────────── */
+  --c-100: #F8F9FA;
+  --c-200: #E9ECEF;
+  --c-300: #DEE2E6;
+  --c-400: #CED4DA;
+  --c-500: #ADB5BD;
+  --c-600: #6C757D;
+  --c-700: #495057;
+  --c-800: #343A40;
+  --c-900: #212529;
+
+  /* ── Semantic Design Tokens — Light Mode ────────────── */
+  --background:            #F8F9FA;
+  --foreground:            #212529;
+  --card:                  #FFFFFF;
+  --card-foreground:       #212529;
+  --primary:               #212529;
+  --primary-foreground:    #F8F9FA;
+  --secondary:             #E9ECEF;
+  --secondary-foreground:  #212529;
+  --muted:                 #CED4DA;
+  --muted-foreground:      #495057;
+  --accent:                #343A40;
+  --accent-foreground:     #F8F9FA;
+  --border:                #DEE2E6;
+  --ring:                  #212529;
+  --radius:                8px;
+
+  /* ── Legacy Compat Aliases ──────────────────────────── */
+  --text-primary:    var(--foreground);
+  --text-secondary:  var(--muted-foreground);
+  --text-muted:      var(--c-600);
+  --glass-bg:        var(--card);
+  --glass-border:    var(--border);
+  --glass-shadow:    0 2px 6px rgba(0,0,0,0.05);
+  --glass-highlight: none;
+  --accent-purple:   var(--c-800);
+  --accent-blue:     var(--c-700);
+  --accent-pink:     var(--c-600);
+}
+
+/* ── Dark Mode Token Overrides ──────────────────────────── */
+.dark {
+  --background:           #212529;
+  --foreground:           #F8F9FA;
+  --card:                 #343A40;
+  --card-foreground:      #F8F9FA;
+  --primary:              #F8F9FA;
+  --primary-foreground:   #212529;
+  --secondary:            #495057;
+  --secondary-foreground: #F8F9FA;
+  --muted:                #495057;
+  --muted-foreground:     #CED4DA;
+  --accent:               #6C757D;
+  --accent-foreground:    #F8F9FA;
+  --border:               #495057;
+  --ring:                 #CED4DA;
+
+  --text-primary:   var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-muted:     #ADB5BD;
+  --glass-bg:       var(--card);
+  --glass-border:   var(--border);
+}
+
+/* ── Tailwind Theme Mapping ─────────────────────────────── */
+@theme inline {
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-border:               var(--border);
+  --color-ring:                 var(--ring);
+
+  /* Legacy color tokens kept for backward compat */
+  --color-accent-purple:  var(--accent-purple);
+  --color-accent-blue:    var(--accent-blue);
+  --color-accent-pink:    var(--accent-pink);
+  --color-text-primary:   var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted:     var(--text-muted);
+}
+
+/* ── Base Layer ─────────────────────────────────────────── */
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  /* ── Flat Card Utility ──────────────────────────────── */
+  .flat-card {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .flat-card-hover {
+    transition: transform 150ms ease-in-out, box-shadow 150ms ease-in-out;
+  }
+  .flat-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  /* ── Flat Input Utility ─────────────────────────────── */
+  .flat-input {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--foreground);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .flat-input:focus {
+    outline: none;
+    border-color: var(--foreground);
+    box-shadow: 0 0 0 3px rgba(33, 37, 41, 0.08);
+  }
+  .dark .flat-input:focus {
+    box-shadow: 0 0 0 3px rgba(248, 249, 250, 0.08);
+  }
+  .flat-input::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.7;
+  }
+
+  /* ── Override all glass utilities with flat equivalents ─ */
+  .glass,
+  .glass-card,
+  .glass-panel,
+  .glass-button {
+    background-color: var(--card) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+    border-color: var(--border) !important;
+  }
+  .glass-input {
+    background-color: var(--card) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: var(--border) !important;
+    color: var(--foreground) !important;
+  }
+  .glass-input:focus {
+    border-color: var(--foreground) !important;
+    box-shadow: 0 0 0 3px rgba(33, 37, 41, 0.08) !important;
+  }
+
+  /* ── Override hardcoded indigo/slate color classes ─────── */
+  .bg-indigo-500,
+  .bg-indigo-600,
+  .bg-indigo-500\/80 {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+  }
+  .bg-indigo-50,
+  .bg-indigo-100 {
+    background-color: var(--secondary) !important;
+  }
+  .text-indigo-600,
+  .text-indigo-700 {
+    color: var(--foreground) !important;
+  }
+  .text-indigo-300,
+  .text-indigo-400 {
+    color: var(--muted-foreground) !important;
+  }
+  .bg-slate-50,
+  .bg-\[\#F6F8FB\] {
+    background-color: var(--background) !important;
+  }
+  .border-white\/50,
+  .border-white\/40,
+  .border-white\/20,
+  .border-white\/10,
+  .border-indigo-400\/50,
+  .border-indigo-500\/50 {
+    border-color: var(--border) !important;
+  }
+
+  /* ── Scrollbar ─────────────────────────────────────── */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--c-600);
+  }
+
+  /* ── Page transition ───────────────────────────────── */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .page-enter {
+    animation: fade-up 200ms ease-out both;
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
