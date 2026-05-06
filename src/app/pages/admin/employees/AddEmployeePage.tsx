@@ -609,9 +609,9 @@ export function AddEmployeePage() {
 
   // ── Form ─────────────────────────────────────────────────
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Scrollable form area */}
-      <div className="flex-1 p-6 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-6 pb-4">
 
         {/* Page header */}
         <div className="flex items-start justify-between gap-4 mb-6">

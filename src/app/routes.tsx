@@ -25,6 +25,8 @@ import { EmployeeLeavesPage } from "./pages/employee/EmployeeLeavesPage";
 import { EmployeePayslipsPage } from "./pages/employee/EmployeePayslipsPage";
 import { EmployeeDocumentsPage } from "./pages/employee/EmployeeDocumentsPage";
 import { EmployeeCanteenPage } from "./pages/employee/EmployeeCanteenPage";
+import { EmployeeProfilePage } from "./pages/employee/EmployeeProfilePage";
+import { ProfileChangeRequestsPage } from "./pages/admin/ProfileChangeRequestsPage";
 
 export const router = createBrowserRouter([
   // Root redirect
@@ -50,6 +52,7 @@ export const router = createBrowserRouter([
       { path: "leave",      Component: LeavePage      },
       { path: "payroll",    Component: PayrollPage    },
       { path: "documents",  Component: DocumentsPage  },
+      { path: "profile-requests", Component: ProfileChangeRequestsPage },
       {
         path: "employees",
         Component: EmployeesShell,
@@ -69,6 +72,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true,         element: <Navigate to="/employee/dashboard" replace /> },
       { path: "dashboard",   Component: EmployeeDashboard },
+      { path: "profile",     Component: EmployeeProfilePage },
       { path: "attendance",  Component: EmployeeAttendancePage },
       { path: "leaves",      Component: EmployeeLeavesPage },
       { path: "payslips",    Component: EmployeePayslipsPage },

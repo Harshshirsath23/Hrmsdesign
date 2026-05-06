@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Outlet, useNavigate, Navigate, useLocation } from "react-router";
 import {
   LayoutDashboard, Clock, CalendarDays, Wallet, Coffee,
-  FileText, Bell, LogOut, Building2, ChevronRight, Menu,
+  FileText, Bell, LogOut, Building2, ChevronRight, Menu, UserRoundCog,
   Sun, Moon,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -10,6 +10,7 @@ import { useTheme } from "../../context/ThemeContext";
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard",  path: "/employee/dashboard" },
+  { icon: UserRoundCog,    label: "My Profile", path: "/employee/profile"   },
   { icon: Clock,           label: "Attendance", path: "/employee/attendance" },
   { icon: CalendarDays,    label: "My Leaves",  path: "/employee/leaves"    },
   { icon: Wallet,          label: "Payslips",   path: "/employee/payslips"  },
