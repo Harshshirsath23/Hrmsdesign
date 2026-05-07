@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import { employees } from "../../components/employees/mockData";
 import {
@@ -9,7 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
 } from "recharts";
- 
+
 /* ── Mock data ─────────────────────────────────────────────── */
 const RECENT_ACTIVITY = [
   { day: "Mon 5 May",  status: "Present", checkIn: "09:10 AM", checkOut: "06:05 PM", hours: "8h 55m" },
@@ -18,7 +19,7 @@ const RECENT_ACTIVITY = [
   { day: "Thu 8 May",  status: "Present", checkIn: "09:25 AM", checkOut: "06:00 PM", hours: "8h 35m" },
   { day: "Fri 9 May",  status: "Present", checkIn: "09:08 AM", checkOut: "06:20 PM", hours: "9h 12m" },
 ];
- 
+
 const WEEKLY_HOURS = [
   { day: "Mon", hours: 8.9 },
   { day: "Tue", hours: 9.2 },
@@ -26,7 +27,7 @@ const WEEKLY_HOURS = [
   { day: "Thu", hours: 8.6 },
   { day: "Fri", hours: 9.2 },
 ];
- 
+
 const UPCOMING = {
   Events: [
     { title: "Team Lunch",         date: "Tomorrow, 1 PM" },
@@ -42,13 +43,13 @@ const UPCOMING = {
     { title: "Divya Pillai", date: "May 28" },
   ],
 };
- 
+
 const STATUS_BADGE: Record<string, string> = {
   Present: "bg-[#212529] text-[#F8F9FA]",
   Leave:   "bg-[#CED4DA] text-[#212529]",
   Absent:  "bg-[#ADB5BD] text-[#212529]",
 };
- 
+
 /* ── Custom Tooltip ────────────────────────────────────────── */
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -59,7 +60,7 @@ const ChartTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
- 
+
 /* ── Live Clock ─────────────────────────────────────────────── */
 function LiveClock() {
   const [time, setTime] = useState(new Date());
@@ -73,22 +74,23 @@ function LiveClock() {
     </span>
   );
 }
- 
+
 /* ── Main Component ─────────────────────────────────────────── */
 export function EmployeeDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"Events" | "Holidays" | "Birthdays">("Events");
   const [checkedIn, setCheckedIn] = useState(true);
   const [checkInTime] = useState("09:12 AM");
   const [elapsed] = useState("6h 32m");
- 
+
   const emp       = employees.find((e) => e.id === user?.employeeId) || employees[0];
   const firstName = emp.name.split(" ")[0];
   const feed      = UPCOMING[activeTab] || [];
- 
+
   return (
     <div className="p-6 space-y-6">
- 
+
       {/* ── Hero / Greeting ─────────────────────────────── */}
       <div className="flat-card bg-card p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -99,7 +101,7 @@ export function EmployeeDashboard() {
             <p className="text-sm text-muted-foreground mt-1">
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
- 
+
             <div className="flex flex-wrap items-center gap-3 mt-4">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary border border-border rounded-lg">
                 <div className={`w-2 h-2 rounded-full ${checkedIn ? "bg-[#212529]" : "bg-[#ADB5BD]"} animate-pulse`} />
@@ -114,7 +116,7 @@ export function EmployeeDashboard() {
               )}
             </div>
           </div>
- 
+
           {/* Live clock + Check-in/out */}
           <div className="flex flex-col items-start md:items-end gap-3">
             <LiveClock />
@@ -133,7 +135,7 @@ export function EmployeeDashboard() {
             </button>
           </div>
         </div>
- 
+
         {/* Progress bar */}
         {checkedIn && (
           <div className="mt-6">
@@ -148,7 +150,7 @@ export function EmployeeDashboard() {
           </div>
         )}
       </div>
- 
+
       {/* ── KPI quick stats ─────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -168,10 +170,10 @@ export function EmployeeDashboard() {
           </div>
         ))}
       </div>
- 
+
       {/* ── Charts + Feed ───────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
- 
+
         {/* Weekly hours chart */}
         <div className="flat-card bg-card p-5 lg:col-span-2">
           <h2 className="text-sm font-semibold text-foreground mb-1">Weekly Hours</h2>
@@ -198,11 +200,11 @@ export function EmployeeDashboard() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
- 
+
         {/* Upcoming feed */}
         <div className="flat-card bg-card p-5 flex flex-col">
           <h2 className="text-sm font-semibold text-foreground mb-4">What's Coming</h2>
- 
+
           <div className="flex gap-1 p-1 bg-secondary rounded-lg mb-4">
             {(["Events", "Holidays", "Birthdays"] as const).map((tab) => (
               <button
@@ -218,7 +220,7 @@ export function EmployeeDashboard() {
               </button>
             ))}
           </div>
- 
+
           <div className="flex-1 space-y-2 overflow-y-auto">
             {feed.map((item, i) => (
               <div
@@ -234,12 +236,21 @@ export function EmployeeDashboard() {
           </div>
         </div>
       </div>
- 
+
       {/* ── Recent Activity Table ────────────────────────── */}
       <div className="flat-card bg-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground">Recent Attendance</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Last 5 working days</p>
+        <div className="px-6 py-4 border-b border-border flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Recent Attendance</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Last 5 working days</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/employee/attendance")}
+            className="text-xs font-semibold text-foreground/80 hover:text-foreground transition-colors rounded-full px-3 py-1.5 bg-secondary border border-border"
+          >
+            View all
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -288,5 +299,3 @@ export function EmployeeDashboard() {
     </div>
   );
 }
- 
- 

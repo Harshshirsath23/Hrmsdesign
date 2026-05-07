@@ -30,6 +30,12 @@
   --border:                #DEE2E6;
   --ring:                  #212529;
   --radius:                8px;
+  --radius-sm:             6px;
+  --radius-lg:             14px;
+  --shadow-soft:           0 2px 8px rgba(16, 24, 40, 0.05);
+  --shadow-elevated:       0 8px 24px rgba(16, 24, 40, 0.08);
+  --transition-fast:       140ms ease;
+  --transition-base:       220ms ease;
 
   /* ── Legacy Compat Aliases ──────────────────────────── */
   --text-primary:    var(--foreground);
@@ -60,6 +66,8 @@
   --accent-foreground:    #F8F9FA;
   --border:               #495057;
   --ring:                 #CED4DA;
+  --shadow-soft:          0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-elevated:      0 10px 28px rgba(0, 0, 0, 0.45);
 
   --text-primary:   var(--foreground);
   --text-secondary: var(--muted-foreground);
@@ -96,6 +104,12 @@
 
 /* ── Base Layer ─────────────────────────────────────────── */
 @layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--border);
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
@@ -107,19 +121,43 @@
     transition: background-color 200ms ease, color 200ms ease;
   }
 
+  ::selection {
+    background: var(--foreground);
+    color: var(--primary-foreground);
+  }
+
+  :where(button, input, select, textarea, a, [role="button"]) {
+    transition:
+      background-color var(--transition-fast),
+      color var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  :where(button, input, select, textarea, a, [role="button"]):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 16%, transparent);
+  }
+
+  .dark :where(button, input, select, textarea, a, [role="button"]):focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 18%, transparent);
+  }
+
   /* ── Flat Card Utility ──────────────────────────────── */
   .flat-card {
     background-color: var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
   }
   .flat-card-hover {
-    transition: transform 150ms ease-in-out, box-shadow 150ms ease-in-out;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   }
   .flat-card-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--foreground) 18%, var(--border));
+    box-shadow: var(--shadow-elevated);
   }
 
   /* ── Flat Input Utility ─────────────────────────────── */
@@ -128,7 +166,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--foreground);
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
   }
   .flat-input:focus {
     outline: none;
@@ -143,6 +181,38 @@
     opacity: 0.7;
   }
 
+  /* ── Unified Table Treatment (attendance benchmark) ─── */
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  thead tr {
+    background: var(--secondary);
+  }
+  th {
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  td {
+    color: var(--foreground);
+  }
+  tbody tr {
+    transition: background-color var(--transition-fast);
+  }
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--secondary) 72%, transparent);
+  }
+
+  /* ── Consistent panel density for app wrappers ───────── */
+  .page-enter,
+  [data-slot="sidebar-inset"] {
+    animation: fade-up var(--transition-base) both;
+  }
+
   /* ── Override all glass utilities with flat equivalents ─ */
   .glass,
   .glass-card,
@@ -151,7 +221,7 @@
     background-color: var(--card) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+    box-shadow: var(--shadow-soft) !important;
     border-color: var(--border) !important;
   }
   .glass-input {
@@ -189,6 +259,48 @@
   .bg-\[\#F6F8FB\] {
     background-color: var(--background) !important;
   }
+  .bg-\[\#212529\] {
+    background-color: var(--foreground) !important;
+  }
+  .bg-\[\#343A40\] {
+    background-color: color-mix(in srgb, var(--foreground) 86%, var(--background)) !important;
+  }
+  .bg-\[\#495057\] {
+    background-color: color-mix(in srgb, var(--foreground) 74%, var(--background)) !important;
+  }
+  .bg-\[\#6C757D\] {
+    background-color: color-mix(in srgb, var(--foreground) 58%, var(--background)) !important;
+  }
+  .bg-\[\#ADB5BD\] {
+    background-color: var(--muted) !important;
+  }
+  .bg-\[\#CED4DA\] {
+    background-color: color-mix(in srgb, var(--muted) 74%, var(--background)) !important;
+  }
+  .bg-\[\#E9ECEF\] {
+    background-color: var(--secondary) !important;
+  }
+  .bg-\[\#F8F9FA\] {
+    background-color: var(--background) !important;
+  }
+  .text-\[\#212529\] {
+    color: var(--foreground) !important;
+  }
+  .text-\[\#495057\],
+  .text-\[\#6C757D\] {
+    color: var(--muted-foreground) !important;
+  }
+  .text-\[\#ADB5BD\],
+  .text-\[\#CED4DA\] {
+    color: color-mix(in srgb, var(--muted-foreground) 82%, var(--background)) !important;
+  }
+  .text-\[\#F8F9FA\],
+  .text-white {
+    color: var(--primary-foreground) !important;
+  }
+  .border-\[\#DEE2E6\] {
+    border-color: var(--border) !important;
+  }
   .border-white\/50,
   .border-white\/40,
   .border-white\/20,
@@ -207,11 +319,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--muted);
+    background: color-mix(in srgb, var(--muted) 86%, var(--background));
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--c-600);
+    background: var(--muted-foreground);
   }
 
   /* ── Page transition ───────────────────────────────── */
