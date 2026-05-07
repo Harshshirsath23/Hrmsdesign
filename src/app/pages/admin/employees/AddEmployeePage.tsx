@@ -15,9 +15,22 @@ import {
 interface UploadedFile { name: string; size: number; type: string; url: string; }
 
 interface FormState {
+  employeeNumberSeries: string;
   firstName: string; lastName: string; employeeId: string;
+  aadhaarNumber: string;
   email: string; phoneCode: string; phone: string;
   dob: string; gender: string; photo: UploadedFile | null;
+  referredBy: string;
+  probationPeriod: string;
+  confirmationDate: string;
+  emergencyContactName: string;
+  emergencyContactNumber: string;
+  fatherName: string;
+  spouseName: string;
+  onboardingPolicy: string;
+  grade: string;
+  attendanceScheme: string;
+  panNumber: string;
   department: string; designation: string; employmentType: string;
   joiningDate: string; workLocation: string; reportingManager: string; status: string;
   shiftType: string; workStart: string; workEnd: string;
@@ -65,6 +78,9 @@ const LEAVE_POLICIES = [
   { v: "executive",  l: "Executive Policy — 36 AL + 18 SL" },
   { v: "contract",   l: "Contract Policy  — 14 AL + 7 SL"  },
 ];
+const EMPLOYEE_NUMBER_SERIES = ["Corporate 2026", "Plant 2026", "Contract 2026"];
+const GRADES = ["G1", "G2", "G3", "G4", "M1", "M2"];
+const ATTENDANCE_SCHEMES = ["General Day Shift", "Flexi Shift", "Night Shift", "Plant Roster"];
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const PHONE_CODES = [
   { v: "+1",  l: "+1  US" },{ v: "+44", l: "+44 UK" },{ v: "+91", l: "+91 IN" },
@@ -81,8 +97,21 @@ const fmtSize = (b: number) =>
   b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`;
 
 const INIT: FormState = {
+  employeeNumberSeries: "Corporate 2026",
   firstName: "", lastName: "", employeeId: genId(),
+  aadhaarNumber: "",
   email: "", phoneCode: "+1", phone: "", dob: "", gender: "", photo: null,
+  referredBy: "",
+  probationPeriod: "6",
+  confirmationDate: "",
+  emergencyContactName: "",
+  emergencyContactNumber: "",
+  fatherName: "",
+  spouseName: "",
+  onboardingPolicy: "",
+  grade: "",
+  attendanceScheme: "",
+  panNumber: "",
   department: "", designation: "", employmentType: "", joiningDate: "",
   workLocation: "", reportingManager: "", status: "active",
   shiftType: "general", workStart: "09:00", workEnd: "18:00",
@@ -667,6 +696,18 @@ export function AddEmployeePage() {
                   className="bg-secondary/50" />
               </FF>
 
+              <FF label="Employee Number Series">
+                <Sel
+                  value={form.employeeNumberSeries}
+                  onChange={e => set("employeeNumberSeries", e.target.value)}
+                  opts={EMPLOYEE_NUMBER_SERIES.map(series => ({ v: series, l: series }))}
+                />
+              </FF>
+
+              <FF label="Employee No" hint="Mapped from Employee ID">
+                <Inp value={form.employeeId} readOnly className="bg-secondary/50" />
+              </FF>
+
               <FF label="Email Address" required error={errors.email} ok={ok("email")}>
                 <Inp name="email" type="email" value={form.email}
                   onChange={e => set("email", e.target.value)} onBlur={() => blur("email")}
@@ -690,6 +731,48 @@ export function AddEmployeePage() {
                     { v: "male", l: "Male" }, { v: "female", l: "Female" },
                     { v: "non-binary", l: "Non-binary" }, { v: "prefer-not-to-say", l: "Prefer not to say" },
                   ]} />
+              </FF>
+
+              <FF label="Aadhaar Number">
+                <Inp
+                  value={form.aadhaarNumber}
+                  onChange={e => set("aadhaarNumber", e.target.value)}
+                  placeholder="1234 5678 9012"
+                />
+              </FF>
+
+              <FF label="PAN Number">
+                <Inp
+                  value={form.panNumber}
+                  onChange={e => set("panNumber", e.target.value.toUpperCase())}
+                  placeholder="ABCDE1234F"
+                  className="font-mono tracking-wider"
+                />
+              </FF>
+
+              <FF label="Father's Name">
+                <Inp value={form.fatherName} onChange={e => set("fatherName", e.target.value)} placeholder="Father name" />
+              </FF>
+
+              <FF label="Spouse Name">
+                <Inp value={form.spouseName} onChange={e => set("spouseName", e.target.value)} placeholder="Spouse name" />
+              </FF>
+
+              <FF label="Emergency Contact Name">
+                <Inp
+                  value={form.emergencyContactName}
+                  onChange={e => set("emergencyContactName", e.target.value)}
+                  placeholder="Emergency contact person"
+                />
+              </FF>
+
+              <FF label="Emergency Contact Number">
+                <Inp
+                  type="tel"
+                  value={form.emergencyContactNumber}
+                  onChange={e => set("emergencyContactNumber", e.target.value)}
+                  placeholder="+91 98xxxxxx"
+                />
               </FF>
 
               <FF label="Profile Photo" hint="JPG or PNG · Max 2 MB" span2>
@@ -738,14 +821,46 @@ export function AddEmployeePage() {
                   err={!!errors.joiningDate} success={ok("joiningDate")} className="cursor-pointer" />
               </FF>
 
+              <FF label="Probation Period (months)">
+                <Inp
+                  type="number"
+                  value={form.probationPeriod}
+                  onChange={e => set("probationPeriod", e.target.value)}
+                  min={0}
+                  max={24}
+                />
+              </FF>
+
+              <FF label="Confirmation Date">
+                <Inp
+                  type="date"
+                  value={form.confirmationDate}
+                  onChange={e => set("confirmationDate", e.target.value)}
+                  className="cursor-pointer"
+                />
+              </FF>
+
               <FF label="Work Location">
                 <Inp value={form.workLocation} onChange={e => set("workLocation", e.target.value)}
                   placeholder="New York HQ / Remote" icon={<MapPin size={13} />} />
               </FF>
 
+              <FF label="Referred By">
+                <Inp value={form.referredBy} onChange={e => set("referredBy", e.target.value)} placeholder="Employee / Agency / Portal" />
+              </FF>
+
               <FF label="Reporting Manager" hint="Searchable — type to filter">
                 <SearchSel value={form.reportingManager} onChange={v => set("reportingManager", v)}
                   opts={MANAGERS} ph="Search managers…" />
+              </FF>
+
+              <FF label="Grade">
+                <Sel
+                  value={form.grade}
+                  onChange={e => set("grade", e.target.value)}
+                  ph="Select grade"
+                  opts={GRADES.map(grade => ({ v: grade, l: grade }))}
+                />
               </FF>
 
               <FF label="Employee Status" span2>
@@ -787,6 +902,15 @@ export function AddEmployeePage() {
                     { v: "hybrid",    l: "Hybrid"    },
                   ]} />
               </FF>
+
+              <FF label="Attendance Scheme">
+                <Sel
+                  value={form.attendanceScheme}
+                  onChange={e => set("attendanceScheme", e.target.value)}
+                  ph="Select attendance scheme"
+                  opts={ATTENDANCE_SCHEMES.map(scheme => ({ v: scheme, l: scheme }))}
+                />
+              </FF>
             </SC>
 
             {/* ─────────────────────────────────────────────
@@ -826,6 +950,14 @@ export function AddEmployeePage() {
               <FF label="Tax ID / PAN">
                 <Inp value={form.taxId} onChange={e => set("taxId", e.target.value.toUpperCase())}
                   placeholder="ABCDE1234F" className="font-mono tracking-wider" />
+              </FF>
+
+              <FF label="Employee Onboarding Policy" span2>
+                <Inp
+                  value={form.onboardingPolicy}
+                  onChange={e => set("onboardingPolicy", e.target.value)}
+                  placeholder="Standard Onboarding Policy 2026"
+                />
               </FF>
             </SC>
 

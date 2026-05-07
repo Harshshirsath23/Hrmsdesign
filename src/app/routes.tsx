@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router";
+import { GlobalAssistantShell } from "./components/assistant/GlobalAssistantShell";
 
 // Auth
 import { LoginPage } from "./pages/LoginPage";
@@ -29,61 +30,58 @@ import { EmployeeProfilePage } from "./pages/employee/EmployeeProfilePage";
 import { ProfileChangeRequestsPage } from "./pages/admin/ProfileChangeRequestsPage";
 
 export const router = createBrowserRouter([
-  // Root redirect
   {
     path: "/",
-    element: <Navigate to="/login" replace />,
-  },
-
-  // Login
-  {
-    path: "/login",
-    Component: LoginPage,
-  },
-
-  // Admin
-  {
-    path: "/admin",
-    Component: AdminLayout,
+    Component: GlobalAssistantShell,
     children: [
-      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-      { path: "dashboard",  Component: DashboardPage  },
-      { path: "attendance", Component: AttendancePage },
-      { path: "leave",      Component: LeavePage      },
-      { path: "payroll",    Component: PayrollPage    },
-      { path: "documents",  Component: DocumentsPage  },
-      { path: "profile-requests", Component: ProfileChangeRequestsPage },
       {
-        path: "employees",
-        Component: EmployeesShell,
+        index: true,
+        element: <Navigate to="/login" replace />,
+      },
+      {
+        path: "login",
+        Component: LoginPage,
+      },
+      {
+        path: "admin",
+        Component: AdminLayout,
         children: [
-          { index: true,               Component: EmployeeDirectory },
-          { path: "add",               Component: AddEmployeePage   },
-          { path: "information/:id",   Component: InformationLayout },
+          { index: true, element: <Navigate to="/admin/dashboard" replace /> },
+          { path: "dashboard", Component: DashboardPage },
+          { path: "attendance", Component: AttendancePage },
+          { path: "leave", Component: LeavePage },
+          { path: "payroll", Component: PayrollPage },
+          { path: "documents", Component: DocumentsPage },
+          { path: "profile-requests", Component: ProfileChangeRequestsPage },
+          {
+            path: "employees",
+            Component: EmployeesShell,
+            children: [
+              { index: true, Component: EmployeeDirectory },
+              { path: "add", Component: AddEmployeePage },
+              { path: "information/:id", Component: InformationLayout },
+            ],
+          },
         ],
       },
+      {
+        path: "employee",
+        Component: EmployeeLayout,
+        children: [
+          { index: true, element: <Navigate to="/employee/dashboard" replace /> },
+          { path: "dashboard", Component: EmployeeDashboard },
+          { path: "profile", Component: EmployeeProfilePage },
+          { path: "attendance", Component: EmployeeAttendancePage },
+          { path: "leaves", Component: EmployeeLeavesPage },
+          { path: "payslips", Component: EmployeePayslipsPage },
+          { path: "documents", Component: EmployeeDocumentsPage },
+          { path: "canteen", Component: EmployeeCanteenPage },
+        ],
+      },
+      {
+        path: "employees/*",
+        element: <Navigate to="/admin/employees" replace />,
+      },
     ],
-  },
-
-  // Employee portal
-  {
-    path: "/employee",
-    Component: EmployeeLayout,
-    children: [
-      { index: true,         element: <Navigate to="/employee/dashboard" replace /> },
-      { path: "dashboard",   Component: EmployeeDashboard },
-      { path: "profile",     Component: EmployeeProfilePage },
-      { path: "attendance",  Component: EmployeeAttendancePage },
-      { path: "leaves",      Component: EmployeeLeavesPage },
-      { path: "payslips",    Component: EmployeePayslipsPage },
-      { path: "documents",   Component: EmployeeDocumentsPage },
-      { path: "canteen",     Component: EmployeeCanteenPage },
-    ],
-  },
-
-  // Legacy redirect
-  {
-    path: "/employees/*",
-    element: <Navigate to="/admin/employees" replace />,
   },
 ]);

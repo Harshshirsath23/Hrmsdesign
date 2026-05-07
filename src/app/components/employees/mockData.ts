@@ -19,6 +19,20 @@ export interface Employee {
   maritalStatus: string;
   bloodGroup: string;
   nationality: string;
+  aadhaarNumber?: string;
+  panNumber?: string;
+  employeeNumberSeries?: string;
+  reportingManager?: string;
+  referredBy?: string;
+  probationPeriod?: string;
+  confirmationDate?: string;
+  emergencyContactName?: string;
+  emergencyContactNumber?: string;
+  fatherName?: string;
+  spouseName?: string;
+  onboardingPolicy?: string;
+  grade?: string;
+  attendanceScheme?: string;
   address: string;
   city: string;
   state: string;
@@ -91,6 +105,20 @@ export const employees: Employee[] = [
     maritalStatus: "Married",
     bloodGroup: "B+",
     nationality: "Indian",
+    aadhaarNumber: "1234 5678 9012",
+    panNumber: "ABCDE1234F",
+    employeeNumberSeries: "Corporate 2026",
+    reportingManager: "Vikram Nair",
+    referredBy: "Internal Referral",
+    probationPeriod: "6 Months",
+    confirmationDate: "2021-09-15",
+    emergencyContactName: "Priya Sharma",
+    emergencyContactNumber: "+91 98765 43299",
+    fatherName: "Ramesh Sharma",
+    spouseName: "Priya Sharma",
+    onboardingPolicy: "Standard Onboarding Policy 2026",
+    grade: "G4",
+    attendanceScheme: "General Day Shift",
     address: "42, Koramangala 5th Block",
     city: "Bangalore",
     state: "Karnataka",

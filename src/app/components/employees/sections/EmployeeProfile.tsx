@@ -115,10 +115,26 @@ export function EmployeeProfile({ employee }: Props) {
       <SectionCard title="Work Details" icon={Briefcase}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <InfoCell label="Employee ID"    value={employee.employeeId}  />
+          <InfoCell label="Employee Number Series" value={employee.employeeNumberSeries || "—"} />
           <InfoCell label="Department"     value={employee.department}  />
           <InfoCell label="Team"           value={employee.team}        />
           <InfoCell label="Designation"    value={employee.designation} />
+          <InfoCell label="Grade"          value={employee.grade || "—"} />
           <InfoCell label="Work Location"  value={employee.location}    />
+          <InfoCell label="Reporting Manager" value={employee.reportingManager || "—"} />
+          <InfoCell label="Attendance Scheme" value={employee.attendanceScheme || "—"} />
+          <InfoCell label="Employee Status" value={employee.status} />
+          <InfoCell label="Date Of Joining" value={new Date(employee.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })} />
+          <InfoCell label="Probation Period" value={employee.probationPeriod || "—"} />
+          <InfoCell label="Confirmation Date" value={employee.confirmationDate ? new Date(employee.confirmationDate).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }) : "—"} />
+          <InfoCell label="Referred By" value={employee.referredBy || "—"} />
+          <InfoCell label="Employee Onboarding Policy" value={employee.onboardingPolicy || "—"} />
+          <InfoCell label="Aadhaar Number" value={employee.aadhaarNumber || "—"} />
+          <InfoCell label="PAN Number" value={employee.panNumber || "—"} />
+          <InfoCell label="Father's Name" value={employee.fatherName || "—"} />
+          <InfoCell label="Spouse Name" value={employee.spouseName || "—"} />
+          <InfoCell label="Emergency Contact Name" value={employee.emergencyContactName || "—"} />
+          <InfoCell label="Emergency Contact Number" value={employee.emergencyContactNumber || "—"} />
         </div>
       </SectionCard>
     </div>
