@@ -105,7 +105,7 @@ export function useApplyLeave(employee: { employee_code: string; employee_name: 
           to_half: payload.to_half,
           total_days: payload.total_days,
           reason: payload.reason,
-          status: "SUBMITTED",
+          status: payload.status ?? "SUBMITTED",
           applied_on: todayISO(),
           approved_at: null,
         };

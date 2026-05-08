@@ -17,7 +17,7 @@ function BoolPill({ v }: { v: boolean }) {
   );
 }
 
-export function AdminLeaveTypeMaster() {
+export function AdminLeaveTypeMaster({ onAddNewLeaveType }: { onAddNewLeaveType?: () => void }) {
   const [query, setQuery] = useState("");
   const [activeOnly, setActiveOnly] = useState(true);
 
@@ -35,6 +35,10 @@ export function AdminLeaveTypeMaster() {
   }, [query, activeOnly]);
 
   const openCreate = () => {
+    if (onAddNewLeaveType) {
+      onAddNewLeaveType();
+      return;
+    }
     alert("Create/Edit drawer form is next. UI scaffold is ready.");
   };
 

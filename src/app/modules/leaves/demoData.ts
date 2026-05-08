@@ -5,6 +5,12 @@ export const DEMO_LEAVE_TYPES: LeaveTypeRef[] = [
   { id: "lt-2", name: "Sick Leave", code: "SL", color_code: "#495057", is_paid: true },
   { id: "lt-3", name: "Casual Leave", code: "CL", color_code: "#6C757D", is_paid: true },
   { id: "lt-4", name: "Loss of Pay", code: "LOP", color_code: "#ADB5BD", is_paid: false },
+  { id: "lt-5", name: "Comp Off", code: "CO", color_code: "#495057", is_paid: true },
+  { id: "lt-6", name: "Short Leave", code: "SHL", color_code: "#6C757D", is_paid: true },
+  { id: "lt-7", name: "Out Duty", code: "OD", color_code: "#495057", is_paid: true },
+  { id: "lt-8", name: "WFH", code: "WFH", color_code: "#343A40", is_paid: true },
+  { id: "lt-9", name: "Gate Pass", code: "GP", color_code: "#868E96", is_paid: true },
+  { id: "lt-10", name: "Overtime", code: "OT", color_code: "#212529", is_paid: true },
 ];
 
 export const DEMO_BALANCES: LeaveBalanceAPI[] = [

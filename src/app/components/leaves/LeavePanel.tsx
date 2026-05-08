@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Badge } from "../ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { cn } from "../ui/utils";
 import { HolidayCalendarView } from "./HolidayCalendarView";
 import {
@@ -28,7 +27,7 @@ import {
   useRejectLeave,
   useUpcomingHolidays,
 } from "../../modules/leaves/useLeaves";
-import type { HolidayAPI, LeaveApplicationAPI, LeaveBalanceAPI } from "../../modules/leaves/types";
+import type { HolidayAPI, LeaveApplicationAPI, LeaveBalanceAPI, LeaveTypeRef } from "../../modules/leaves/types";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   APPROVED: "default",
@@ -185,7 +184,7 @@ function ApplicationsTable({ applications }: { applications: LeaveApplicationAPI
                         <p className="text-sm font-medium text-foreground">{app.leave_type_detail?.name ?? "Leave"}</p>
                         <p className="text-xs text-muted-foreground">{app.leave_type_detail?.is_paid ? "Paid" : "Unpaid"}</p>
                       </div>
-                    </div>
+                    </div>  
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">{formatShortDate(app.from_date)}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">{formatShortDate(app.to_date)}</td>
@@ -274,10 +273,12 @@ function ApplyLeaveForm({
   employee,
   onSuccess,
   balances,
+  prefillLeaveType,
 }: {
   employee: { employee_code: string; employee_name: string };
   balances: LeaveBalanceAPI[];
   onSuccess: () => void;
+  prefillLeaveType?: string;
 }) {
   const { data: leaveTypes = [] } = useLeaveTypes();
   const applyLeave = useApplyLeave(employee);
@@ -290,6 +291,14 @@ function ApplyLeaveForm({
   const [reason, setReason] = useState("");
   const [contactDuringLeave, setContactDuringLeave] = useState("");
   const [documentUrl, setDocumentUrl] = useState("");
+  const [submitMode, setSubmitMode] = useState<"DRAFT" | "SUBMITTED">("SUBMITTED");
+
+  useEffect(() => {
+    if (!prefillLeaveType) return;
+    if (leaveTypes.some((lt) => lt.id === prefillLeaveType)) {
+      setLeaveType(prefillLeaveType);
+    }
+  }, [prefillLeaveType, leaveTypes]);
 
   const totalDays = useMemo(() => {
     if (!fromDate || !toDate) return 0;
@@ -331,6 +340,7 @@ function ApplyLeaveForm({
             reason: reason.trim(),
             contact_during_leave: contactDuringLeave.trim() || undefined,
             document_url: documentUrl.trim() || undefined,
+            status: submitMode,
           },
           {
             onSuccess: () => {
@@ -361,6 +371,12 @@ function ApplyLeaveForm({
             Employee: {employee.employee_code}
           </span>
         </div>
+      </div>
+
+      <div className="mb-4 rounded-lg border border-border bg-secondary/40 p-3">
+        <p className="text-xs text-muted-foreground">
+          Every submitted request is routed to <span className="font-semibold text-foreground">Manager and Admin</span> for approval.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -465,18 +481,27 @@ function ApplyLeaveForm({
 
       {applyLeave.isSuccess && (
         <div className="mt-4 rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground">
-          Leave application submitted successfully.
+          {submitMode === "DRAFT" ? "Leave application saved as draft." : "Leave application submitted to manager and admin for approval."}
         </div>
       )}
 
       <div className="mt-5 flex items-center justify-end gap-3">
         <button
           type="submit"
+          onClick={() => setSubmitMode("DRAFT")}
+          disabled={applyLeave.isPending || !leaveType || !fromDate || !toDate || !reason.trim() || totalDays <= 0}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-secondary border border-border text-foreground hover:bg-background"
+        >
+          Create Draft
+        </button>
+        <button
+          type="submit"
+          onClick={() => setSubmitMode("SUBMITTED")}
           disabled={applyLeave.isPending || !canSubmit}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-foreground text-primary-foreground hover:bg-accent"
         >
           <Send className="w-4 h-4" />
-          {applyLeave.isPending ? "Submitting..." : "Submit Application"}
+          {applyLeave.isPending ? "Submitting..." : "Submit for Approval"}
         </button>
       </div>
     </form>
@@ -636,7 +661,9 @@ export function LeavePanel({ mode }: { mode: "employee" | "admin" }) {
 
   const [activeTab, setActiveTab] = useState(mode === "admin" ? "approvals" : "dashboard");
   const [holidayView, setHolidayView] = useState<"list" | "calendar">("list");
+  const [prefillLeaveType, setPrefillLeaveType] = useState("");
   const year = new Date().getFullYear();
+  const { data: leaveTypes = [] } = useLeaveTypes();
 
   const balancesQ = useMyLeaveBalances(employee_code);
   const appsQ = useMyLeaveApplications(employee_code);
@@ -724,117 +751,157 @@ export function LeavePanel({ mode }: { mode: "employee" | "admin" }) {
     </div>
   );
 
+  const employeeSections = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "balances", label: "Balance Leaves" },
+    { id: "applications", label: "My Applications" },
+    { id: "apply", label: "Apply Leave" },
+    { id: "holidays", label: "Holiday Calendar" },
+  ] as const;
+  const adminSections = [
+    { id: "approvals", label: "Approvals" },
+    { id: "all", label: "All Applications" },
+  ] as const;
+
+  const quickButtonConfig: Array<{ button: string; lookupName?: string }> = [
+    { button: "Apply Leave" },
+  ];
+
+  const quickActions = quickButtonConfig.map((item) => {
+    const leaveTypeMatch =
+      item.lookupName
+        ? leaveTypes.find((lt) => lt.name.toLowerCase() === item.lookupName?.toLowerCase())
+        : undefined;
+    return {
+      label: item.button,
+      leaveTypeId: leaveTypeMatch?.id,
+    };
+  });
+
+  const renderEmployeeContent = () => {
+    if (activeTab === "dashboard") return dashboard;
+    if (activeTab === "balances") return <BalanceCards balances={balances} />;
+    if (activeTab === "applications") return <ApplicationsTable applications={applications} />;
+    if (activeTab === "apply") {
+      return (
+        <ApplyLeaveForm
+          employee={{ employee_code, employee_name }}
+          balances={balances}
+          prefillLeaveType={prefillLeaveType}
+          onSuccess={() => {
+            appsQ.refresh();
+            balancesQ.refresh();
+            setActiveTab("applications");
+          }}
+        />
+      );
+    }
+    if (activeTab === "holidays") {
+      return (
+        <div className="space-y-4">
+          <div className="flex gap-1 p-1 bg-secondary rounded-lg w-fit">
+            {([
+              { id: "list", label: "List View" },
+              { id: "calendar", label: "Calendar View" },
+            ] as const).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setHolidayView(t.id)}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150",
+                  holidayView === t.id
+                    ? "bg-card text-foreground shadow-sm border border-border"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {holidayView === "calendar" ? (
+            <HolidayCalendarView holidays={holidaysQ.data} initialYear={year} />
+          ) : (
+            <HolidaysYearList holidays={holidaysQ.data} />
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderAdminContent = () => {
+    if (activeTab === "approvals") {
+      return (
+        <AdminLeaveApprovalView
+          applications={allAppsQ.data}
+          onDataChange={() => {
+            allAppsQ.refresh();
+          }}
+        />
+      );
+    }
+    return <ApplicationsTable applications={allAppsQ.data} />;
+  };
+
   return (
     <div className="p-6 space-y-6">
       {mode === "employee" && (
-        <div className="flat-card bg-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flat-card bg-card p-5 flex flex-col gap-4">
           <div>
             <h1 className="text-xl font-bold text-foreground tracking-tight">My Leaves</h1>
             <p className="text-sm text-muted-foreground mt-1">Balances, applications and holiday calendar</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setActiveTab("apply")}
-            className="flex items-center gap-2 px-4 py-2.5 bg-foreground text-primary-foreground text-sm font-medium rounded-lg hover:bg-accent transition-colors self-start md:self-auto"
-          >
-            <Plus className="w-4 h-4" /> Apply Leave
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {quickActions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => {
+                  setActiveTab("apply");
+                  setPrefillLeaveType(action.leaveTypeId ?? "");
+                }}
+                className="px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-secondary text-foreground hover:bg-background transition-colors"
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full justify-start">
-          {mode === "employee" ? (
-            <>
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="balances">Balance Leaves</TabsTrigger>
-              <TabsTrigger value="applications">My Applications</TabsTrigger>
-              <TabsTrigger value="apply">Apply Leave</TabsTrigger>
-              <TabsTrigger value="holidays">Holiday Calendar</TabsTrigger>
-            </>
-          ) : (
-            <>
-              <TabsTrigger value="approvals">Approvals</TabsTrigger>
-              <TabsTrigger value="all">All Applications</TabsTrigger>
-            </>
-          )}
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-[250px_minmax(0,1fr)] gap-6 items-start">
+        <aside className="flat-card bg-card p-3 sticky top-4">
+          <p className="px-3 pb-3 text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+            {mode === "employee" ? "Leave Sections" : "Approval Sections"}
+          </p>
+          <nav className="space-y-0.5">
+            {(mode === "employee" ? employeeSections : adminSections).map((section) => {
+              const isActive = activeTab === section.id;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveTab(section.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2.5 text-left rounded-lg relative transition-all duration-150 text-sm font-medium",
+                    isActive
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  )}
+                >
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
+                  )}
+                  <span className="truncate">{section.label}</span>
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-        {mode === "employee" && (
-          <>
-            <TabsContent value="dashboard" className="pt-2">
-              {dashboard}
-            </TabsContent>
-
-            <TabsContent value="balances" className="pt-2">
-              <BalanceCards balances={balances} />
-            </TabsContent>
-
-            <TabsContent value="applications" className="pt-2">
-              <ApplicationsTable applications={applications} />
-            </TabsContent>
-
-            <TabsContent value="apply" className="pt-2">
-              <ApplyLeaveForm
-                employee={{ employee_code, employee_name }}
-                balances={balances}
-                onSuccess={() => {
-                  appsQ.refresh();
-                  balancesQ.refresh();
-                  setActiveTab("applications");
-                }}
-              />
-            </TabsContent>
-
-            <TabsContent value="holidays" className="pt-2">
-              <div className="space-y-4">
-                <div className="flex gap-1 p-1 bg-secondary rounded-lg w-fit">
-                  {([
-                    { id: "list", label: "List View" },
-                    { id: "calendar", label: "Calendar View" },
-                  ] as const).map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setHolidayView(t.id)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150",
-                        holidayView === t.id
-                          ? "bg-card text-foreground shadow-sm border border-border"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {holidayView === "calendar" ? (
-                  <HolidayCalendarView holidays={holidaysQ.data} initialYear={year} />
-                ) : (
-                  <HolidaysYearList holidays={holidaysQ.data} />
-                )}
-              </div>
-            </TabsContent>
-          </>
-        )}
-
-        {mode === "admin" && (
-          <>
-            <TabsContent value="approvals" className="pt-2">
-              <AdminLeaveApprovalView
-                applications={allAppsQ.data}
-                onDataChange={() => {
-                  allAppsQ.refresh();
-                }}
-              />
-            </TabsContent>
-            <TabsContent value="all" className="pt-2">
-              <ApplicationsTable applications={allAppsQ.data} />
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
+        <div>{mode === "employee" ? renderEmployeeContent() : renderAdminContent()}</div>
+      </div>
     </div>
   );
 }

@@ -1,49 +1,25 @@
-import { useMemo, useState } from "react";
-import {
-  ChevronDown,
-  Download,
-  Filter,
-  Search,
-  SlidersHorizontal,
-  StickyNote,
-} from "lucide-react";
-import { Input } from "../../../../components/ui/input";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "../../../../components/ui/pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../../components/ui/table";
+import { useEffect, useMemo, useState } from "react";
+import { Download, SlidersHorizontal } from "lucide-react";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "../../../../components/ui/pagination";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
 import { cn } from "../../../../components/ui/utils";
 import { AdminLeaveRequestDrawer } from "./components/AdminLeaveRequestDrawer";
 import { ADMIN_LEAVE_REQUESTS } from "../../../../modules/adminLeave/mock";
-import type { AdminLeaveRequestRow, LeaveRequestStatus } from "../../../../modules/adminLeave/types";
+import { AdvancedFilterDrawer, type SavedView } from "../../../../components/filters/AdvancedFilterDrawer";
+import { CategoryFilter } from "../../../../components/filters/CategoryFilter";
+import { SearchFilter } from "../../../../components/filters/SearchFilter";
+import { StatusFilter } from "../../../../components/filters/StatusFilter";
+import { DEFAULT_ADVANCED_FILTERS, LEAVE_CATEGORY_OPTIONS, LEAVE_STATUS_OPTIONS, type AdvancedLeaveFilters } from "../../../../components/filters/constants";
+import type { AdminLeaveRequestRow, LeaveCategory, LeaveRequestStatus } from "../../../../modules/adminLeave/types";
 
 const STATUS_BADGE: Record<LeaveRequestStatus, string> = {
   DRAFT: "bg-secondary text-foreground border-border",
   SUBMITTED: "bg-secondary text-foreground border-border",
   APPROVED: "bg-foreground text-primary-foreground border-border",
+  PENDING: "bg-secondary text-foreground border-border",
   REJECTED: "bg-secondary text-foreground border-border",
   CANCELLED: "bg-secondary text-foreground border-border",
   REVOKED: "bg-secondary text-foreground border-border",
-};
-
-type SavedView = {
-  id: string;
-  name: string;
-  query: string;
-  status: LeaveRequestStatus | "ALL";
-  department: string | "ALL";
 };
 
 const SAVED_VIEWS_KEY = "hrms-admin-leave-saved-views";
@@ -53,7 +29,11 @@ function readViews(): SavedView[] {
     const raw = localStorage.getItem(SAVED_VIEWS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as SavedView[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((view) => ({
+      ...view,
+      advancedFilters: view.advancedFilters ?? DEFAULT_ADVANCED_FILTERS,
+    }));
   } catch {
     return [];
   }
@@ -91,8 +71,11 @@ function Checkbox({ checked, onChange }: { checked: boolean; onChange: (v: boole
 
 export function AdminLeaveRequests() {
   const [query, setQuery] = useState("");
+  const [searchValue, setSearchValue] = useState("");
+  const [category, setCategory] = useState<LeaveCategory | "ALL">("ALL");
   const [status, setStatus] = useState<LeaveRequestStatus | "ALL">("ALL");
-  const [department, setDepartment] = useState<string | "ALL">("ALL");
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedLeaveFilters>(DEFAULT_ADVANCED_FILTERS);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drawerRow, setDrawerRow] = useState<AdminLeaveRequestRow | null>(null);
 
@@ -101,25 +84,46 @@ export function AdminLeaveRequests() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  const departments = useMemo(() => {
+  const departmentOptions = useMemo(() => {
     const all = Array.from(new Set(ADMIN_LEAVE_REQUESTS.map((r) => r.employee.department))).sort();
-    return ["ALL", ...all] as const;
+    return ["ALL", ...all];
   }, []);
 
+  const employeeOptions = useMemo(() => {
+    const all = Array.from(new Set(ADMIN_LEAVE_REQUESTS.map((r) => r.employee.employee_name))).sort();
+    return ["ALL", ...all];
+  }, []);
+
+  const locationOptions = useMemo(() => ["ALL"], []);
+  const businessUnitOptions = useMemo(() => ["ALL"], []);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setQuery(searchValue.trim());
+      setPage(1);
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchValue]);
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.toLowerCase();
     return ADMIN_LEAVE_REQUESTS.filter((r) => {
-      const matchStatus = status === "ALL" || r.status === status;
-      const matchDept = department === "ALL" || r.employee.department === department;
       const matchQuery =
         !q ||
         r.employee.employee_name.toLowerCase().includes(q) ||
         r.employee.employee_code.toLowerCase().includes(q) ||
         r.leave_type.name.toLowerCase().includes(q) ||
         r.leave_type.code.toLowerCase().includes(q);
-      return matchStatus && matchDept && matchQuery;
+
+      const matchStatus = status === "ALL" || r.status === status;
+      const matchCategory = category === "ALL" || r.category === category;
+      const matchDepartment =
+        advancedFilters.department === "ALL" || r.employee.department === advancedFilters.department;
+
+      return matchQuery && matchStatus && matchCategory && matchDepartment;
     });
-  }, [query, status, department]);
+  }, [query, status, category, advancedFilters]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const clampedPage = Math.min(page, pageCount);
@@ -130,10 +134,19 @@ export function AdminLeaveRequests() {
 
   const selectedCount = Object.values(selected).filter(Boolean).length;
 
+  const activeFilterCount = [
+    searchValue ? 1 : 0,
+    category !== "ALL" ? 1 : 0,
+    status !== "ALL" ? 1 : 0,
+    Object.values(advancedFilters).filter((value) => value !== "ALL" && value !== "").length,
+  ].reduce((total, next) => total + next, 0);
+
   const applyView = (v: SavedView) => {
+    setSearchValue(v.query);
     setQuery(v.query);
+    setCategory(v.category);
     setStatus(v.status);
-    setDepartment(v.department);
+    setAdvancedFilters(v.advancedFilters);
     setActiveViewId(v.id);
     setPage(1);
   };
@@ -142,41 +155,91 @@ export function AdminLeaveRequests() {
     <div className="space-y-5">
       {/* Toolbar */}
       <div className="flat-card bg-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-border flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="px-6 py-4 border-b border-border flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-foreground">Leave Requests Management</h2>
             <p className="text-xs text-muted-foreground mt-1">
-              Enterprise table with filters, saved views, bulk actions, export, and audit-ready details.
+              Enterprise table with focused filters, saved presets, bulk actions, export, and audit-ready details.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="relative w-full sm:w-[320px]">
-              <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-              <Input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search employee, code, leave type…"
-                className="pl-9"
-              />
-            </div>
-
+          <div className="grid w-full gap-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:w-auto lg:grid-cols-[minmax(240px,360px)_auto_auto]">
+            <SearchFilter
+              value={searchValue}
+              onChange={(value) => {
+                setSearchValue(value);
+              }}
+              onClear={() => {
+                setSearchValue("");
+                setQuery("");
+                setPage(1);
+              }}
+            />
+            <CategoryFilter
+              value={category}
+              options={LEAVE_CATEGORY_OPTIONS}
+              onChange={(value) => {
+                setCategory(value as LeaveCategory | "ALL");
+                setActiveViewId("ALL");
+                setPage(1);
+              }}
+            />
+            <StatusFilter
+              value={status}
+              options={LEAVE_STATUS_OPTIONS}
+              onChange={(value) => {
+                setStatus(value as LeaveRequestStatus | "ALL");
+                setActiveViewId("ALL");
+                setPage(1);
+              }}
+            />
+            <AdvancedFilterDrawer
+              open={drawerOpen}
+              onOpenChange={setDrawerOpen}
+              query={searchValue}
+              category={category}
+              status={status}
+              advancedFilters={advancedFilters}
+              onFilterChange={(key, value) => {
+                setAdvancedFilters((prev) => ({ ...prev, [key]: value }));
+                setActiveViewId("ALL");
+                setPage(1);
+              }}
+              onReset={() => {
+                setSearchValue("");
+                setQuery("");
+                setCategory("ALL");
+                setStatus("ALL");
+                setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
+                setActiveViewId("ALL");
+                setPage(1);
+              }}
+              onSaveView={(name) => {
+                const next: SavedView = {
+                  id: `view-${Date.now()}`,
+                  name,
+                  query: searchValue,
+                  category,
+                  status,
+                  advancedFilters,
+                };
+                const updated = [next, ...views];
+                setViews(updated);
+                writeViews(updated);
+                setActiveViewId(next.id);
+              }}
+              views={views}
+              activeViewId={activeViewId}
+              onApplyView={applyView}
+              departmentOptions={departmentOptions}
+              employeeOptions={employeeOptions}
+              locationOptions={locationOptions}
+              businessUnitOptions={businessUnitOptions}
+            />
             <button
               type="button"
-              className="px-3 py-2 rounded-lg text-xs font-semibold bg-secondary border border-border text-foreground hover:bg-background transition-colors inline-flex items-center gap-2"
-            >
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              Advanced Filters
-            </button>
-
-            <button
-              type="button"
-              className="px-3 py-2 rounded-lg text-xs font-semibold bg-foreground text-primary-foreground hover:bg-accent transition-colors inline-flex items-center gap-2"
+              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-900"
               onClick={() => {
-                // demo export
                 const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -190,114 +253,11 @@ export function AdminLeaveRequests() {
               Export
             </button>
           </div>
-        </div>
 
-        {/* Saved views + simple filters */}
-        <div className="px-6 py-4 border-b border-border flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              Saved Views
-            </span>
-            <div className="flex gap-1 p-1 bg-secondary rounded-lg overflow-x-auto">
-              <button
-                type="button"
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
-                  activeViewId === "ALL"
-                    ? "bg-card text-foreground shadow-sm border border-border"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => {
-                  setActiveViewId("ALL");
-                  setQuery("");
-                  setStatus("ALL");
-                  setDepartment("ALL");
-                  setPage(1);
-                }}
-              >
-                All
-              </button>
-              {views.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  className={cn(
-                    "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
-                    activeViewId === v.id
-                      ? "bg-card text-foreground shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  onClick={() => applyView(v)}
-                >
-                  {v.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <select
-                value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value as LeaveRequestStatus | "ALL");
-                  setActiveViewId("ALL");
-                  setPage(1);
-                }}
-                className="flat-input px-3 py-2 text-sm font-medium cursor-pointer appearance-none pr-8"
-              >
-                <option value="ALL">All Status</option>
-                <option value="SUBMITTED">Submitted</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="CANCELLED">Cancelled</option>
-                <option value="DRAFT">Draft</option>
-                <option value="REVOKED">Revoked</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            <div className="relative">
-              <select
-                value={department}
-                onChange={(e) => {
-                  setDepartment(e.target.value);
-                  setActiveViewId("ALL");
-                  setPage(1);
-                }}
-                className="flat-input px-3 py-2 text-sm font-medium cursor-pointer appearance-none pr-8"
-              >
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d === "ALL" ? "All Departments" : d}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            <button
-              type="button"
-              className="px-3 py-2 rounded-lg text-xs font-semibold bg-secondary border border-border text-foreground hover:bg-background transition-colors inline-flex items-center gap-2"
-              onClick={() => {
-                const name = prompt("Saved view name?");
-                if (!name?.trim()) return;
-                const next: SavedView = {
-                  id: `view-${Date.now()}`,
-                  name: name.trim(),
-                  query,
-                  status,
-                  department,
-                };
-                const updated = [next, ...views];
-                setViews(updated);
-                writeViews(updated);
-                setActiveViewId(next.id);
-              }}
-            >
-              <StickyNote className="w-4 h-4 text-muted-foreground" />
-              Save View
-            </button>
+          <div className="flex items-center gap-2 text-xs text-neutral-400">
+            <span>{activeFilterCount} Active Filters</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
+            <span>{filtered.length} records</span>
           </div>
         </div>
 

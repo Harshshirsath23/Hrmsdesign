@@ -4,7 +4,7 @@ import { cn } from "../../../../components/ui/utils";
 import { HolidayCalendarView } from "../../../../components/leaves/HolidayCalendarView";
 import { useUpcomingHolidays } from "../../../../modules/leaves/useLeaves";
 
-export function AdminHolidayCalendarManagement() {
+export function AdminHolidayCalendarManagement({ onAddHoliday }: { onAddHoliday?: () => void }) {
   const [view, setView] = useState<"list" | "calendar">("calendar");
   const year = new Date().getFullYear();
   const holidaysQ = useUpcomingHolidays(year);
@@ -51,7 +51,13 @@ export function AdminHolidayCalendarManagement() {
             <button
               type="button"
               className="px-3 py-2 rounded-lg text-xs font-semibold bg-foreground text-primary-foreground hover:bg-accent transition-colors inline-flex items-center gap-2"
-              onClick={() => alert("CRUD drawer is next (add/edit holidays).")}
+              onClick={() => {
+                if (onAddHoliday) {
+                  onAddHoliday();
+                  return;
+                }
+                alert("CRUD drawer is next (add/edit holidays).");
+              }}
             >
               <Plus className="w-4 h-4" />
               Add Holiday

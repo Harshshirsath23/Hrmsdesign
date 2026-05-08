@@ -1,11 +1,15 @@
 export type LeaveDuration = "FULL" | "HALF" | "HOURLY";
 
 export type PayrollLockStatus = "Unlocked" | "Locked";
+export type LeavePriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type LeaveCategory = "LEAVE" | "COMP_OFF" | "SHORT_LEAVE" | "OUT_DUTY" | "WFH" | "GATE_PASS" | "OVERTIME";
+export type AdminActorRole = "employee" | "manager" | "HR" | "admin" | "superadmin";
 
 export type LeaveRequestStatus =
   | "DRAFT"
   | "SUBMITTED"
   | "APPROVED"
+  | "PENDING"
   | "REJECTED"
   | "CANCELLED"
   | "REVOKED";
@@ -14,6 +18,7 @@ export interface AdminLeaveEmployeeRef {
   employee_code: string;
   employee_name: string;
   department: string;
+  designation?: string;
   avatarColor?: string;
   initials?: string;
 }
@@ -52,8 +57,13 @@ export interface LeaveAuditEvent {
   id: string;
   at: string;
   actor: string;
+  actor_role?: AdminActorRole;
   action: string;
   meta?: string;
+  previous_value?: string;
+  new_value?: string;
+  ip_address?: string;
+  device_info?: string;
 }
 
 export interface LeaveLedgerImpactLine {
@@ -76,9 +86,13 @@ export interface AdminLeaveRequestRow {
   reason: string;
   backup_employee?: string;
   status: LeaveRequestStatus;
+  priority?: LeavePriority;
+  workflow_stage?: string;
+  category?: LeaveCategory;
   current_approver?: string;
   payroll_lock: PayrollLockStatus;
   workflow_level: number;
+  deleted_at?: string | null;
 
   approval_history: LeaveApprovalStep[];
   comments: LeaveComment[];

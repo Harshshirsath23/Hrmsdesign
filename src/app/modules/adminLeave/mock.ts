@@ -5,6 +5,12 @@ const TYPES: AdminLeaveTypeRef[] = [
   { id: "lt-sl", code: "SL", name: "Sick Leave", is_paid: true, is_active: true },
   { id: "lt-cl", code: "CL", name: "Casual Leave", is_paid: true, is_active: true },
   { id: "lt-lop", code: "LOP", name: "Loss of Pay", is_paid: false, is_active: true },
+  { id: "lt-co", code: "CO", name: "Comp Off", is_paid: true, is_active: true },
+  { id: "lt-shl", code: "SHL", name: "Short Leave", is_paid: true, is_active: true },
+  { id: "lt-od", code: "OD", name: "Out Duty", is_paid: true, is_active: true },
+  { id: "lt-wfh", code: "WFH", name: "Work From Home", is_paid: true, is_active: true },
+  { id: "lt-gp", code: "GP", name: "Gate Pass", is_paid: true, is_active: true },
+  { id: "lt-ot", code: "OT", name: "Overtime", is_paid: true, is_active: true },
 ];
 
 export const LEAVE_TYPE_MASTER: LeaveTypeMasterRecord[] = [
@@ -74,11 +80,11 @@ function initials(name: string) {
 }
 
 const EMPLOYEES = [
-  { employee_code: "EMP-0001", employee_name: "Arjun Sharma", department: "Engineering", avatarColor: "#212529" },
-  { employee_code: "EMP-0002", employee_name: "Rohan Kulkarni", department: "Sales", avatarColor: "#343A40" },
-  { employee_code: "EMP-0003", employee_name: "Divya Pillai", department: "Finance", avatarColor: "#495057" },
-  { employee_code: "EMP-0004", employee_name: "Sneha Krishnan", department: "HR", avatarColor: "#6C757D" },
-  { employee_code: "EMP-0005", employee_name: "Vikram Mehta", department: "Product", avatarColor: "#212529" },
+  { employee_code: "EMP-0001", employee_name: "Arjun Sharma", department: "Engineering", designation: "Software Engineer", avatarColor: "#212529" },
+  { employee_code: "EMP-0002", employee_name: "Rohan Kulkarni", department: "Sales", designation: "Sales Executive", avatarColor: "#343A40" },
+  { employee_code: "EMP-0003", employee_name: "Divya Pillai", department: "Finance", designation: "Finance Analyst", avatarColor: "#495057" },
+  { employee_code: "EMP-0004", employee_name: "Sneha Krishnan", department: "HR", designation: "HRBP", avatarColor: "#6C757D" },
+  { employee_code: "EMP-0005", employee_name: "Vikram Mehta", department: "Product", designation: "Product Manager", avatarColor: "#212529" },
 ];
 
 const STATUSES = ["SUBMITTED", "APPROVED", "REJECTED", "CANCELLED"] as const;
@@ -92,6 +98,9 @@ export const ADMIN_LEAVE_REQUESTS: AdminLeaveRequestRow[] = Array.from({ length:
   end.setDate(start.getDate() + Math.max(0, days - 1));
   const toISO = (d: Date) => d.toISOString().slice(0, 10);
   const status = STATUSES[i % STATUSES.length];
+  const categories: AdminLeaveRequestRow["category"][] = ["LEAVE", "COMP_OFF", "SHORT_LEAVE", "OUT_DUTY", "WFH", "GATE_PASS", "OVERTIME"];
+  const category = categories[i % categories.length];
+  const priorityMap: AdminLeaveRequestRow["priority"][] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
   const id = `lr-${i + 1}`;
   const workflow_level = status === "SUBMITTED" ? 1 : 2;
@@ -108,9 +117,13 @@ export const ADMIN_LEAVE_REQUESTS: AdminLeaveRequestRow[] = Array.from({ length:
     reason: i % 3 === 0 ? "Personal commitment" : i % 3 === 1 ? "Medical appointment" : "Family function",
     backup_employee: i % 5 === 0 ? "Priya Nair" : undefined,
     status,
+    priority: priorityMap[i % priorityMap.length],
+    workflow_stage: status === "SUBMITTED" ? "Manager Review" : status === "APPROVED" ? "Completed" : "Closed",
+    category,
     current_approver: status === "SUBMITTED" ? "Manager" : "—",
     payroll_lock: i % 9 === 0 ? "Locked" : "Unlocked",
     workflow_level,
+    deleted_at: null,
     approval_history: [
       { level: 1, approver: "Manager", status: status === "SUBMITTED" ? "PENDING" : "APPROVED", acted_at: status === "SUBMITTED" ? undefined : new Date().toISOString() },
       { level: 2, approver: "HRBP", status: status === "APPROVED" ? "APPROVED" : status === "REJECTED" ? "REJECTED" : "PENDING", acted_at: status === "APPROVED" || status === "REJECTED" ? new Date().toISOString() : undefined },
@@ -120,7 +133,16 @@ export const ADMIN_LEAVE_REQUESTS: AdminLeaveRequestRow[] = Array.from({ length:
     ],
     attachments: i % 7 === 0 ? [{ id: `${id}-a1`, name: "Medical Certificate", url: "#", type: "pdf" }] : [],
     audit: [
-      { id: `${id}-e1`, at: new Date().toISOString(), actor: "System", action: "SUBMITTED", meta: "Submitted via ESS" },
+      {
+        id: `${id}-e1`,
+        at: new Date().toISOString(),
+        actor: "System",
+        actor_role: "admin",
+        action: "SUBMITTED",
+        meta: "Submitted via ESS",
+        ip_address: "10.10.1.25",
+        device_info: "Chrome / Windows",
+      },
     ],
     ledger_impact: [
       { id: `${id}-l1`, leave_type_code: leave_type.code, effect: "DEBIT", days, note: "Pending approval reservation" },

@@ -26,6 +26,7 @@ export interface LeaveBalanceAPI {
 export type LeaveApplicationStatus =
   | "DRAFT"
   | "SUBMITTED"
+  | "PENDING"
   | "APPROVED"
   | "REJECTED"
   | "CANCELLED"
@@ -66,5 +67,6 @@ export interface ApplyLeavePayload {
   reason: string;
   contact_during_leave?: string;
   document_url?: string;
+  status?: "DRAFT" | "SUBMITTED";
 }
 
