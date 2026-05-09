@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Outlet, useNavigate, Navigate, useLocation } from "react-router";
 import {
   LayoutDashboard, Clock, CalendarDays, Wallet, Coffee,
@@ -29,9 +29,29 @@ export function EmployeeLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  const isActive   = (path: string) => location.pathname === path;
+  const isActive = (path: string) =>
+    path === "/employee/leaves"
+      ? location.pathname.startsWith("/employee/leaves")
+      : location.pathname === path;
   const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
-  const currentPage = NAV_ITEMS.find((n) => isActive(n.path))?.label ?? "Dashboard";
+  const currentPage = useMemo(() => {
+    if (location.pathname.startsWith("/employee/leaves")) {
+      const seg = location.pathname.split("/").filter(Boolean).pop() ?? "dashboard";
+      const titles: Record<string, string> = {
+        leaves: "Leave center",
+        dashboard: "Leave · Dashboard",
+        apply: "Leave · Apply",
+        applications: "Leave · Applications",
+        balance: "Leave · Balance",
+        holidays: "Leave · Holidays",
+        team: "Leave · Team",
+        policy: "Leave · Policy",
+        notifications: "Leave · Notifications",
+      };
+      return titles[seg] ?? "Leave center";
+    }
+    return NAV_ITEMS.find((n) => isActive(n.path))?.label ?? "Dashboard";
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -169,10 +189,15 @@ export function EmployeeLayout() {
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-border
-              text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-foreground" />
+            <button
+              type="button"
+              onClick={() => navigate("/employee/leaves/notifications")}
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border
+                text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden />
             </button>
 
             <div className="w-px h-6 bg-border mx-1" />

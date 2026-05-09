@@ -100,46 +100,47 @@ export function AdminLeaveModule() {
   };
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="rounded-xl border border-white/10 bg-black text-neutral-100 p-4 shadow-xl">
+    <div className="p-6 space-y-4">
+      {/* Header */}
+      <div className="rounded-xl border border-white/10 bg-[#0f2744] text-neutral-100 p-4 shadow-xl">
         <AdminBreadcrumbs items={["Admin", "Leave Management", header.label]} />
         <div className="mt-1.5 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-semibold tracking-tight">{header.label}</h1>
             <p className="text-xs text-neutral-400 mt-1">{header.description}</p>
           </div>
-          <div className="hidden md:inline-flex items-center gap-2 rounded-lg border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-[11px] text-neutral-400">
+          <div className="hidden md:inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-neutral-400">
             <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
             Enterprise Leave Console
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-5 items-start">
-        <AdminNavRail groups={navGroups} active={active} onSelect={setActive} />
-        <div>
-          {active === "dashboard" && <SuperadminLeaveDashboard />}
-          {active === "applications" && <SuperadminLeaveRequests title="Leave Applications" />}
-          {active === "policies" && <AdminLeavePolicies onAddNewPolicy={() => openSettingsCreate("leave-policies")} />}
-          {active === "types" && <AdminLeaveTypeMaster onAddNewLeaveType={() => openSettingsCreate("leave-types")} />}
-          {active === "allocation" && <AdminPlaceholderSection title="Leave Allocation Management" />}
-          {active === "holidays" && <AdminHolidayCalendarManagement onAddHoliday={() => openSettingsCreate("holidays")} />}
-          {active === "audit" && <SuperadminAuditLogs />}
-          {active === "reports" && <SuperadminReportsAnalytics />}
-          {active === "workflow" && <SuperadminWorkflowSettings />}
-          {active === "settings" && (
-            <LeaveSettingsCenter
-              targetSection={settingsTargetSection}
-              createSignal={settingsCreateSignal}
-              onCreateHandled={() => setSettingsCreateSignal(0)}
-            />
-          )}
-          {active === "legacy-requests" && <AdminLeaveRequests />}
-          {active === "legacy-types" && <AdminLeaveTypeMaster />}
-          {active === "legacy-dashboard" && <AdminPlaceholderSection title="Legacy Admin Dashboard" />}
-        </div>
+      {/* Top Navigation Rail */}
+      <AdminNavRail groups={navGroups} active={active} onSelect={setActive} />
+
+      {/* Content */}
+      <div>
+        {active === "dashboard" && <SuperadminLeaveDashboard />}
+        {active === "applications" && <SuperadminLeaveRequests title="Leave Applications" />}
+        {active === "policies" && <AdminLeavePolicies onAddNewPolicy={() => openSettingsCreate("leave-policies")} />}
+        {active === "types" && <AdminLeaveTypeMaster onAddNewLeaveType={() => openSettingsCreate("leave-types")} />}
+        {active === "allocation" && <AdminPlaceholderSection title="Leave Allocation Management" />}
+        {active === "holidays" && <AdminHolidayCalendarManagement onAddHoliday={() => openSettingsCreate("holidays")} />}
+        {active === "audit" && <SuperadminAuditLogs />}
+        {active === "reports" && <SuperadminReportsAnalytics />}
+        {active === "workflow" && <SuperadminWorkflowSettings />}
+        {active === "settings" && (
+          <LeaveSettingsCenter
+            targetSection={settingsTargetSection}
+            createSignal={settingsCreateSignal}
+            onCreateHandled={() => setSettingsCreateSignal(0)}
+          />
+        )}
+        {active === "legacy-requests" && <AdminLeaveRequests />}
+        {active === "legacy-types" && <AdminLeaveTypeMaster />}
+        {active === "legacy-dashboard" && <AdminPlaceholderSection title="Legacy Admin Dashboard" />}
       </div>
     </div>
   );
 }
-

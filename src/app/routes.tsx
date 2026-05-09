@@ -21,7 +21,15 @@ import { InformationLayout } from "./components/employees/InformationLayout";
 import { EmployeeLayout } from "./pages/employee/EmployeeLayout";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeAttendancePage } from "./pages/employee/EmployeeAttendancePage";
-import { EmployeeLeavesPage } from "./pages/employee/EmployeeLeavesPage";
+import { EmployeeLeavesLayout } from "./pages/employee/leaves/EmployeeLeavesLayout";
+import { EmployeeLeaveDashboardPage } from "./pages/employee/leaves/EmployeeLeaveDashboardPage";
+import { EmployeeLeaveApplyPage } from "./pages/employee/leaves/EmployeeLeaveApplyPage";
+import { EmployeeLeaveApplicationsPage } from "./pages/employee/leaves/EmployeeLeaveApplicationsPage";
+import { EmployeeLeaveBalancePage } from "./pages/employee/leaves/EmployeeLeaveBalancePage";
+import { EmployeeLeaveHolidaysPage } from "./pages/employee/leaves/EmployeeLeaveHolidaysPage";
+import { EmployeeLeaveTeamCalendarPage } from "./pages/employee/leaves/EmployeeLeaveTeamCalendarPage";
+import { EmployeeLeavePolicyPage } from "./pages/employee/leaves/EmployeeLeavePolicyPage";
+import { EmployeeLeaveNotificationsPage } from "./pages/employee/leaves/EmployeeLeaveNotificationsPage";
 import { EmployeePayslipsPage } from "./pages/employee/EmployeePayslipsPage";
 import { EmployeeDocumentsPage } from "./pages/employee/EmployeeDocumentsPage";
 import { EmployeeCanteenPage } from "./pages/employee/EmployeeCanteenPage";
@@ -74,7 +82,21 @@ export const router = createBrowserRouter([
       { path: "dashboard",   Component: EmployeeDashboard },
       { path: "profile",     Component: EmployeeProfilePage },
       { path: "attendance",  Component: EmployeeAttendancePage },
-      { path: "leaves",      Component: EmployeeLeavesPage },
+      {
+        path: "leaves",
+        Component: EmployeeLeavesLayout,
+        children: [
+          { index: true, element: <Navigate to="dashboard" replace /> },
+          { path: "dashboard", Component: EmployeeLeaveDashboardPage },
+          { path: "apply", Component: EmployeeLeaveApplyPage },
+          { path: "applications", Component: EmployeeLeaveApplicationsPage },
+          { path: "balance", Component: EmployeeLeaveBalancePage },
+          { path: "holidays", Component: EmployeeLeaveHolidaysPage },
+          { path: "team", Component: EmployeeLeaveTeamCalendarPage },
+          { path: "policy", Component: EmployeeLeavePolicyPage },
+          { path: "notifications", Component: EmployeeLeaveNotificationsPage },
+        ],
+      },
       { path: "payslips",    Component: EmployeePayslipsPage },
       { path: "documents",   Component: EmployeeDocumentsPage },
       { path: "canteen",     Component: EmployeeCanteenPage },
