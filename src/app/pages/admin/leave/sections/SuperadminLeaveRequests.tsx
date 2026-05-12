@@ -33,6 +33,8 @@ export function SuperadminLeaveRequests({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<LeaveRequestStatus | "ALL" | "PENDING">("ALL");
   const [category, setCategory] = useState<LeaveCategory | "ALL">(defaultCategory);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drawerRow, setDrawerRow] = useState<AdminLeaveRequestRow | null>(null);
 
@@ -74,9 +76,15 @@ export function SuperadminLeaveRequests({
         r.employee.department.toLowerCase().includes(q) ||
         (r.employee.designation ?? "").toLowerCase().includes(q) ||
         r.leave_type.name.toLowerCase().includes(q);
-      return statusOk && categoryOk && queryOk;
+      let dateOk = true;
+      if (dateFrom || dateTo) {
+        if (dateFrom && !dateTo) dateOk = r.to_date >= dateFrom;
+        else if (!dateFrom && dateTo) dateOk = r.from_date <= dateTo;
+        else if (dateFrom && dateTo) dateOk = r.to_date >= dateFrom && r.from_date <= dateTo;
+      }
+      return statusOk && categoryOk && queryOk && dateOk;
     });
-  }, [activeRows, category, query, status]);
+  }, [activeRows, category, dateFrom, dateTo, query, status]);
 
   const selectedRows = rows.filter((r) => selected[r.id]);
 
@@ -131,6 +139,42 @@ export function SuperadminLeaveRequests({
               <option key={v} value={v}>{categoryLabel(v)}</option>
             ))}
           </select>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1 sm:flex-none sm:min-w-[9.5rem]">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">From date</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDateFrom(v);
+                  if (v && dateTo && dateTo < v) setDateTo(v);
+                }}
+                className="flat-input px-3 py-2 text-sm w-full"
+              />
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1 sm:flex-none sm:min-w-[9.5rem]">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">To date</span>
+              <input
+                type="date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) {
+                    setDateTo("");
+                    return;
+                  }
+                  if (dateFrom && v < dateFrom) {
+                    setDateTo(dateFrom);
+                    return;
+                  }
+                  setDateTo(v);
+                }}
+                className="flat-input px-3 py-2 text-sm w-full"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="px-6 py-3 border-b border-border bg-secondary/60 flex flex-wrap items-center justify-between gap-2">
@@ -208,4 +252,5 @@ export function SuperadminLeaveRequests({
     </div>
   );
 }
+
 

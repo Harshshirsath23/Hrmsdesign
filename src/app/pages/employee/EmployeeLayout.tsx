@@ -20,7 +20,6 @@ import {
   FileStack,
   Scale,
   Palmtree,
-  Users,
   ScrollText,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -37,12 +36,10 @@ const NAV_ITEMS = [
 ];
 
 const LEAVE_ITEMS = [
-  { icon: LayoutDashboard, label: "Leave Dashboard", path: "/employee/leaves/dashboard" },
   { icon: PenLine, label: "Apply Leave", path: "/employee/leaves/apply" },
   { icon: FileStack, label: "My Applications", path: "/employee/leaves/applications" },
   { icon: Scale, label: "Leave Balance", path: "/employee/leaves/balance" },
   { icon: Palmtree, label: "Holiday Calendar", path: "/employee/leaves/holidays" },
-  { icon: Users, label: "Team Calendar", path: "/employee/leaves/team" },
   { icon: ScrollText, label: "Leave Policy", path: "/employee/leaves/policy" },
   { icon: Bell, label: "Notifications", path: "/employee/leaves/notifications" },
 ];
@@ -134,9 +131,8 @@ export function EmployeeLayout() {
 
         {/* Nav items */}
         <nav
-          className={`flex-1 overflow-y-auto space-y-0.5 ${
-            collapsed ? "px-3 pt-4" : "px-3"
-          }`}
+          className={`flex-1 overflow-y-auto space-y-0.5 ${collapsed ? "px-3 pt-4" : "px-3"
+            }`}
         >
           {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
             const active = isActive(path);
@@ -149,10 +145,9 @@ export function EmployeeLayout() {
                     title={collapsed ? label : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                       transition-all duration-150 relative
-                      ${
-                        active
-                          ? "bg-secondary text-foreground font-semibold"
-                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      ${active
+                        ? "bg-secondary text-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                       }
                       ${collapsed ? "justify-center" : ""}`}
                   >
@@ -167,9 +162,8 @@ export function EmployeeLayout() {
                         <span>My Leaves</span>
 
                         <ChevronDown
-                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${
-                            leaveOpen ? "rotate-180" : ""
-                          }`}
+                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${leaveOpen ? "rotate-180" : ""
+                            }`}
                         />
                       </>
                     )}
@@ -185,10 +179,9 @@ export function EmployeeLayout() {
                             key={path}
                             onClick={() => navigate(path)}
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all
-                              ${
-                                subActive
-                                  ? "bg-secondary text-foreground font-semibold"
-                                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              ${subActive
+                                ? "bg-secondary text-foreground font-semibold"
+                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                               }`}
                           >
                             <SubIcon className="w-4 h-4 flex-shrink-0" />
@@ -209,10 +202,9 @@ export function EmployeeLayout() {
                 title={collapsed ? label : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-all duration-150 relative
-                  ${
-                    active
-                      ? "bg-secondary text-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  ${active
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }
                   ${collapsed ? "justify-center" : ""}`}
               >
@@ -358,3 +350,4 @@ export function EmployeeLayout() {
     </div>
   );
 }
+
