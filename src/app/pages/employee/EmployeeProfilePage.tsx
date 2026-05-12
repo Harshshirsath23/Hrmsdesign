@@ -247,13 +247,23 @@ function Field({
   const isBoolean = typeof value === "boolean";
   const inputType = fieldKey.toLowerCase().includes("email")
     ? "email"
-    : fieldKey.toLowerCase().includes("url") || fieldKey.toLowerCase().includes("website") || fieldKey.toLowerCase().includes("linkedin") || fieldKey.toLowerCase().includes("github") || fieldKey.toLowerCase().includes("portfolio")
-      ? "url"
-      : fieldKey.toLowerCase().includes("date") || fieldKey.toLowerCase().includes("from") || fieldKey.toLowerCase().includes("till") || fieldKey === "joiningDate" || fieldKey === "confirmationDate"
-        ? "date"
-        : fieldKey.toLowerCase().includes("number") || fieldKey === "sharePercentage" || fieldKey === "coverageAmount"
-          ? "text"
-          : "text";
+    : fieldKey.toLowerCase().includes("url") ||
+      fieldKey.toLowerCase().includes("website") ||
+      fieldKey.toLowerCase().includes("linkedin") ||
+      fieldKey.toLowerCase().includes("github") ||
+      fieldKey.toLowerCase().includes("portfolio")
+    ? "url"
+    : fieldKey.toLowerCase().includes("date") ||
+      fieldKey.toLowerCase().includes("from") ||
+      fieldKey.toLowerCase().includes("till") ||
+      fieldKey === "joiningDate" ||
+      fieldKey === "confirmationDate"
+    ? "date"
+    : fieldKey.toLowerCase().includes("number") ||
+      fieldKey === "sharePercentage" ||
+      fieldKey === "coverageAmount"
+    ? "text"
+    : "text";
 
   return (
     <label className="flex flex-col gap-1.5">
@@ -329,14 +339,11 @@ function DynamicListEditor({
           type="button"
           onClick={() => {
             const base = rows[0] ?? {};
-            const newRow = Object.keys(base).reduce(
-              (acc, key) => {
-                if (key === "id") return { ...acc, id: `${Date.now()}` };
-                if (typeof base[key] === "boolean") return { ...acc, [key]: false };
-                return { ...acc, [key]: "" };
-              },
-              {} as Record<string, unknown>
-            );
+            const newRow = Object.keys(base).reduce((acc, key) => {
+              if (key === "id") return { ...acc, id: `${Date.now()}` };
+              if (typeof base[key] === "boolean") return { ...acc, [key]: false };
+              return { ...acc, [key]: "" };
+            }, {} as Record<string, unknown>);
             onChange([...rows, newRow]);
           }}
           className="h-10 px-4 rounded-lg bg-foreground text-primary-foreground text-sm font-medium"
@@ -383,12 +390,23 @@ function PassportVisaSection({
   onChange: (v: Record<string, unknown>) => void;
 }) {
   const passportFields = [
-    "passportNumber","passportHolderName","issueDate","expiryDate",
-    "placeOfIssue","countryOfIssue","passportCategory","passportStatus",
+    "passportNumber",
+    "passportHolderName",
+    "issueDate",
+    "expiryDate",
+    "placeOfIssue",
+    "countryOfIssue",
+    "passportCategory",
+    "passportStatus",
   ];
   const visaFields = [
-    "visaType","visaNumber","visaCountry","visaSponsor",
-    "visaIssueDate","visaExpiryDate","visaStatus",
+    "visaType",
+    "visaNumber",
+    "visaCountry",
+    "visaSponsor",
+    "visaIssueDate",
+    "visaExpiryDate",
+    "visaStatus",
   ];
 
   return (
@@ -397,8 +415,13 @@ function PassportVisaSection({
         <p className="text-sm font-semibold text-foreground mb-3">Passport Details</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {passportFields.map((f) => (
-            <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={readOnly}
-              onChange={(v) => onChange({ ...data, [f]: v })} />
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={readOnly}
+              onChange={(v) => onChange({ ...data, [f]: v })}
+            />
           ))}
         </div>
       </div>
@@ -406,8 +429,13 @@ function PassportVisaSection({
         <p className="text-sm font-semibold text-foreground mb-3">Visa Details</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {visaFields.map((f) => (
-            <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={readOnly}
-              onChange={(v) => onChange({ ...data, [f]: v })} />
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={readOnly}
+              onChange={(v) => onChange({ ...data, [f]: v })}
+            />
           ))}
         </div>
       </div>
@@ -468,10 +496,21 @@ function SkillsCertificationsSection({
 // Documents Repository section renderer
 // ---------------------------------------------------------------------------
 const DOCUMENT_CATEGORIES = [
-  "PAN Card","Aadhaar Card","Resume","Offer Letter","Joining Documents",
-  "Educational Certificates","Salary Slips","Experience Letters","Passport",
-  "Visa","Tax Documents","Insurance Documents","Relieving Letter",
-  "Appraisal Letters","Increment Letters",
+  "PAN Card",
+  "Aadhaar Card",
+  "Resume",
+  "Offer Letter",
+  "Joining Documents",
+  "Educational Certificates",
+  "Salary Slips",
+  "Experience Letters",
+  "Passport",
+  "Visa",
+  "Tax Documents",
+  "Insurance Documents",
+  "Relieving Letter",
+  "Appraisal Letters",
+  "Increment Letters",
 ];
 
 function DocumentsRepositorySection({ readOnly }: { readOnly: boolean }) {
@@ -487,7 +526,17 @@ function DocumentsRepositorySection({ readOnly }: { readOnly: boolean }) {
 // ---------------------------------------------------------------------------
 // Address sub-section renderer (reused for current / permanent)
 // ---------------------------------------------------------------------------
-const ADDRESS_FIELDS = ["addressLine1","addressLine2","landmark","city","state","country","pincode","startDate","toDate"];
+const ADDRESS_FIELDS = [
+  "addressLine1",
+  "addressLine2",
+  "landmark",
+  "city",
+  "state",
+  "country",
+  "pincode",
+  "startDate",
+  "toDate",
+];
 
 function AddressesSection({
   data,
@@ -537,7 +586,12 @@ function AddressesSection({
       <div className="rounded-lg border border-border p-3">
         <p className="text-sm font-semibold text-foreground mb-3">Communication Details</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {["emergencyContactName","emergencyContactRelation","emergencyContactNumber","alternateMobileNumber"].map((f) => (
+          {[
+            "emergencyContactName",
+            "emergencyContactRelation",
+            "emergencyContactNumber",
+            "alternateMobileNumber",
+          ].map((f) => (
             <Field
               key={f}
               fieldKey={f}
@@ -559,9 +613,21 @@ function AddressesSection({
 // Profile section renderer — adds new fields not in original
 // ---------------------------------------------------------------------------
 const ORIGINAL_PROFILE_FIELDS = [
-  "employeeId","employeeCode","salutation","firstName","middleName","lastName",
-  "preferredName","officialEmail","personalEmail","workMobile","personalMobile",
-  "alternateMobileNumber","extensionNumber","username","bio",
+  "employeeId",
+  "employeeCode",
+  "salutation",
+  "firstName",
+  "middleName",
+  "lastName",
+  "preferredName",
+  "officialEmail",
+  "personalEmail",
+  "workMobile",
+  "personalMobile",
+  "alternateMobileNumber",
+  "extensionNumber",
+  "username",
+  "bio",
 ];
 
 function ProfileSection({
@@ -577,8 +643,13 @@ function ProfileSection({
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {ORIGINAL_PROFILE_FIELDS.map((f) => (
-          <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={readOnly}
-            onChange={(v) => onChange({ ...data, [f]: v })} />
+          <Field
+            key={f}
+            fieldKey={f}
+            value={data[f] ?? ""}
+            readOnly={readOnly}
+            onChange={(v) => onChange({ ...data, [f]: v })}
+          />
         ))}
       </div>
       {!readOnly && (
@@ -595,20 +666,45 @@ function ProfileSection({
 // Personal Details — adds motherName, caste, casteCategory
 // ---------------------------------------------------------------------------
 const PERSONAL_DETAIL_FIELDS = [
-  "dateOfBirth","actualDateOfBirth","gender","bloodGroup","maritalStatus",
-  "nationality","religion","caste","casteCategory","residentialStatus",
-  "placeOfBirth","identificationMark","physicallyChallenged","internationalEmployee",
-  "fatherName","motherName","spouseName",
+  "dateOfBirth",
+  "actualDateOfBirth",
+  "gender",
+  "bloodGroup",
+  "maritalStatus",
+  "nationality",
+  "religion",
+  "caste",
+  "casteCategory",
+  "residentialStatus",
+  "placeOfBirth",
+  "identificationMark",
+  "physicallyChallenged",
+  "internationalEmployee",
+  "fatherName",
+  "motherName",
+  "spouseName",
 ];
 
 // ---------------------------------------------------------------------------
 // Employment — adds subDepartment, gradeBand, joiningDate, confirmationDate, probationStatus, employeeStatus
 // ---------------------------------------------------------------------------
 const EMPLOYMENT_FIELDS = [
-  "department","subDepartment","designation","employmentType","employeeCategory",
-  "gradeBand","workLocation","shift","joiningDate","confirmationDate",
-  "probationStatus","noticePeriod","employeeStatus","reportingManager",
-  "functionalManager","hrPartner",
+  "department",
+  "subDepartment",
+  "designation",
+  "employmentType",
+  "employeeCategory",
+  "gradeBand",
+  "workLocation",
+  "shift",
+  "joiningDate",
+  "confirmationDate",
+  "probationStatus",
+  "noticePeriod",
+  "employeeStatus",
+  "reportingManager",
+  "functionalManager",
+  "hrPartner",
 ];
 
 // ---------------------------------------------------------------------------
@@ -620,7 +716,7 @@ export function EmployeeProfilePage() {
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
-  const [draft, setDraft] = useState<unknown>(null);
+  const [draft, setDraft] = useState<any>(null);
   const [pendingSections, setPendingSections] = useState<SectionKey[]>([]);
   const [banner, setBanner] = useState<BannerState>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -637,7 +733,9 @@ export function EmployeeProfilePage() {
     setLoading(false);
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+  }, []);
 
   const beginEdit = (section: SectionKey) => {
     if (!profile) return;
@@ -646,14 +744,20 @@ export function EmployeeProfilePage() {
     setBanner(null);
   };
 
-  const cancelEdit = () => { setEditingSection(null); setDraft(null); };
+  const cancelEdit = () => {
+    setEditingSection(null);
+    setDraft(null);
+  };
 
   const submitChange = (section: SectionKey) => {
     if (!profile) return;
     const current = (profile as any)[section];
 
     if (isEqualPayload(current, draft)) {
-      setBanner({ type: "error", message: "No changes detected. Update at least one field before submitting." });
+      setBanner({
+        type: "error",
+        message: "No changes detected. Update at least one field before submitting.",
+      });
       return;
     }
 
@@ -669,7 +773,10 @@ export function EmployeeProfilePage() {
     if (section === "personalDetails") {
       const next = draft as any;
       if (next.panNumber && !validatePan(next.panNumber)) {
-        setBanner({ type: "error", message: "PAN format is invalid. Expected format: ABCDE1234F." });
+        setBanner({
+          type: "error",
+          message: "PAN format is invalid. Expected format: ABCDE1234F.",
+        });
         return;
       }
       if (next.aadhaarNumber && !validateAadhaar(next.aadhaarNumber)) {
@@ -685,10 +792,16 @@ export function EmployeeProfilePage() {
         return;
       }
       if (next.aadhaarNumber && !validateAadhaar(next.aadhaarNumber)) {
-        setBanner({ type: "error", message: "Aadhaar must be a 12-digit number in statutory details." });
+        setBanner({
+          type: "error",
+          message: "Aadhaar must be a 12-digit number in statutory details.",
+        });
         return;
       }
-      if (next.bankAccounts && detectDuplicateValues(next.bankAccounts.map((e: any) => e.accountNumber))) {
+      if (
+        next.bankAccounts &&
+        detectDuplicateValues(next.bankAccounts.map((e: any) => e.accountNumber))
+      ) {
         setBanner({ type: "error", message: "Duplicate bank account numbers are not allowed." });
         return;
       }
@@ -715,11 +828,17 @@ export function EmployeeProfilePage() {
     try {
       setSubmitting(true);
       submitSectionChangeRequest({ employeeId, section, newValue: draft });
-      setBanner({ type: "success", message: "Change request submitted and awaiting admin approval." });
+      setBanner({
+        type: "success",
+        message: "Change request submitted and awaiting admin approval.",
+      });
       cancelEdit();
       refresh();
     } catch (err) {
-      setBanner({ type: "error", message: err instanceof Error ? err.message : "Failed to submit. Try again." });
+      setBanner({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to submit. Try again.",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -735,11 +854,7 @@ export function EmployeeProfilePage() {
     ...EXTRA_SECTIONS,
   ] as Array<{ key: string; label: string; editable: boolean; optional?: boolean }>;
 
-  const renderSectionBody = (
-    sectionKey: string,
-    sectionData: unknown,
-    isReadOnly: boolean
-  ) => {
+  const renderSectionBody = (sectionKey: string, sectionData: unknown, isReadOnly: boolean) => {
     // ---- Profile ----
     if (sectionKey === "profile") {
       return (
@@ -757,8 +872,13 @@ export function EmployeeProfilePage() {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {PERSONAL_DETAIL_FIELDS.map((f) => (
-            <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })} />
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={isReadOnly}
+              onChange={(v) => setDraft({ ...data, [f]: v })}
+            />
           ))}
         </div>
       );
@@ -781,8 +901,13 @@ export function EmployeeProfilePage() {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {EMPLOYMENT_FIELDS.map((f) => (
-            <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })} />
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={isReadOnly}
+              onChange={(v) => setDraft({ ...data, [f]: v })}
+            />
           ))}
         </div>
       );
@@ -792,8 +917,14 @@ export function EmployeeProfilePage() {
     if (sectionKey === "bankAndStatutoryDetails") {
       const data = sectionData as any;
       const statutoryFields = [
-        "panNumber","aadhaarNumber","uanNumber","esicNumber","pfNumber",
-        "professionalTaxNumber","passportNumber","taxRegime",
+        "panNumber",
+        "aadhaarNumber",
+        "uanNumber",
+        "esicNumber",
+        "pfNumber",
+        "professionalTaxNumber",
+        "passportNumber",
+        "taxRegime",
       ];
       return (
         <div className="space-y-4">
@@ -807,8 +938,13 @@ export function EmployeeProfilePage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {statutoryFields.map((f) => (
-              <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={isReadOnly}
-                onChange={(v) => setDraft({ ...data, [f]: v })} />
+              <Field
+                key={f}
+                fieldKey={f}
+                value={data[f] ?? ""}
+                readOnly={isReadOnly}
+                onChange={(v) => setDraft({ ...data, [f]: v })}
+              />
             ))}
           </div>
         </div>
@@ -900,13 +1036,12 @@ export function EmployeeProfilePage() {
 
     // ---- Skills & Certifications ----
     if (sectionKey === "skillsAndCertifications") {
-      const data = sectionData as { skills: Record<string, unknown>[]; certifications: Record<string, unknown>[] };
+      const data = sectionData as {
+        skills: Record<string, unknown>[];
+        certifications: Record<string, unknown>[];
+      };
       return (
-        <SkillsCertificationsSection
-          data={data}
-          readOnly={isReadOnly}
-          onChange={setDraft}
-        />
+        <SkillsCertificationsSection data={data} readOnly={isReadOnly} onChange={setDraft} />
       );
     }
 
@@ -941,15 +1076,26 @@ export function EmployeeProfilePage() {
     if (sectionKey === "emergencyAndMedical") {
       const data = sectionData as Record<string, unknown>;
       const fields = [
-        "emergencyContactName","emergencyContactNumber","relationship",
-        "medicalConditions","allergies","bloodGroup","doctorName",
-        "insuranceProvider","insurancePolicyNumber",
+        "emergencyContactName",
+        "emergencyContactNumber",
+        "relationship",
+        "medicalConditions",
+        "allergies",
+        "bloodGroup",
+        "doctorName",
+        "insuranceProvider",
+        "insurancePolicyNumber",
       ];
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {fields.map((f) => (
-            <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })} />
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={isReadOnly}
+              onChange={(v) => setDraft({ ...data, [f]: v })}
+            />
           ))}
         </div>
       );
@@ -959,14 +1105,24 @@ export function EmployeeProfilePage() {
     if (sectionKey === "insuranceDetails") {
       const data = sectionData as Record<string, unknown>;
       const fields = [
-        "policyNumber","provider","policyType","coverageAmount",
-        "startDate","endDate","nomineeName",
+        "policyNumber",
+        "provider",
+        "policyType",
+        "coverageAmount",
+        "startDate",
+        "endDate",
+        "nomineeName",
       ];
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {fields.map((f) => (
-            <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })} />
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={isReadOnly}
+              onChange={(v) => setDraft({ ...data, [f]: v })}
+            />
           ))}
         </div>
       );
@@ -988,9 +1144,14 @@ export function EmployeeProfilePage() {
       const data = sectionData as Record<string, unknown>;
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {["linkedin","github","portfolioWebsite","personalWebsite"].map((f) => (
-            <Field key={f} fieldKey={f} value={data[f] ?? ""} readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })} />
+          {["linkedin", "github", "portfolioWebsite", "personalWebsite"].map((f) => (
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={isReadOnly}
+              onChange={(v) => setDraft({ ...data, [f]: v })}
+            />
           ))}
         </div>
       );
@@ -1016,7 +1177,9 @@ export function EmployeeProfilePage() {
             fieldKey={f}
             value={v}
             readOnly={isReadOnly}
-            onChange={(nv) => setDraft({ ...(sectionData as Record<string, unknown>), [f]: nv })}
+            onChange={(nv) =>
+              setDraft({ ...(sectionData as Record<string, unknown>), [f]: nv })
+            }
           />
         ))}
       </div>
@@ -1079,7 +1242,9 @@ export function EmployeeProfilePage() {
             sectionData === undefined ||
             sectionData === null ||
             (Array.isArray(sectionData) && sectionData.length === 0) ||
-            (typeof sectionData === "object" && !Array.isArray(sectionData) && Object.keys(sectionData as object).length === 0);
+            (typeof sectionData === "object" &&
+              !Array.isArray(sectionData) &&
+              Object.keys(sectionData as object).length === 0);
 
           return (
             <section
@@ -1097,7 +1262,9 @@ export function EmployeeProfilePage() {
                       </span>
                     )}
                   </div>
-                  {isPending && <p className="text-xs text-muted-foreground mt-1">Pending Approval</p>}
+                  {isPending && (
+                    <p className="text-xs text-muted-foreground mt-1">Pending Approval</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {isEditing ? (

@@ -1,29 +1,42 @@
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation, Navigate } from "react-router";
 import {
-  LayoutDashboard, Users, Clock, CalendarDays, Wallet, FileText,
-  Bell, Building2, LogOut, Menu, ChevronRight, Sun, Moon, ClipboardCheck,
+  LayoutDashboard,
+  Users,
+  Clock,
+  CalendarDays,
+  Wallet,
+  FileText,
+  Bell,
+  Building2,
+  LogOut,
+  Menu,
+  ChevronRight,
+  Sun,
+  Moon,
+  ClipboardCheck,
   Settings2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { EmployeeProvider } from "../../context/EmployeeContext";
 
 const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "Dashboard",  path: "/admin/dashboard" },
-  { icon: Users,           label: "Employees",  path: "/admin/employees" },
-  { icon: Clock,           label: "Attendance", path: "/admin/attendance" },
-  { icon: CalendarDays,    label: "Leave",      path: "/admin/leave" },
-  { icon: Wallet,          label: "Payroll",    path: "/admin/payroll" },
-  { icon: FileText,        label: "Documents",  path: "/admin/documents" },
-  { icon: Settings2,       label: "Settings",   path: "/admin/settings" },
-  { icon: ClipboardCheck,  label: "Profile Requests", path: "/admin/profile-requests" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
+  { icon: Users, label: "Employees", path: "/admin/employees" },
+  { icon: Clock, label: "Attendance", path: "/admin/attendance" },
+  { icon: CalendarDays, label: "Leave", path: "/admin/leave" },
+  { icon: Wallet, label: "Payroll", path: "/admin/payroll" },
+  { icon: FileText, label: "Documents", path: "/admin/documents" },
+  { icon: Settings2, label: "Settings", path: "/admin/settings" },
+  { icon: ClipboardCheck, label: "Profile Requests", path: "/admin/profile-requests" },
 ];
 
 export function AdminLayout() {
   const { user, logout, isAuthenticated } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -36,12 +49,14 @@ export function AdminLayout() {
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
-  const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
   const currentPage = NAV_ITEMS.find((n) => isActive(n.path))?.label ?? "Dashboard";
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
         className={`flex flex-col flex-shrink-0 bg-card border-r border-border
@@ -49,8 +64,10 @@ export function AdminLayout() {
           ${collapsed ? "w-[72px]" : "w-60"}`}
       >
         {/* Logo */}
-        <div className={`h-16 flex items-center flex-shrink-0 border-b border-border
-          ${collapsed ? "justify-center px-0" : "px-5 gap-3"}`}>
+        <div
+          className={`h-16 flex items-center flex-shrink-0 border-b border-border
+          ${collapsed ? "justify-center px-0" : "px-5 gap-3"}`}
+        >
           <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
@@ -84,9 +101,10 @@ export function AdminLayout() {
                 title={collapsed ? label : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-all duration-150 group relative
-                  ${active
-                    ? "bg-secondary text-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  ${
+                    active
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }
                   ${collapsed ? "justify-center" : ""}`}
               >
@@ -135,7 +153,9 @@ export function AdminLayout() {
                   {user?.initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate leading-tight">{user?.name}</p>
+                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                    {user?.name}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">Administrator</p>
                 </div>
               </div>
@@ -153,14 +173,16 @@ export function AdminLayout() {
 
       {/* ── Main area ────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         {/* Topbar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0">
           <div>
             <h1 className="text-base font-semibold text-foreground">{currentPage}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               {new Date().toLocaleDateString("en-IN", {
-                weekday: "long", day: "2-digit", month: "long", year: "numeric",
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
               })}
             </p>
           </div>
@@ -177,8 +199,10 @@ export function AdminLayout() {
             </button>
 
             {/* Notifications */}
-            <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-border
-              text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative">
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-border
+              text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative"
+            >
               <Bell className="w-4 h-4" />
               <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-foreground" />
             </button>
@@ -195,7 +219,9 @@ export function AdminLayout() {
                 <div className="w-7 h-7 rounded-md bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold">
                   {user?.initials}
                 </div>
-                <span className="text-sm font-medium text-foreground hidden sm:block">{user?.name}</span>
+                <span className="text-sm font-medium text-foreground hidden sm:block">
+                  {user?.name}
+                </span>
               </button>
 
               {profileOpen && (
@@ -222,7 +248,9 @@ export function AdminLayout() {
 
         {/* Page content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
-          <Outlet />
+          <EmployeeProvider>
+            <Outlet />
+          </EmployeeProvider>
         </main>
       </div>
 

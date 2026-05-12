@@ -13,6 +13,7 @@ export interface Employee {
   avatar?: string;
   initials: string;
   avatarColor: string;
+  reportingManagerId?: string;
   // Profile details
   dateOfBirth: string;
   gender: string;
@@ -72,6 +73,55 @@ export interface Employee {
 
 export const employees: Employee[] = [
   {
+    id: "0",
+    name: "Vikram Nair",
+    employeeId: "EMP-000",
+    designation: "Managing Director",
+    department: "Executive",
+    team: "Management",
+    email: "vikram.nair@company.com",
+    phone: "+91 99999 00000",
+    joiningDate: "2015-01-01",
+    location: "Bangalore",
+    status: "Active",
+    avatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+    initials: "VN",
+    avatarColor: "#1E293B",
+    reportingManagerId: undefined, // Root
+    dateOfBirth: "1980-05-15",
+    gender: "Male",
+    maritalStatus: "Married",
+    bloodGroup: "A+",
+    nationality: "Indian",
+    address: "CEO Residence, Bangalore",
+    city: "Bangalore",
+    state: "Karnataka",
+    pincode: "560001",
+    bankName: "HDFC Bank",
+    accountNumber: "XXXX XXXX 1111",
+    ifscCode: "HDFC0001111",
+    pfNumber: "KN/BAN/00000/000",
+    esiNumber: "ESI/2015/000000",
+    family: [],
+    passportNumber: "A1111111",
+    passportExpiry: "2035-01-01",
+    visaType: "",
+    visaExpiry: "",
+    visaCountry: "",
+    positionHistory: [],
+    previousEmployment: [],
+    basicSalary: 200000,
+    hra: 80000,
+    conveyance: 5000,
+    medicalAllowance: 2500,
+    specialAllowance: 50000,
+    grossSalary: 337500,
+    pf: 15000,
+    tds: 50000,
+    netSalary: 272500,
+  },
+  {
     id: "1",
     name: "Arjun Sharma",
     employeeId: "EMP-001",
@@ -83,9 +133,11 @@ export const employees: Employee[] = [
     joiningDate: "2021-03-15",
     location: "Bangalore",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1651684215020-f7a5b6610f23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+    avatar:
+      "https://images.unsplash.com/photo-1651684215020-f7a5b6610f23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
     initials: "AS",
     avatarColor: "#4F46E5",
+    reportingManagerId: "0", // Reports to Vikram Nair
     dateOfBirth: "1992-07-20",
     gender: "Male",
     maritalStatus: "Married",
@@ -111,12 +163,36 @@ export const employees: Employee[] = [
     visaExpiry: "2024-12-31",
     visaCountry: "United States",
     positionHistory: [
-      { title: "Senior Developer", department: "Engineering", from: "2023-01-01", to: "Present", reportingTo: "Vikram Nair" },
-      { title: "Developer", department: "Engineering", from: "2021-03-15", to: "2022-12-31", reportingTo: "Vikram Nair" },
+      {
+        title: "Senior Developer",
+        department: "Engineering",
+        from: "2023-01-01",
+        to: "Present",
+        reportingTo: "Vikram Nair",
+      },
+      {
+        title: "Developer",
+        department: "Engineering",
+        from: "2021-03-15",
+        to: "2022-12-31",
+        reportingTo: "Vikram Nair",
+      },
     ],
     previousEmployment: [
-      { company: "TechSolutions Pvt Ltd", designation: "Junior Developer", from: "2018-06-01", to: "2021-03-10", reasonForLeaving: "Better Opportunity" },
-      { company: "StartupXYZ", designation: "Intern", from: "2017-11-01", to: "2018-05-31", reasonForLeaving: "Contract End" },
+      {
+        company: "TechSolutions Pvt Ltd",
+        designation: "Junior Developer",
+        from: "2018-06-01",
+        to: "2021-03-10",
+        reasonForLeaving: "Better Opportunity",
+      },
+      {
+        company: "StartupXYZ",
+        designation: "Intern",
+        from: "2017-11-01",
+        to: "2018-05-31",
+        reasonForLeaving: "Contract End",
+      },
     ],
     basicSalary: 75000,
     hra: 30000,
@@ -140,9 +216,11 @@ export const employees: Employee[] = [
     joiningDate: "2020-06-01",
     location: "Mumbai",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1706824265660-5ca5effaf122?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+    avatar:
+      "https://images.unsplash.com/photo-1706824265660-5ca5effaf122?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
     initials: "PN",
     avatarColor: "#0891B2",
+    reportingManagerId: "0", // Reports to Vikram Nair
     dateOfBirth: "1990-04-15",
     gender: "Female",
     maritalStatus: "Single",
@@ -167,11 +245,29 @@ export const employees: Employee[] = [
     visaExpiry: "2024-06-30",
     visaCountry: "United Kingdom",
     positionHistory: [
-      { title: "HR Manager", department: "Human Resources", from: "2022-07-01", to: "Present", reportingTo: "Deepa Menon" },
-      { title: "HR Executive", department: "Human Resources", from: "2020-06-01", to: "2022-06-30", reportingTo: "Deepa Menon" },
+      {
+        title: "HR Manager",
+        department: "Human Resources",
+        from: "2022-07-01",
+        to: "Present",
+        reportingTo: "Deepa Menon",
+      },
+      {
+        title: "HR Executive",
+        department: "Human Resources",
+        from: "2020-06-01",
+        to: "2022-06-30",
+        reportingTo: "Deepa Menon",
+      },
     ],
     previousEmployment: [
-      { company: "GlobalHR Solutions", designation: "HR Coordinator", from: "2016-08-01", to: "2020-05-28", reasonForLeaving: "Career Growth" },
+      {
+        company: "GlobalHR Solutions",
+        designation: "HR Coordinator",
+        from: "2016-08-01",
+        to: "2020-05-28",
+        reasonForLeaving: "Career Growth",
+      },
     ],
     basicSalary: 65000,
     hra: 26000,
@@ -195,9 +291,11 @@ export const employees: Employee[] = [
     joiningDate: "2019-09-10",
     location: "Delhi",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1625929664135-197db5f6c857?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+    avatar:
+      "https://images.unsplash.com/photo-1625929664135-197db5f6c857?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
     initials: "VM",
     avatarColor: "#059669",
+    reportingManagerId: "1", // Reports to Arjun Sharma
     dateOfBirth: "1988-12-03",
     gender: "Male",
     maritalStatus: "Married",
@@ -222,12 +320,36 @@ export const employees: Employee[] = [
     visaExpiry: "2025-03-15",
     visaCountry: "Germany",
     positionHistory: [
-      { title: "Product Manager", department: "Product", from: "2021-04-01", to: "Present", reportingTo: "CEO" },
-      { title: "Senior Business Analyst", department: "Product", from: "2019-09-10", to: "2021-03-31", reportingTo: "CTO" },
+      {
+        title: "Product Manager",
+        department: "Product",
+        from: "2021-04-01",
+        to: "Present",
+        reportingTo: "CEO",
+      },
+      {
+        title: "Senior Business Analyst",
+        department: "Product",
+        from: "2019-09-10",
+        to: "2021-03-31",
+        reportingTo: "CTO",
+      },
     ],
     previousEmployment: [
-      { company: "BigTech Corp", designation: "Business Analyst", from: "2015-01-15", to: "2019-09-05", reasonForLeaving: "Better Package" },
-      { company: "ConsultingFirm", designation: "Analyst Intern", from: "2013-06-01", to: "2014-12-31", reasonForLeaving: "Full Time Opportunity" },
+      {
+        company: "BigTech Corp",
+        designation: "Business Analyst",
+        from: "2015-01-15",
+        to: "2019-09-05",
+        reasonForLeaving: "Better Package",
+      },
+      {
+        company: "ConsultingFirm",
+        designation: "Analyst Intern",
+        from: "2013-06-01",
+        to: "2014-12-31",
+        reasonForLeaving: "Full Time Opportunity",
+      },
     ],
     basicSalary: 90000,
     hra: 36000,
@@ -251,9 +373,11 @@ export const employees: Employee[] = [
     joiningDate: "2022-01-05",
     location: "Chennai",
     status: "On Leave",
-    avatar: "https://images.unsplash.com/photo-1670852077053-6f9a8b3b0d75?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+    avatar:
+      "https://images.unsplash.com/photo-1670852077053-6f9a8b3b0d75?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
     initials: "SK",
     avatarColor: "#DC2626",
+    reportingManagerId: "2", // Reports to Priya Nair
     dateOfBirth: "1995-08-30",
     gender: "Female",
     maritalStatus: "Single",
@@ -278,10 +402,22 @@ export const employees: Employee[] = [
     visaExpiry: "2023-09-30",
     visaCountry: "Singapore",
     positionHistory: [
-      { title: "UI/UX Designer", department: "Design", from: "2022-01-05", to: "Present", reportingTo: "Anand Shenoy" },
+      {
+        title: "UI/UX Designer",
+        department: "Design",
+        from: "2022-01-05",
+        to: "Present",
+        reportingTo: "Anand Shenoy",
+      },
     ],
     previousEmployment: [
-      { company: "CreativeStudio", designation: "Junior Designer", from: "2020-07-01", to: "2021-12-31", reasonForLeaving: "Relocation" },
+      {
+        company: "CreativeStudio",
+        designation: "Junior Designer",
+        from: "2020-07-01",
+        to: "2021-12-31",
+        reasonForLeaving: "Relocation",
+      },
     ],
     basicSalary: 55000,
     hra: 22000,
@@ -305,9 +441,11 @@ export const employees: Employee[] = [
     joiningDate: "2021-11-20",
     location: "Hyderabad",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1680515837641-bb4b6cbebe8a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+    avatar:
+      "https://images.unsplash.com/photo-1680515837641-bb4b6cbebe8a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
     initials: "RK",
     avatarColor: "#7C3AED",
+    reportingManagerId: "1", // Reports to Arjun Sharma
     dateOfBirth: "1993-01-12",
     gender: "Male",
     maritalStatus: "Married",
@@ -323,7 +461,12 @@ export const employees: Employee[] = [
     pfNumber: "TS/HYD/56789/005",
     esiNumber: "ESI/2021/005678",
     family: [
-      { name: "Kavitha Kumar", relationship: "Spouse", dob: "1995-05-18", occupation: "Software Engineer" },
+      {
+        name: "Kavitha Kumar",
+        relationship: "Spouse",
+        dob: "1995-05-18",
+        occupation: "Software Engineer",
+      },
       { name: "Aryan Kumar", relationship: "Son", dob: "2021-08-10", occupation: "Infant" },
     ],
     passportNumber: "N8765432",
@@ -332,10 +475,22 @@ export const employees: Employee[] = [
     visaExpiry: "2025-01-15",
     visaCountry: "Australia",
     positionHistory: [
-      { title: "DevOps Engineer", department: "Engineering", from: "2021-11-20", to: "Present", reportingTo: "Kiran Bose" },
+      {
+        title: "DevOps Engineer",
+        department: "Engineering",
+        from: "2021-11-20",
+        to: "Present",
+        reportingTo: "Kiran Bose",
+      },
     ],
     previousEmployment: [
-      { company: "CloudTech Solutions", designation: "Systems Engineer", from: "2018-03-01", to: "2021-11-15", reasonForLeaving: "Better Growth" },
+      {
+        company: "CloudTech Solutions",
+        designation: "Systems Engineer",
+        from: "2018-03-01",
+        to: "2021-11-15",
+        reasonForLeaving: "Better Growth",
+      },
     ],
     basicSalary: 70000,
     hra: 28000,
@@ -359,7 +514,8 @@ export const employees: Employee[] = [
     joiningDate: "2023-02-14",
     location: "Pune",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1758599543146-f263d3b3321e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+    avatar:
+      "https://images.unsplash.com/photo-1758599543146-f263d3b3321e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
     initials: "AI",
     avatarColor: "#D97706",
     dateOfBirth: "1997-11-25",
@@ -386,10 +542,22 @@ export const employees: Employee[] = [
     visaExpiry: "2024-04-10",
     visaCountry: "France",
     positionHistory: [
-      { title: "Marketing Specialist", department: "Marketing", from: "2023-02-14", to: "Present", reportingTo: "Neeraj Shah" },
+      {
+        title: "Marketing Specialist",
+        department: "Marketing",
+        from: "2023-02-14",
+        to: "Present",
+        reportingTo: "Neeraj Shah",
+      },
     ],
     previousEmployment: [
-      { company: "AdAgency Pro", designation: "Content Writer", from: "2021-01-01", to: "2023-02-05", reasonForLeaving: "Higher Studies" },
+      {
+        company: "AdAgency Pro",
+        designation: "Content Writer",
+        from: "2021-01-01",
+        to: "2023-02-05",
+        reasonForLeaving: "Higher Studies",
+      },
     ],
     basicSalary: 45000,
     hra: 18000,
@@ -439,10 +607,22 @@ export const employees: Employee[] = [
     visaExpiry: "",
     visaCountry: "",
     positionHistory: [
-      { title: "Data Analyst", department: "Analytics", from: "2022-08-01", to: "2024-12-31", reportingTo: "Sanjay Patel" },
+      {
+        title: "Data Analyst",
+        department: "Analytics",
+        from: "2022-08-01",
+        to: "2024-12-31",
+        reportingTo: "Sanjay Patel",
+      },
     ],
     previousEmployment: [
-      { company: "DataFirst Inc", designation: "Junior Analyst", from: "2019-05-01", to: "2022-07-25", reasonForLeaving: "Better Opportunity" },
+      {
+        company: "DataFirst Inc",
+        designation: "Junior Analyst",
+        from: "2019-05-01",
+        to: "2022-07-25",
+        reasonForLeaving: "Better Opportunity",
+      },
     ],
     basicSalary: 58000,
     hra: 23200,
@@ -492,10 +672,22 @@ export const employees: Employee[] = [
     visaExpiry: "2024-08-20",
     visaCountry: "UAE",
     positionHistory: [
-      { title: "Finance Executive", department: "Finance", from: "2020-11-30", to: "Present", reportingTo: "CFO" },
+      {
+        title: "Finance Executive",
+        department: "Finance",
+        from: "2020-11-30",
+        to: "Present",
+        reportingTo: "CFO",
+      },
     ],
     previousEmployment: [
-      { company: "CA Firm Nair & Associates", designation: "Accounts Assistant", from: "2017-07-01", to: "2020-11-20", reasonForLeaving: "Corporate Job" },
+      {
+        company: "CA Firm Nair & Associates",
+        designation: "Accounts Assistant",
+        from: "2017-07-01",
+        to: "2020-11-20",
+        reasonForLeaving: "Corporate Job",
+      },
     ],
     basicSalary: 48000,
     hra: 19200,
@@ -509,6 +701,35 @@ export const employees: Employee[] = [
   },
 ];
 
-export const departments = ["All Departments", "Engineering", "Human Resources", "Product", "Design", "Marketing", "Analytics", "Finance"];
-export const teams = ["All Teams", "Frontend", "Infrastructure", "Talent Acquisition", "Product Strategy", "User Experience", "Digital Marketing", "Business Intelligence", "Accounts"];
-export const designations = ["All Designations", "Senior Developer", "HR Manager", "Product Manager", "UI/UX Designer", "DevOps Engineer", "Marketing Specialist", "Data Analyst", "Finance Executive"];
+export const departments = [
+  "All Departments",
+  "Engineering",
+  "Human Resources",
+  "Product",
+  "Design",
+  "Marketing",
+  "Analytics",
+  "Finance",
+];
+export const teams = [
+  "All Teams",
+  "Frontend",
+  "Infrastructure",
+  "Talent Acquisition",
+  "Product Strategy",
+  "User Experience",
+  "Digital Marketing",
+  "Business Intelligence",
+  "Accounts",
+];
+export const designations = [
+  "All Designations",
+  "Senior Developer",
+  "HR Manager",
+  "Product Manager",
+  "UI/UX Designer",
+  "DevOps Engineer",
+  "Marketing Specialist",
+  "Data Analyst",
+  "Finance Executive",
+];

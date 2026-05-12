@@ -89,9 +89,12 @@ function SelectFilter({
   );
 }
 
+import { useEmployee } from "../../context/EmployeeContext";
+
 export function EmployeeDirectory() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { selectEmployee } = useEmployee();
 
   const [filters, setFilters] = useState<DirectoryFilters>({
     search:      searchParams.get("search")      || "",
@@ -132,8 +135,10 @@ export function EmployeeDirectory() {
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
 
-  const openInformation = (emp: Employee) =>
+  const openInformation = (emp: Employee) => {
+    selectEmployee(emp.id);
     navigate(`/admin/employees/information/${emp.id}`);
+  };
 
   return (
     <div className="flex flex-col h-full bg-background">

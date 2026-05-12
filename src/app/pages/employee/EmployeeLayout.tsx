@@ -23,7 +23,6 @@ import {
   Users,
   ScrollText,
 } from "lucide-react";
-
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -56,7 +55,6 @@ export function EmployeeLayout() {
   const location = useLocation();
 
   const [collapsed, setCollapsed] = useState(false);
-
   const [leaveOpen, setLeaveOpen] = useState(
     location.pathname.startsWith("/employee/leaves")
   );
