@@ -1,29 +1,65 @@
 import { useMemo, useState } from "react";
 import { Outlet, useNavigate, Navigate, useLocation } from "react-router";
 import {
-  LayoutDashboard, Clock, CalendarDays, Wallet, Coffee,
-  FileText, Bell, LogOut, Building2, ChevronRight, Menu, UserRoundCog,
-  Sun, Moon,
+  LayoutDashboard,
+  Clock,
+  CalendarDays,
+  Wallet,
+  Coffee,
+  FileText,
+  Bell,
+  LogOut,
+  Building2,
+  ChevronRight,
+  ChevronDown,
+  Menu,
+  UserRoundCog,
+  Sun,
+  Moon,
+  PenLine,
+  FileStack,
+  Scale,
+  Palmtree,
+  Users,
+  ScrollText,
 } from "lucide-react";
+
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 
 const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "Dashboard",  path: "/employee/dashboard" },
-  { icon: UserRoundCog,    label: "My Profile", path: "/employee/profile"   },
-  { icon: Clock,           label: "Attendance", path: "/employee/attendance" },
-  { icon: CalendarDays,    label: "My Leaves",  path: "/employee/leaves"    },
-  { icon: Wallet,          label: "Payslips",   path: "/employee/payslips"  },
-  { icon: Coffee,          label: "Canteen",    path: "/employee/canteen"   },
-  { icon: FileText,        label: "Documents",  path: "/employee/documents" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/employee/dashboard" },
+  { icon: UserRoundCog, label: "My Profile", path: "/employee/profile" },
+  { icon: Clock, label: "Attendance", path: "/employee/attendance" },
+  { icon: CalendarDays, label: "My Leaves", path: "/employee/leaves" },
+  { icon: Wallet, label: "Payslips", path: "/employee/payslips" },
+  { icon: Coffee, label: "Canteen", path: "/employee/canteen" },
+  { icon: FileText, label: "Documents", path: "/employee/documents" },
+];
+
+const LEAVE_ITEMS = [
+  { icon: LayoutDashboard, label: "Leave Dashboard", path: "/employee/leaves/dashboard" },
+  { icon: PenLine, label: "Apply Leave", path: "/employee/leaves/apply" },
+  { icon: FileStack, label: "My Applications", path: "/employee/leaves/applications" },
+  { icon: Scale, label: "Leave Balance", path: "/employee/leaves/balance" },
+  { icon: Palmtree, label: "Holiday Calendar", path: "/employee/leaves/holidays" },
+  { icon: Users, label: "Team Calendar", path: "/employee/leaves/team" },
+  { icon: ScrollText, label: "Leave Policy", path: "/employee/leaves/policy" },
+  { icon: Bell, label: "Notifications", path: "/employee/leaves/notifications" },
 ];
 
 export function EmployeeLayout() {
   const { user, logout, isAuthenticated } = useAuth();
-  const { isDark, toggleTheme }           = useTheme();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const { isDark, toggleTheme } = useTheme();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [collapsed, setCollapsed] = useState(false);
+
+  const [leaveOpen, setLeaveOpen] = useState(
+    location.pathname.startsWith("/employee/leaves")
+  );
 
   if (!isAuthenticated || user?.role !== "employee") {
     return <Navigate to="/login" replace />;
@@ -33,10 +69,16 @@ export function EmployeeLayout() {
     path === "/employee/leaves"
       ? location.pathname.startsWith("/employee/leaves")
       : location.pathname === path;
-  const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   const currentPage = useMemo(() => {
     if (location.pathname.startsWith("/employee/leaves")) {
       const seg = location.pathname.split("/").filter(Boolean).pop() ?? "dashboard";
+
       const titles: Record<string, string> = {
         leaves: "Leave center",
         dashboard: "Leave · Dashboard",
@@ -48,14 +90,15 @@ export function EmployeeLayout() {
         policy: "Leave · Policy",
         notifications: "Leave · Notifications",
       };
+
       return titles[seg] ?? "Leave center";
     }
+
     return NAV_ITEMS.find((n) => isActive(n.path))?.label ?? "Dashboard";
   }, [location.pathname]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
         className={`flex flex-col flex-shrink-0 bg-card border-r border-border
@@ -63,16 +106,20 @@ export function EmployeeLayout() {
           ${collapsed ? "w-[72px]" : "w-60"}`}
       >
         {/* Logo */}
-        <div className={`h-16 flex items-center flex-shrink-0 border-b border-border
-          ${collapsed ? "justify-center px-0" : "px-5 gap-3"}`}>
+        <div
+          className={`h-16 flex items-center flex-shrink-0 border-b border-border
+          ${collapsed ? "justify-center px-0" : "px-5 gap-3"}`}
+        >
           <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
+
           {!collapsed && (
             <div className="min-w-0">
               <p className="text-sm font-bold text-foreground leading-tight">
                 HR<span className="text-muted-foreground">MS</span>
               </p>
+
               <p className="text-[10px] text-muted-foreground tracking-widest uppercase font-medium">
                 Employee Portal
               </p>
@@ -88,9 +135,75 @@ export function EmployeeLayout() {
         )}
 
         {/* Nav items */}
-        <nav className={`flex-1 overflow-y-auto space-y-0.5 ${collapsed ? "px-3 pt-4" : "px-3"}`}>
+        <nav
+          className={`flex-1 overflow-y-auto space-y-0.5 ${
+            collapsed ? "px-3 pt-4" : "px-3"
+          }`}
+        >
           {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
             const active = isActive(path);
+
+            if (path === "/employee/leaves") {
+              return (
+                <div key={path}>
+                  <button
+                    onClick={() => setLeaveOpen((p) => !p)}
+                    title={collapsed ? label : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                      transition-all duration-150 relative
+                      ${
+                        active
+                          ? "bg-secondary text-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      }
+                      ${collapsed ? "justify-center" : ""}`}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
+                    )}
+
+                    <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+
+                    {!collapsed && (
+                      <>
+                        <span>My Leaves</span>
+
+                        <ChevronDown
+                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${
+                            leaveOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  {!collapsed && leaveOpen && (
+                    <div className="mt-1 ml-4 space-y-1 border-l border-border pl-3">
+                      {LEAVE_ITEMS.map(({ icon: SubIcon, label, path }) => {
+                        const subActive = location.pathname === path;
+
+                        return (
+                          <button
+                            key={path}
+                            onClick={() => navigate(path)}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all
+                              ${
+                                subActive
+                                  ? "bg-secondary text-foreground font-semibold"
+                                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              }`}
+                          >
+                            <SubIcon className="w-4 h-4 flex-shrink-0" />
+                            <span>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <button
                 key={path}
@@ -98,17 +211,21 @@ export function EmployeeLayout() {
                 title={collapsed ? label : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-all duration-150 relative
-                  ${active
-                    ? "bg-secondary text-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  ${
+                    active
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }
                   ${collapsed ? "justify-center" : ""}`}
               >
                 {active && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
                 )}
+
                 <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+
                 {!collapsed && <span>{label}</span>}
+
                 {!collapsed && active && (
                   <ChevronRight className="w-3.5 h-3.5 ml-auto text-muted-foreground" />
                 )}
@@ -127,6 +244,7 @@ export function EmployeeLayout() {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <Menu className="w-[18px] h-[18px] flex-shrink-0" />
+
             {!collapsed && <span>Collapse</span>}
           </button>
         </div>
@@ -148,11 +266,18 @@ export function EmployeeLayout() {
                 <div className="w-8 h-8 rounded-lg bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
                   {user?.initials}
                 </div>
+
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate leading-tight">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">Employee</p>
+                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                    {user?.name}
+                  </p>
+
+                  <p className="text-xs text-muted-foreground truncate">
+                    Employee
+                  </p>
                 </div>
               </div>
+
               <button
                 onClick={handleLogout}
                 title="Logout"
@@ -167,14 +292,19 @@ export function EmployeeLayout() {
 
       {/* ── Main area ────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         {/* Topbar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0">
           <div>
-            <h1 className="text-base font-semibold text-foreground">{currentPage}</h1>
+            <h1 className="text-base font-semibold text-foreground">
+              {currentPage}
+            </h1>
+
             <p className="text-xs text-muted-foreground mt-0.5">
               {new Date().toLocaleDateString("en-IN", {
-                weekday: "long", day: "2-digit", month: "long", year: "numeric",
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
               })}
             </p>
           </div>
@@ -186,7 +316,11 @@ export function EmployeeLayout() {
                 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               title={isDark ? "Light mode" : "Dark mode"}
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDark ? (
+                <Sun className="w-4 h-4" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
             </button>
 
             <button
@@ -197,7 +331,11 @@ export function EmployeeLayout() {
               title="Notifications"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden />
+
+              <span
+                className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-foreground"
+                aria-hidden
+              />
             </button>
 
             <div className="w-px h-6 bg-border mx-1" />
@@ -206,7 +344,10 @@ export function EmployeeLayout() {
               <div className="w-7 h-7 rounded-md bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold">
                 {user?.initials}
               </div>
-              <span className="text-sm font-medium text-foreground hidden sm:block">{user?.name}</span>
+
+              <span className="text-sm font-medium text-foreground hidden sm:block">
+                {user?.name}
+              </span>
             </div>
           </div>
         </header>

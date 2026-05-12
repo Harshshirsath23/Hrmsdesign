@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation, Navigate } from "react-router";
 import {
   LayoutDashboard, Users, Clock, CalendarDays, Wallet, FileText,
   Bell, Building2, LogOut, Menu, ChevronRight, Sun, Moon, ClipboardCheck,
+  Settings2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { icon: CalendarDays,    label: "Leave",      path: "/admin/leave" },
   { icon: Wallet,          label: "Payroll",    path: "/admin/payroll" },
   { icon: FileText,        label: "Documents",  path: "/admin/documents" },
+  { icon: Settings2,       label: "Settings",   path: "/admin/settings" },
   { icon: ClipboardCheck,  label: "Profile Requests", path: "/admin/profile-requests" },
 ];
 

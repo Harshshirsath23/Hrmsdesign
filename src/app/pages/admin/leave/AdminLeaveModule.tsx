@@ -13,6 +13,7 @@ import { SuperadminAuditLogs } from "./sections/SuperadminAuditLogs";
 import { SuperadminReportsAnalytics } from "./sections/SuperadminReportsAnalytics";
 import { SuperadminWorkflowSettings } from "./sections/SuperadminWorkflowSettings";
 import { LeaveSettingsCenter } from "./sections/LeaveSettingsCenter";
+import { SuperadminSettings } from "./sections/SuperadminSettings";
 import type { LeaveSettingsSectionKey } from "../../../modules/adminLeave/settings";
 import { AdminNavRail, type AdminNavGroupSchema } from "../../../components/navigation/AdminNavRail";
 import { AdminBreadcrumbs } from "../../../components/navigation/AdminBreadcrumbs";
@@ -27,6 +28,7 @@ type SectionId =
   | "audit"
   | "reports"
   | "workflow"
+  | "superadmin-settings"
   | "settings"
   | "legacy-requests"
   | "legacy-types"
@@ -42,6 +44,7 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ElementType; descrip
   { id: "audit", label: "Audit Logs", icon: FileText, description: "Action history with change traceability" },
   { id: "reports", label: "Reports & Analytics", icon: BarChart3, description: "Insights, exports and trends" },
   { id: "workflow", label: "Workflow Settings", icon: Network, description: "Multi-stage approval workflow controls" },
+  { id: "superadmin-settings", label: "Settings", icon: Settings, description: "Superadmin settings for overall application masters" },
   { id: "settings", label: "Leave Settings", icon: Settings, description: "Centralized leave settings command center" },
   { id: "legacy-requests", label: "Legacy Requests View", icon: SlidersHorizontal, description: "Existing requests module" },
   { id: "legacy-types", label: "Legacy Type Master", icon: Palette, description: "Existing type master module" },
@@ -78,7 +81,7 @@ export function AdminLeaveModule() {
       {
         id: "configuration",
         label: "Configuration",
-        items: [item("settings")],
+        items: [item("superadmin-settings"), item("settings")],
       },
       {
         id: "insights",
@@ -130,6 +133,7 @@ export function AdminLeaveModule() {
         {active === "audit" && <SuperadminAuditLogs />}
         {active === "reports" && <SuperadminReportsAnalytics />}
         {active === "workflow" && <SuperadminWorkflowSettings />}
+        {active === "superadmin-settings" && <SuperadminSettings />}
         {active === "settings" && (
           <LeaveSettingsCenter
             targetSection={settingsTargetSection}

@@ -19,13 +19,34 @@ function DynamicField({
   onChange: (v: unknown) => void;
 }) {
   if (field.type === "boolean") {
-    return (
-      <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 p-3">
-        <p className="text-sm font-medium text-foreground">{field.label}</p>
-        <Switch checked={Boolean(value)} onCheckedChange={onChange as (checked: boolean) => void} />
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-border bg-secondary/40 px-4 py-4 shadow-sm transition-all">
+      <div className="space-y-0.5">
+        <p className="text-sm font-semibold text-foreground">
+          {field.label}
+        </p>
+
+        <p className="text-[11px] text-muted-foreground">
+          {Boolean(value) ? "Enabled" : "Disabled"}
+        </p>
       </div>
-    );
-  }
+
+      <Switch
+        checked={Boolean(value)}
+        onCheckedChange={onChange as (checked: boolean) => void}
+        className="
+          data-[state=checked]:bg-black
+          data-[state=unchecked]:bg-zinc-300
+          border
+          border-zinc-400
+          h-7
+          w-12
+          shadow-inner
+        "
+      />
+    </div>
+  );
+}
   if (field.type === "textarea" || field.type === "json") {
     return (
       <div className="space-y-1">

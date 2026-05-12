@@ -12,7 +12,7 @@ const labelClass = "mb-1.5 block text-[10px] font-semibold uppercase tracking-wi
 function SectionHeading({ icon: Icon, title, description }: { icon: ElementType; title: string; description?: string }) {
   return (
     <div className="mb-3 flex items-start gap-3">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border bg-secondary">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl border border-border bg-secondary">
         <Icon className="h-4 w-4 text-foreground" aria-hidden />
       </div>
       <div className="min-w-0">
@@ -168,11 +168,28 @@ export function ApplyLeaveFormEnterprise({
     totalDays > 0 &&
     !exceedsBalance;
 
+  const selectedLeaveName = selectedType?.name ?? selectedBalance?.leave_type_detail.name ?? "Selected leave";
+  const selectedLeaveCode = selectedType?.code ?? selectedBalance?.leave_type_detail.code ?? "";
+  const selectedLeaveLabel = selectedLeaveCode ? `${selectedLeaveName} (${selectedLeaveCode})` : selectedLeaveName;
+  const applyingRangeLabel = fromDate && toDate
+    ? `${new Date(fromDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} → ${new Date(toDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+    : "—";
+  const sessionLabel = fromHalf === "FULL" && toHalf === "FULL"
+    ? "Full days"
+    : `${fromHalf === "FULL" ? "Full" : fromHalf === "AM" ? "First half" : "Second half"} → ${toHalf === "FULL" ? "Full" : toHalf === "AM" ? "First half" : "Second half"}`;
+  const totalVisibleBalance = selectedBalance ? Number(selectedBalance.used) + Number(selectedBalance.available) : 0;
+  const usedPercent = totalVisibleBalance > 0 ? Math.round((Number(selectedBalance?.used || 0) / totalVisibleBalance) * 100) : 0;
+  const remainingAfterApproval = selectedBalance ? Math.max(0, Number(selectedBalance.available) - totalDays) : 0;
+  const expiryDate = selectedBalance?.period_end ? new Date(selectedBalance.period_end) : null;
+  const expiryLabel = expiryDate ? expiryDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const expiryDays = expiryDate ? Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+  const carryExpirySoon = selectedBalance?.carry_forwarded && expiryDays !== null && expiryDays > 0 && expiryDays <= 15;
+
   const approvalSteps = ["You submit", "Manager review", "HR / Admin confirmation"];
 
   return (
     <form
-      className="flat-card bg-card p-4 sm:p-6 lg:p-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start"
+      className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 rounded-3xl border border-border bg-card p-4 sm:p-5"
       onSubmit={(e) => {
         e.preventDefault();
         const submitMode = submitModeRef.current;
@@ -211,356 +228,339 @@ export function ApplyLeaveFormEnterprise({
         );
       }}
     >
-      <div className="space-y-0">
-        <div className="mb-6 rounded-xl border border-border bg-secondary/30 px-4 py-3 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">Routing: </span>
-          Submitted requests are reviewed by your manager and HR in sequence. You will be notified at each step.
-        </div>
+      {/* <div className="rounded-3xl border border-border bg-secondary/60 p-4">
+        <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Applying for leave</p>
+        <h2 className="mt-2 text-lg font-semibold text-foreground">Leave application</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Submit a clear request with live leave balance preview.</p>
+      </div> */}
 
-        <FormSection
-          icon={Shield}
-          title="Leave information"
-          description="Choose the policy bucket this request should consume."
+      <div className="space-y-5">
+        <FormSection icon={Shield} title="Leave type">
+        <select
+          value={leaveType}
+          onChange={(e) => setLeaveType(e.target.value)}
+          className="flat-input w-full cursor-pointer appearance-none rounded-2xl border border-border bg-background px-3 py-3 text-sm"
+          required
         >
-          <label className={labelClass}>Leave type *</label>
-          <select
-            value={leaveType}
-            onChange={(e) => setLeaveType(e.target.value)}
-            className="flat-input w-full cursor-pointer appearance-none rounded-lg px-3 py-2.5 text-sm font-medium"
-            required
-          >
-            <option value="">Select leave type</option>
-            {leaveTypes.map((lt) => (
-              <option key={lt.id} value={lt.id}>
-                {lt.name} ({lt.code})
-              </option>
-            ))}
-          </select>
-        </FormSection>
+          <option value="">Select leave type</option>
+          {leaveTypes.map((lt) => (
+            <option key={lt.id} value={lt.id}>
+              {lt.name} ({lt.code})
+            </option>
+          ))}
+        </select>
+      </FormSection>
 
-        <FormSection icon={CalendarDays} title="Date & duration" description="Inclusive dates; sessions refine partial days.">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>From *</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="flat-input w-full rounded-lg px-3 py-2.5 text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className={labelClass}>To *</label>
-              <input
-                type="date"
-                value={toDate}
-                min={fromDate || undefined}
-                onChange={(e) => setToDate(e.target.value)}
-                className="flat-input w-full rounded-lg px-3 py-2.5 text-sm"
-                required
-              />
-            </div>
-          </div>
-        </FormSection>
-
-        <FormSection icon={CalendarDays} title="Half-day (sessions)" description="Use for first/second half patterns.">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>From session</label>
-              <select
-                value={fromHalf}
-                onChange={(e) => setFromHalf(e.target.value as "FULL" | "AM" | "PM")}
-                className="flat-input w-full cursor-pointer appearance-none rounded-lg px-3 py-2.5 text-sm font-medium"
-              >
-                <option value="FULL">Full day</option>
-                <option value="AM">First half</option>
-                <option value="PM">Second half</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>To session</label>
-              <select
-                value={toHalf}
-                onChange={(e) => setToHalf(e.target.value as "FULL" | "AM" | "PM")}
-                className="flat-input w-full cursor-pointer appearance-none rounded-lg px-3 py-2.5 text-sm font-medium"
-              >
-                <option value="FULL">Full day</option>
-                <option value="AM">First half</option>
-                <option value="PM">Second half</option>
-              </select>
-            </div>
-          </div>
-          {totalDays > 0 && (
-            <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm">
-              <span className="font-medium text-foreground">Total days</span>
-              <span className="font-bold tabular-nums text-foreground">{totalDays}</span>
-            </div>
-          )}
-        </FormSection>
-
-        <FormSection icon={MessageSquare} title="Reason & details" description="A concise business justification for reviewers.">
-          <label className={labelClass}>Reason *</label>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-            className="flat-input w-full resize-none rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Share context approvers need…"
-            required
-          />
-        </FormSection>
-
-        <FormSection
-          icon={ClipboardList}
-          title="Handover information"
-          description="Captured into the request narrative for approvers."
-        >
-          <label className={labelClass}>Handover notes</label>
-          <textarea
-            value={handover}
-            onChange={(e) => setHandover(e.target.value)}
-            rows={2}
-            className="flat-input w-full resize-none rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Coverage, pending tasks, critical contacts…"
-          />
-        </FormSection>
-
-        <FormSection
-          icon={FileUp}
-          title="Attachments"
-          description="Optional evidence upload (PDF, JPG, PNG, DOC, DOCX)."
-        >
-          <label className={labelClass}>Supporting document</label>
-
-          {attachmentError && (
-            <p className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {attachmentError}
-            </p>
-          )}
-
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
-            }}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              setIsDraggingAttachment(true);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDraggingAttachment(true);
-            }}
-            onDragLeave={() => setIsDraggingAttachment(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDraggingAttachment(false);
-              const f = e.dataTransfer.files?.[0] ?? null;
-              handleAttachmentFile(f);
-            }}
-            className={cn(
-              "rounded-xl border border-dashed px-4 py-6 transition-colors cursor-pointer select-none",
-              isDraggingAttachment
-                ? "border-foreground/40 bg-secondary/25"
-                : "border-border bg-secondary/10 hover:border-foreground/25",
-            )}
-          >
-            <div className="flex flex-col items-center gap-2 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-secondary">
-                <FileUp className="h-4 w-4 text-foreground" aria-hidden />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Drag & drop, or click to browse. Accepted: PDF/JPG/PNG/DOC/DOCX
-              </p>
-
-              {attachment ? (
-                <div className="mt-3 w-full">
-                  {attachmentPreviewUrl && (
-                    <img
-                      src={attachmentPreviewUrl}
-                      alt="Attachment preview"
-                      className="h-20 w-20 rounded-xl border border-border bg-background object-cover"
-                    />
-                  )}
-                  <div className="mt-2 flex items-start justify-between gap-3">
-                    <div className="min-w-0 text-left">
-                      <p className="truncate text-sm font-semibold text-foreground">{attachment.name}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">{formatBytes(attachment.size)}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 rounded-lg border border-border bg-background hover:bg-secondary/40"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAttachmentFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p className="mt-1 text-[11px] text-muted-foreground">No file attached.</p>
-              )}
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
-                handleAttachmentFile(f);
-              }}
-            />
-          </div>
-        </FormSection>
-
-        <FormSection icon={Phone} title="Contact details" description="Optional alternate reachability for emergencies.">
-          <label className={labelClass}>Contact</label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From date</p>
           <input
-            type="text"
-            value={contactDuringLeave}
-            onChange={(e) => setContactDuringLeave(e.target.value)}
-            className="flat-input w-full rounded-lg px-3 py-2.5 text-sm"
-            placeholder="Phone or email"
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="mt-3 w-full rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+            required
           />
-        </FormSection>
-
-        <FormSection
-          icon={GitBranch}
-          title="Submission summary"
-          description="Total days and balance impact before you send."
-        >
-          <div className="rounded-xl border border-border bg-background/60 px-3 py-2 text-xs">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-semibold uppercase tracking-wider text-muted-foreground">Request</span>
-              <span className="font-bold tabular-nums text-foreground">
-                {totalDays > 0 ? `${totalDays} days` : "—"}
-              </span>
-            </div>
-            {selectedBalance && totalDays > 0 ? (
-              <>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <span className="font-semibold uppercase tracking-wider text-muted-foreground">Available after</span>
-                  <span
-                    className={cn(
-                      "font-bold tabular-nums",
-                      exceedsBalance ? "text-destructive" : "text-foreground",
-                    )}
-                  >
-                    {Math.max(0, Number(selectedBalance.available) - totalDays)} days
-                  </span>
-                </div>
-                {exceedsBalance && (
-                  <p className="mt-2 text-[11px] font-semibold text-destructive">
-                    This request exceeds your available balance.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="mt-2 text-[11px] text-muted-foreground">Select a leave type to preview entitlement consumption.</p>
-            )}
-          </div>
-        </FormSection>
-
-        {applyLeave.isError && (
-          <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {(applyLeave.error as Error)?.message || "Failed to submit leave application."}
-          </div>
-        )}
-
-        <div className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-border bg-background/95 py-3 backdrop-blur-sm sm:flex-row sm:justify-end lg:static lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
-          <Button
-            type="submit"
-            variant="outline"
-            className="h-10 rounded-xl border-border font-semibold"
-            disabled={
-              applyLeave.isPending || !leaveType || !fromDate || !toDate || !reason.trim() || totalDays <= 0
-            }
-            onClick={() => {
-              submitModeRef.current = "DRAFT";
-            }}
-          >
-            Save draft
-          </Button>
-          <Button
-            type="submit"
-            className="h-10 rounded-xl bg-foreground font-semibold text-primary-foreground hover:bg-foreground/90"
-            disabled={applyLeave.isPending || !canSubmit}
-            onClick={() => {
-              submitModeRef.current = "SUBMITTED";
-            }}
-          >
-            <Send className="mr-2 h-4 w-4" />
-            {applyLeave.isPending ? "Submitting…" : "Submit for approval"}
-          </Button>
+        </div>
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To date</p>
+          <input
+            type="date"
+            value={toDate}
+            min={fromDate || undefined}
+            onChange={(e) => setToDate(e.target.value)}
+            className="mt-3 w-full rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+            required
+          />
         </div>
       </div>
 
-      <aside className="lg:sticky lg:top-4">
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Balance preview</p>
-          {selectedBalance && selectedType ? (
-            <div className="mt-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <LeaveTypePill code={selectedType.code} />
-                <span className="text-sm font-semibold text-foreground">{selectedType.name}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-xl border border-border bg-secondary/50 px-2 py-1.5">
-                  <p className="text-muted-foreground">Available</p>
-                  <p className="text-lg font-bold tabular-nums">{Number(selectedBalance.available)}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-secondary/50 px-2 py-1.5">
-                  <p className="text-muted-foreground">Pending</p>
-                  <p className="text-lg font-bold tabular-nums">{Number(selectedBalance.pending_approval)}</p>
-                </div>
-              </div>
-              {totalDays > 0 && (
-                <div className="rounded-xl border border-border bg-background px-3 py-2 text-xs">
-                  <p className="text-muted-foreground">After this request</p>
-                  <p
-                    className={cn(
-                      "text-sm font-semibold tabular-nums",
-                      exceedsBalance ? "text-destructive" : "text-foreground",
-                    )}
-                  >
-                    {Math.max(0, Number(selectedBalance.available) - totalDays)} days left
-                  </p>
-                  {exceedsBalance && <p className="mt-1 text-[11px] text-destructive">Exceeds available balance.</p>}
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">Select a leave type to preview entitlement consumption.</p>
-          )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From session</p>
+          <select
+            value={fromHalf}
+            onChange={(e) => setFromHalf(e.target.value as "FULL" | "AM" | "PM")}
+            className="mt-3 w-full cursor-pointer appearance-none rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+          >
+            <option value="FULL">Full day</option>
+            <option value="AM">First half</option>
+            <option value="PM">Second half</option>
+          </select>
+        </div>
+        <div className="rounded-2xl border border-border bg-background p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To session</p>
+          <select
+            value={toHalf}
+            onChange={(e) => setToHalf(e.target.value as "FULL" | "AM" | "PM")}
+            className="mt-3 w-full cursor-pointer appearance-none rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+          >
+            <option value="FULL">Full day</option>
+            <option value="AM">First half</option>
+            <option value="PM">Second half</option>
+          </select>
+        </div>
+      </div>
 
-          <div className="mt-4 border-t border-border pt-4">
-            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <GitBranch className="h-3.5 w-3.5" />
-              Approval chain
-            </p>
-            <ol className="mt-3 space-y-2">
-              {approvalSteps.map((step, i) => (
-                <li key={step} className="flex gap-2 text-xs">
-                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-border bg-secondary text-[10px] font-bold">
-                    {i + 1}
-                  </span>
-                  <span className="pt-0.5 text-foreground">{step}</span>
-                </li>
-              ))}
-            </ol>
+      <FormSection icon={MessageSquare} title="Reason">
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={3}
+          className="flat-input w-full resize-none rounded-2xl border border-border bg-background px-3 py-3 text-sm"
+          placeholder="Enter your reason"
+          required
+        />
+      </FormSection>
+
+      {/* <FormSection icon={ClipboardList} title="Handover" description="Optional details for colleagues covering work.">
+        <textarea
+          value={handover}
+          onChange={(e) => setHandover(e.target.value)}
+          rows={2}
+          className="flat-input w-full resize-none rounded-2xl border border-border bg-background px-3 py-3 text-sm"
+          placeholder="Coverage, pending tasks, critical contacts…"
+        />
+      </FormSection> */}
+
+      <FormSection icon={FileUp} title="Attachment">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setIsDraggingAttachment(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDraggingAttachment(true);
+          }}
+          onDragLeave={() => setIsDraggingAttachment(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDraggingAttachment(false);
+            const f = e.dataTransfer.files?.[0] ?? null;
+            handleAttachmentFile(f);
+          }}
+          className={cn(
+            "rounded-2xl border border-dashed px-4 py-6 transition-colors cursor-pointer select-none",
+            isDraggingAttachment
+              ? "border-foreground/40 bg-secondary/25"
+              : "border-border bg-background hover:border-foreground/50",
+          )}
+        >
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-secondary">
+              <FileUp className="h-4 w-4 text-foreground" aria-hidden />
+            </div>
+            <p className="text-xs text-muted-foreground">Drag & drop, or click to browse.</p>
+            <p className="text-[11px] text-muted-foreground">PDF, JPG, PNG, DOC, DOCX</p>
+
+            {attachment ? (
+              <div className="mt-3 w-full">
+                {attachmentPreviewUrl && (
+                  <img
+                    src={attachmentPreviewUrl}
+                    alt="Attachment preview"
+                    className="mx-auto h-20 w-20 rounded-2xl border border-border bg-background object-cover"
+                  />
+                )}
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="truncate text-sm font-semibold text-foreground">{attachment.name}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full border border-border bg-background hover:bg-secondary/40"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAttachmentFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-1 text-[11px] text-muted-foreground">No file attached.</p>
+            )}
           </div>
         </div>
-      </aside>
-    </form>
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            handleAttachmentFile(f);
+          }}
+        />
+        {attachmentError && (
+          <p className="mt-3 rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {attachmentError}
+          </p>
+        )}
+      </FormSection>
+
+      <FormSection icon={Phone} title="Contact details">
+        <input
+          type="text"
+          value={contactDuringLeave}
+          onChange={(e) => setContactDuringLeave(e.target.value)}
+          className="flat-input w-full rounded-2xl border border-border bg-background px-3 py-3 text-sm"
+          placeholder="Phone or email"
+        />
+      </FormSection>
+
+      <div className="rounded-2xl border border-border bg-background p-4 text-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Total days</span>
+          <span className="font-semibold text-foreground">{totalDays > 0 ? `${totalDays}` : "—"}</span>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>Balance after request</span>
+          <span>{selectedBalance ? `${Math.max(0, Number(selectedBalance.available) - totalDays)} days` : "—"}</span>
+        </div>
+      </div>
+
+      {applyLeave.isError && (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+          {(applyLeave.error as Error)?.message || "Failed to submit leave application."}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Button
+          type="submit"
+          variant="outline"
+          className="h-11 rounded-full border-border font-semibold"
+          disabled={
+            applyLeave.isPending || !leaveType || !fromDate || !toDate || !reason.trim() || totalDays <= 0
+          }
+          onClick={() => {
+            submitModeRef.current = "DRAFT";
+          }}
+        >
+          Save draft
+        </Button>
+        <Button
+          type="submit"
+          className="h-11 rounded-full bg-foreground font-semibold text-primary-foreground hover:bg-foreground/90"
+          disabled={applyLeave.isPending || !canSubmit}
+          onClick={() => {
+            submitModeRef.current = "SUBMITTED";
+          }}
+        >
+          <Send className="mr-2 h-4 w-4" />
+          {applyLeave.isPending ? "Submitting…" : "Submit for approval"}
+        </Button>
+      </div>
+    </div>
+
+    <aside className="lg:sticky lg:top-6">
+      <div className="space-y-4">
+        <div className="rounded-3xl border border-border bg-background p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              {/* <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Leave summary</p> */}
+              <p className="mt-2 text-base font-semibold text-foreground">{selectedLeaveLabel}</p>
+            </div>
+            {selectedType && <LeaveTypePill code={selectedType.code} />}
+          </div>
+
+          <div className="mt-5 space-y-4">
+            {/* <div className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Balance visualization</div> */}
+            <div className="rounded-full bg-border/50 h-2 overflow-hidden">
+              <div className="h-full rounded-full bg-foreground" style={{ width: `${usedPercent}%` }} />
+            </div>
+            <div className="text-sm font-medium text-foreground">
+              {Number(selectedBalance?.used || 0)} used / {Number(selectedBalance?.available || 0)} available
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 text-sm text-foreground">
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Total allocated</span>
+              <span className="font-semibold">{selectedBalance ? Number(selectedBalance.total_allocated) : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Used</span>
+              <span className="font-semibold">{selectedBalance ? Number(selectedBalance.used) : "—"}</span>
+            </div>
+            {/* <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Pending approval</span>
+              <span className="font-semibold">{selectedBalance ? Number(selectedBalance.pending_approval) : "—"}</span>
+            </div> */}
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Remaining available</span>
+              <span className="font-semibold">{selectedBalance ? Number(selectedBalance.available) : "—"}</span>
+            </div>
+            {/* <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Applying days</span>
+              <span className="font-semibold">{totalDays > 0 ? totalDays : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Balance after approval</span>
+              <span className="font-semibold">{selectedBalance ? remainingAfterApproval : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Carry forward</span>
+              <span className="font-semibold">{selectedBalance ? Number(selectedBalance.carry_forwarded) : "—"}</span>
+            </div> */}
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
+              <span className="text-muted-foreground">Expiry date</span>
+              <span className="font-semibold">{selectedBalance ? expiryLabel : "—"}</span>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2 text-xs text-muted-foreground">
+            <div>Applying: {applyingRangeLabel}</div>
+            <div>Total: {totalDays > 0 ? `${totalDays} days` : "—"}</div>
+            <div>Session: {sessionLabel}</div>
+            <div>Holidays/weekends excluded when applicable.</div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {exceedsBalance && (
+              <div className="rounded-2xl border border-amber-200/80 bg-amber-100/70 px-3 py-2 text-sm text-amber-900">
+                Insufficient balance for selected dates.
+              </div>
+            )}
+            {!exceedsBalance && selectedBalance && remainingAfterApproval <= 1 && remainingAfterApproval >= 0 && (
+              <div className="rounded-2xl border border-amber-200/80 bg-amber-100/70 px-3 py-2 text-sm text-amber-900">
+                Only {remainingAfterApproval} day remaining after this request.
+              </div>
+            )}
+            {carryExpirySoon && (
+              <div className="rounded-2xl border border-amber-200/80 bg-amber-100/70 px-3 py-2 text-sm text-amber-900">
+                {selectedBalance?.carry_forwarded} carry-forward leaves expire in {expiryDays} days.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-border bg-background p-4 text-sm shadow-sm">
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Other leave types</p>
+          <div className="mt-3 grid gap-2">
+            {balances.map((balance) => (
+              <div key={balance.id} className="flex items-center justify-between rounded-2xl border border-border bg-secondary/50 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{balance.leave_type_detail.name}</p>
+                  <p className="text-xs text-muted-foreground">{balance.leave_type_detail.code}</p>
+                </div>
+                <span className="text-sm font-semibold text-foreground">{Number(balance.available)} left</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </aside>
+  </form>
   );
 }

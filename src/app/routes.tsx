@@ -10,8 +10,11 @@ import { AttendancePage } from "./pages/admin/AttendancePage";
 import { LeavePage } from "./pages/admin/LeavePage";
 import { PayrollPage } from "./pages/admin/PayrollPage";
 import { DocumentsPage } from "./pages/admin/DocumentsPage";
+import { AdminSettingsPage } from "./pages/admin/SettingsPage";
 import { EmployeesShell } from "./pages/admin/employees/EmployeesShell";
 import { AddEmployeePage } from "./pages/admin/employees/AddEmployeePage";
+import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
+import { MASTER_CATEGORIES } from "./modules/masters/config";
 
 // Employee module components
 import { EmployeeDirectory } from "./components/employees/EmployeeDirectory";
@@ -60,6 +63,7 @@ export const router = createBrowserRouter([
       { path: "leave",      Component: LeavePage      },
       { path: "payroll",    Component: PayrollPage    },
       { path: "documents",  Component: DocumentsPage  },
+      { path: "settings",   Component: AdminSettingsPage },
       { path: "profile-requests", Component: ProfileChangeRequestsPage },
       {
         path: "employees",
@@ -107,5 +111,28 @@ export const router = createBrowserRouter([
   {
     path: "/employees/*",
     element: <Navigate to="/admin/employees" replace />,
+  },
+
+  // Superadmin masters
+  {
+    path: "/superadmin",
+    Component: AdminLayout,
+    children: [
+      {
+        path: "masters",
+        children: [
+          {
+            index: true,
+            element: (
+              <Navigate
+                to={`${MASTER_CATEGORIES[0]?.key}/${MASTER_CATEGORIES[0]?.masters[0]?.key}`}
+                replace
+              />
+            ),
+          },
+          { path: ":category/:masterName", Component: SuperadminMastersPage },
+        ],
+      },
+    ],
   },
 ]);
