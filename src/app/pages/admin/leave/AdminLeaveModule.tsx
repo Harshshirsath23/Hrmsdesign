@@ -7,7 +7,6 @@ import {
   ListChecks,
   Network,
   Palette,
-  Settings,
   ShieldCheck,
   SlidersHorizontal,
 } from "lucide-react";
@@ -21,8 +20,6 @@ import { SuperadminLeaveRequests } from "./sections/SuperadminLeaveRequests";
 import { SuperadminAuditLogs } from "./sections/SuperadminAuditLogs";
 import { SuperadminReportsAnalytics } from "./sections/SuperadminReportsAnalytics";
 import { SuperadminWorkflowSettings } from "./sections/SuperadminWorkflowSettings";
-import { LeaveSettingsCenter } from "./sections/LeaveSettingsCenter";
-import { SuperadminSettings } from "./sections/SuperadminSettings";
 import type { LeaveSettingsSectionKey } from "../../../modules/adminLeave/settings";
 import {
   AdminNavRail,
@@ -40,8 +37,6 @@ type SectionId =
   | "audit"
   | "reports"
   | "workflow"
-  | "superadmin-settings"
-  | "settings"
   | "legacy-requests"
   | "legacy-types"
   | "legacy-dashboard";
@@ -101,18 +96,8 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ElementType; descrip
     icon: Network,
     description: "Multi-stage approval workflow controls",
   },
-  {
-    id: "superadmin-settings",
-    label: "Settings",
-    icon: Settings,
-    description: "Superadmin settings for overall application masters",
-  },
-  {
-    id: "settings",
-    label: "Leave Settings",
-    icon: Settings,
-    description: "Centralized leave settings command center",
-  },
+
+
   {
     id: "legacy-requests",
     label: "Legacy Requests View",
@@ -160,11 +145,7 @@ export function AdminLeaveModule() {
         label: "Workflows",
         items: [item("workflow"), item("allocation"), item("holidays")],
       },
-      {
-        id: "configuration",
-        label: "Configuration",
-        items: [item("superadmin-settings"), item("settings")],
-      },
+
       {
         id: "insights",
         label: "Insights",
@@ -178,27 +159,21 @@ export function AdminLeaveModule() {
     ];
   }, []);
 
-  const openSettingsCreate = (section: LeaveSettingsSectionKey) => {
-    setSettingsTargetSection(section);
-    setActive("settings");
-    setSettingsCreateSignal((x) => x + 1);
+  const openSettingsCreate = (_section: LeaveSettingsSectionKey) => {
+    // Leave Settings section removed as per user request
+    // setSettingsTargetSection(section);
+    // setActive("settings");
+    // setSettingsCreateSignal((x) => x + 1);
   };
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-8 space-y-8 bg-slate-50/50 dark:bg-slate-950 min-h-full">
       {/* Header */}
-      <div className="rounded-xl border border-white/10 bg-[#0f2744] text-neutral-100 p-4 shadow-xl">
-        <AdminBreadcrumbs items={["Admin", "Leave Management", header.label]} />
-        <div className="mt-1.5 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">{header.label}</h1>
-            <p className="text-xs text-neutral-400 mt-1">{header.description}</p>
-          </div>
-          <div className="hidden md:inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] text-neutral-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
-            Enterprise Leave Console
-          </div>
-        </div>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-black text-foreground tracking-tight">{header.label}</h1>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">
+          {header.description}
+        </p>
       </div>
 
       {/* Top Navigation Rail */}
@@ -221,14 +196,8 @@ export function AdminLeaveModule() {
         {active === "audit" && <SuperadminAuditLogs />}
         {active === "reports" && <SuperadminReportsAnalytics />}
         {active === "workflow" && <SuperadminWorkflowSettings />}
-        {active === "superadmin-settings" && <SuperadminSettings />}
-        {active === "settings" && (
-          <LeaveSettingsCenter
-            targetSection={settingsTargetSection}
-            createSignal={settingsCreateSignal}
-            onCreateHandled={() => setSettingsCreateSignal(0)}
-          />
-        )}
+
+
         {active === "legacy-requests" && <AdminLeaveRequests />}
         {active === "legacy-types" && <AdminLeaveTypeMaster />}
         {active === "legacy-dashboard" && (

@@ -41,8 +41,8 @@ function TopNavDropdown<T extends string>({
         className={cn(
           "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 whitespace-nowrap",
           isGroupActive
-            ? "bg-[#0f2744] text-white shadow-sm"
-            : "text-[#334155] hover:bg-slate-100 hover:text-[#0f2744]"
+            ? "bg-secondary text-foreground shadow-sm"
+            : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
         )}
       >
         {group.label}
@@ -55,7 +55,7 @@ function TopNavDropdown<T extends string>({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1.5 z-50 min-w-[200px] rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60 py-1.5">
+        <div className="absolute top-full left-0 mt-1.5 z-50 min-w-[200px] rounded-xl border border-border bg-card shadow-lg py-1.5">
           {group.items.map((item) => {
             const Icon = item.icon;
             const isActive = active === item.id;
@@ -70,19 +70,19 @@ function TopNavDropdown<T extends string>({
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3.5 py-2 text-sm transition-colors duration-100",
                   isActive
-                    ? "bg-[#0f2744]/8 text-[#0f2744] font-medium"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-secondary/60 text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
                 )}
               >
                 <Icon
                   className={cn(
                     "w-4 h-4 shrink-0",
-                    isActive ? "text-[#0f2744]" : "text-slate-400"
+                    isActive ? "text-foreground" : "text-muted-foreground"
                   )}
                 />
                 <span>{item.label}</span>
                 {isActive && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0f2744]" />
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-foreground" />
                 )}
               </button>
             );
@@ -105,14 +105,14 @@ function SearchBar({
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => ref.current?.focus(), []);
   return (
-    <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-white shadow-sm">
+    <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-background shadow-sm">
       <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
       <input
         ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search navigation..."
-        className="text-sm text-slate-700 placeholder:text-slate-400 bg-transparent outline-none w-44"
+        className="text-sm text-foreground placeholder:text-muted-foreground bg-transparent outline-none w-44"
       />
       <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600">
         <X className="w-3.5 h-3.5" />
@@ -148,7 +148,7 @@ export function AdminNavRail<T extends string>({
   const allItems = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
   const topNav = (
-    <nav className="rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2">
+    <nav className="rounded-xl border border-border bg-card shadow-sm px-3 py-2">
       <div className="flex items-center gap-1 flex-wrap">
         {/* Search toggle */}
         {searchOpen ? (
@@ -171,7 +171,7 @@ export function AdminNavRail<T extends string>({
           </button>
         )}
 
-        <div className="h-5 w-px bg-slate-200 mx-1" />
+        <div className="h-5 w-px bg-border mx-1" />
 
         {/* Group dropdowns */}
         {filteredGroups.map((group) => (
