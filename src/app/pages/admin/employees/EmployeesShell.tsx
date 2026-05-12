@@ -1,21 +1,44 @@
 import { Outlet, useLocation, useNavigate } from "react-router";
-import { Users, Info, UserPlus, Briefcase, Settings, BarChart3, FileSpreadsheet, GitGraph } from "lucide-react";
+import {
+  Users,
+  Info,
+  UserPlus,
+  Briefcase,
+  Settings,
+  BarChart3,
+  FileSpreadsheet,
+  GitGraph,
+} from "lucide-react";
 import { useEmployee } from "../../../context/EmployeeContext";
 
 export function EmployeesShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { selectedEmployeeId, selectEmployee, clearSelection } = useEmployee();
+  const { selectedEmployeeId, clearSelection } = useEmployee();
 
   const isInformation = location.pathname.includes("/information");
-  const isAddEmployee  = location.pathname.includes("/add");
-  const isManagement   = location.pathname.includes("/management");
-  const isSetup        = location.pathname.includes("/setup");
-  const isReports      = location.pathname.includes("/reports");
-  const isImport       = location.pathname.includes("/import");
-  const isOrgChart     = location.pathname.includes("/org-chart");
+  const isAddEmployee = location.pathname.includes("/add");
+  const isManagement = location.pathname.includes("/management");
+  const isSetup = location.pathname.includes("/setup");
+  const isReports = location.pathname.includes("/reports");
+  const isImport = location.pathname.includes("/import");
+  const isOrgChart = location.pathname.includes("/org-chart");
 
-  const activeTab = isInformation ? "information" : isAddEmployee ? "add" : isManagement ? "management" : isSetup ? "setup" : isReports ? "reports" : isImport ? "import" : isOrgChart ? "org-chart" : "directory";
+  const activeTab = isInformation
+    ? "information"
+    : isAddEmployee
+    ? "add"
+    : isManagement
+    ? "management"
+    : isSetup
+    ? "setup"
+    : isReports
+    ? "reports"
+    : isImport
+    ? "import"
+    : isOrgChart
+    ? "org-chart"
+    : "directory";
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -125,7 +148,12 @@ export function EmployeesShell() {
         </div>
 
         <span className="text-xs font-medium text-muted-foreground bg-secondary border border-border px-3 py-1.5 rounded-lg">
-          {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
+          {new Date().toLocaleDateString("en-IN", {
+            weekday: "long",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}
         </span>
       </div>
 

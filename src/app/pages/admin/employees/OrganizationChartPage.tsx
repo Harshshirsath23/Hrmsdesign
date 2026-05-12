@@ -48,7 +48,10 @@ import { cn } from "../../../components/ui/utils";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion";
+
+console.log("OrganizationChartPage module loaded");
+
 
 // --- Types ---
 interface OrgNodeData {
@@ -591,7 +594,7 @@ export function OrganizationChartPage() {
 }
 
 // Wrapper to provide ReactFlow context
-export default function OrganizationChartPageWrapper() {
+export function OrganizationChartPageWrapper() {
   return (
     <ReactFlowProvider>
       <OrganizationChartPage />

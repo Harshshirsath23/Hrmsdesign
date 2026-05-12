@@ -1,6 +1,15 @@
 import { useMemo, useState } from "react";
 import {
-  BarChart3, CalendarDays, FileText, Layers3, ListChecks, Network, Palette, Settings, ShieldCheck, SlidersHorizontal,
+  BarChart3,
+  CalendarDays,
+  FileText,
+  Layers3,
+  ListChecks,
+  Network,
+  Palette,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
 } from "lucide-react";
 import { AdminLeaveRequests } from "./sections/AdminLeaveRequests";
 import { AdminLeaveTypeMaster } from "./sections/AdminLeaveTypeMaster";
@@ -13,8 +22,12 @@ import { SuperadminAuditLogs } from "./sections/SuperadminAuditLogs";
 import { SuperadminReportsAnalytics } from "./sections/SuperadminReportsAnalytics";
 import { SuperadminWorkflowSettings } from "./sections/SuperadminWorkflowSettings";
 import { LeaveSettingsCenter } from "./sections/LeaveSettingsCenter";
+import { SuperadminSettings } from "./sections/SuperadminSettings";
 import type { LeaveSettingsSectionKey } from "../../../modules/adminLeave/settings";
-import { AdminNavRail, type AdminNavGroupSchema } from "../../../components/navigation/AdminNavRail";
+import {
+  AdminNavRail,
+  type AdminNavGroupSchema,
+} from "../../../components/navigation/AdminNavRail";
 import { AdminBreadcrumbs } from "../../../components/navigation/AdminBreadcrumbs";
 
 type SectionId =
@@ -27,25 +40,97 @@ type SectionId =
   | "audit"
   | "reports"
   | "workflow"
+  | "superadmin-settings"
   | "settings"
   | "legacy-requests"
   | "legacy-types"
   | "legacy-dashboard";
 
 const SECTIONS: { id: SectionId; label: string; icon: React.ElementType; description: string }[] = [
-  { id: "dashboard", label: "Leave Dashboard", icon: BarChart3, description: "Enterprise command center for superadmin" },
-  { id: "applications", label: "Leave Applications", icon: ListChecks, description: "Search, filter, manage all leave requests" },
-  { id: "policies", label: "Leave Policies", icon: ShieldCheck, description: "Policy engine and eligibility rules" },
-  { id: "types", label: "Leave Types", icon: Palette, description: "Create and maintain leave master types" },
-  { id: "allocation", label: "Leave Allocation", icon: Layers3, description: "Allocation controls and adjustments" },
-  { id: "holidays", label: "Holiday Management", icon: CalendarDays, description: "Region and category holiday setup" },
-  { id: "audit", label: "Audit Logs", icon: FileText, description: "Action history with change traceability" },
-  { id: "reports", label: "Reports & Analytics", icon: BarChart3, description: "Insights, exports and trends" },
-  { id: "workflow", label: "Workflow Settings", icon: Network, description: "Multi-stage approval workflow controls" },
-  { id: "settings", label: "Leave Settings", icon: Settings, description: "Centralized leave settings command center" },
-  { id: "legacy-requests", label: "Legacy Requests View", icon: SlidersHorizontal, description: "Existing requests module" },
-  { id: "legacy-types", label: "Legacy Type Master", icon: Palette, description: "Existing type master module" },
-  { id: "legacy-dashboard", label: "Legacy Dashboard", icon: BarChart3, description: "Existing admin dashboard module" },
+  {
+    id: "dashboard",
+    label: "Leave Dashboard",
+    icon: BarChart3,
+    description: "Enterprise command center for superadmin",
+  },
+  {
+    id: "applications",
+    label: "Leave Applications",
+    icon: ListChecks,
+    description: "Search, filter, manage all leave requests",
+  },
+  {
+    id: "policies",
+    label: "Leave Policies",
+    icon: ShieldCheck,
+    description: "Policy engine and eligibility rules",
+  },
+  {
+    id: "types",
+    label: "Leave Types",
+    icon: Palette,
+    description: "Create and maintain leave master types",
+  },
+  {
+    id: "allocation",
+    label: "Leave Allocation",
+    icon: Layers3,
+    description: "Allocation controls and adjustments",
+  },
+  {
+    id: "holidays",
+    label: "Holiday Management",
+    icon: CalendarDays,
+    description: "Region and category holiday setup",
+  },
+  {
+    id: "audit",
+    label: "Audit Logs",
+    icon: FileText,
+    description: "Action history with change traceability",
+  },
+  {
+    id: "reports",
+    label: "Reports & Analytics",
+    icon: BarChart3,
+    description: "Insights, exports and trends",
+  },
+  {
+    id: "workflow",
+    label: "Workflow Settings",
+    icon: Network,
+    description: "Multi-stage approval workflow controls",
+  },
+  {
+    id: "superadmin-settings",
+    label: "Settings",
+    icon: Settings,
+    description: "Superadmin settings for overall application masters",
+  },
+  {
+    id: "settings",
+    label: "Leave Settings",
+    icon: Settings,
+    description: "Centralized leave settings command center",
+  },
+  {
+    id: "legacy-requests",
+    label: "Legacy Requests View",
+    icon: SlidersHorizontal,
+    description: "Existing requests module",
+  },
+  {
+    id: "legacy-types",
+    label: "Legacy Type Master",
+    icon: Palette,
+    description: "Existing type master module",
+  },
+  {
+    id: "legacy-dashboard",
+    label: "Legacy Dashboard",
+    icon: BarChart3,
+    description: "Existing admin dashboard module",
+  },
 ];
 
 export function AdminLeaveModule() {
@@ -78,7 +163,7 @@ export function AdminLeaveModule() {
       {
         id: "configuration",
         label: "Configuration",
-        items: [item("settings")],
+        items: [item("superadmin-settings"), item("settings")],
       },
       {
         id: "insights",
@@ -123,13 +208,20 @@ export function AdminLeaveModule() {
       <div>
         {active === "dashboard" && <SuperadminLeaveDashboard />}
         {active === "applications" && <SuperadminLeaveRequests title="Leave Applications" />}
-        {active === "policies" && <AdminLeavePolicies onAddNewPolicy={() => openSettingsCreate("leave-policies")} />}
-        {active === "types" && <AdminLeaveTypeMaster onAddNewLeaveType={() => openSettingsCreate("leave-types")} />}
+        {active === "policies" && (
+          <AdminLeavePolicies onAddNewPolicy={() => openSettingsCreate("leave-policies")} />
+        )}
+        {active === "types" && (
+          <AdminLeaveTypeMaster onAddNewLeaveType={() => openSettingsCreate("leave-types")} />
+        )}
         {active === "allocation" && <AdminPlaceholderSection title="Leave Allocation Management" />}
-        {active === "holidays" && <AdminHolidayCalendarManagement onAddHoliday={() => openSettingsCreate("holidays")} />}
+        {active === "holidays" && (
+          <AdminHolidayCalendarManagement onAddHoliday={() => openSettingsCreate("holidays")} />
+        )}
         {active === "audit" && <SuperadminAuditLogs />}
         {active === "reports" && <SuperadminReportsAnalytics />}
         {active === "workflow" && <SuperadminWorkflowSettings />}
+        {active === "superadmin-settings" && <SuperadminSettings />}
         {active === "settings" && (
           <LeaveSettingsCenter
             targetSection={settingsTargetSection}
@@ -139,7 +231,9 @@ export function AdminLeaveModule() {
         )}
         {active === "legacy-requests" && <AdminLeaveRequests />}
         {active === "legacy-types" && <AdminLeaveTypeMaster />}
-        {active === "legacy-dashboard" && <AdminPlaceholderSection title="Legacy Admin Dashboard" />}
+        {active === "legacy-dashboard" && (
+          <AdminPlaceholderSection title="Legacy Admin Dashboard" />
+        )}
       </div>
     </div>
   );

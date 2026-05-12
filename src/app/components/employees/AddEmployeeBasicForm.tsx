@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router';
-import { motion } from 'framer-motion';
+import { motion } from 'motion';
 import {
   ChevronRight, ArrowLeft, Save, FileText, Briefcase, Clock, CreditCard,
   Calendar, User, Shield, Upload, X, Check, AlertCircle, CheckCircle2,

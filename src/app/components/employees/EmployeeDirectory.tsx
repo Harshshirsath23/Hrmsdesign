@@ -135,8 +135,10 @@ export function EmployeeDirectory() {
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
 
-  const openInformation = (emp: Employee) =>
+  const openInformation = (emp: Employee) => {
     selectEmployee(emp.id);
+    navigate(`/admin/employees/information/${emp.id}`);
+  };
 
   return (
     <div className="flex flex-col h-full bg-background">

@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router";
+import { lazy, Suspense } from "react";
 
 // Auth
 import { LoginPage } from "./pages/LoginPage";
@@ -11,15 +12,17 @@ import { AttendanceDashboard } from "./pages/admin/attendance/AttendanceDashboar
 import { WhosInPage } from "./pages/admin/attendance/WhosInPage";
 import { ShiftRosterPage } from "./pages/admin/attendance/ShiftRosterPage";
 import { SwipeLogsPage } from "./pages/admin/attendance/SwipeLogsPage";
-import { lazy, Suspense } from "react";
 const AttendanceMatrixPage = lazy(() => import("./pages/admin/attendance/AttendanceMatrixPage").then(m => ({ default: m.AttendanceMatrixPage })));
 import { LeavePage } from "./pages/admin/LeavePage";
 import { PayrollPage } from "./pages/admin/PayrollPage";
 import { DocumentsPage } from "./pages/admin/DocumentsPage";
+import { AdminSettingsPage } from "./pages/admin/SettingsPage";
 import { EmployeesShell } from "./pages/admin/employees/EmployeesShell";
 import { AddEmployeePage } from "./pages/admin/employees/AddEmployeePage";
 import { EmployeeManagementLayout } from "./pages/admin/employees/EmployeeManagementLayout";
 import { EmployeeSetupLayout } from "./pages/admin/employees/EmployeeSetupLayout";
+import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
+import { MASTER_CATEGORIES } from "./modules/masters/config";
 
 // Management Pages (Lazy Loaded)
 const GenerateLetterPage = lazy(() => import("./pages/admin/employees/management/GenerateLetterPage").then(m => ({ default: m.GenerateLetterPage })));
@@ -37,7 +40,7 @@ const PoliciesFormsPage = lazy(() => import("./pages/admin/employees/setup/Polic
 const EmployeeSegmentPage = lazy(() => import("./pages/admin/employees/setup/EmployeeSegmentPage").then(m => ({ default: m.EmployeeSegmentPage })));
 const EmployeeRolesPage = lazy(() => import("./pages/admin/employees/setup/EmployeeRolesPage").then(m => ({ default: m.EmployeeRolesPage })));
 const EmployeeFilterPage = lazy(() => import("./pages/admin/employees/setup/EmployeeFilterPage").then(m => ({ default: m.EmployeeFilterPage })));
-const OrganizationChartPage = lazy(() => import("./pages/admin/employees/OrganizationChartPage"));
+const OrganizationChartPage = lazy(() => import("./pages/admin/employees/OrganizationChartPage").then(m => ({ default: m.OrganizationChartPageWrapper })));
 
 // Employee module components
 import { EmployeeDirectory } from "./components/employees/EmployeeDirectory";
@@ -63,25 +66,20 @@ import { EmployeeProfilePage } from "./pages/employee/EmployeeProfilePage";
 import { ProfileChangeRequestsPage } from "./pages/admin/ProfileChangeRequestsPage";
 
 export const router = createBrowserRouter([
-  // Root redirect
   {
     path: "/",
     element: <Navigate to="/login" replace />,
   },
-
-  // Login
   {
     path: "/login",
     Component: LoginPage,
   },
-
-  // Admin
   {
     path: "/admin",
     Component: AdminLayout,
     children: [
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-      { path: "dashboard",  Component: DashboardPage  },
+      { path: "dashboard", Component: DashboardPage },
       {
         path: "attendance",
         Component: AttendanceLayout,
@@ -94,41 +92,43 @@ export const router = createBrowserRouter([
           { path: "matrix", element: <Suspense fallback={<div className="p-8 text-center animate-pulse font-bold text-slate-400">Loading Matrix...</div>}><AttendanceMatrixPage /></Suspense> },
         ]
       },
-      { path: "leave",      Component: LeavePage      },
-      { path: "payroll",    Component: PayrollPage    },
-      { path: "documents",  Component: DocumentsPage  },
+      { path: "leave", Component: LeavePage },
+      { path: "payroll", Component: PayrollPage },
+      { path: "documents", Component: DocumentsPage },
+      { path: "settings", Component: AdminSettingsPage },
       { path: "profile-requests", Component: ProfileChangeRequestsPage },
       {
         path: "employees",
         Component: EmployeesShell,
         children: [
-          { index: true,               Component: EmployeeDirectory },
-          { path: "add",               Component: AddEmployeePage   },
-          { path: "information/:id",   Component: InformationLayout },
+          { index: true, Component: EmployeeDirectory },
+          { path: "add", Component: AddEmployeePage },
+          { path: "information/:id", Component: InformationLayout },
           {
             path: "management",
             Component: EmployeeManagementLayout,
             children: [
               { index: true, element: <Navigate to="generate-letter" replace /> },
               { path: "generate-letter", element: <Suspense fallback={<ManagementSkeleton />}><GenerateLetterPage /></Suspense> },
-              { path: "excel-import",    element: <Suspense fallback={<ManagementSkeleton />}><ExcelImportPage /></Suspense> },
-              { path: "photo-upload",    element: <Suspense fallback={<ManagementSkeleton />}><BulkPhotoUploadPage /></Suspense> },
-              { path: "bulletin-board",  element: <Suspense fallback={<ManagementSkeleton />}><BulletinBoardPage /></Suspense> },
-              { path: "communication",   element: <Suspense fallback={<ManagementSkeleton />}><MassCommunicationPage /></Suspense> },
-              { path: "verification",    element: <Suspense fallback={<ManagementSkeleton />}><IdentityVerificationPage /></Suspense> },
-              { path: "contracts",       element: <Suspense fallback={<ManagementSkeleton />}><ContractDetailsPage /></Suspense> },
-              { path: "data-drive",      element: <Suspense fallback={<ManagementSkeleton />}><DataDrivePage /></Suspense> },
+              { path: "excel-import", element: <Suspense fallback={<ManagementSkeleton />}><ExcelImportPage /></Suspense> },
+              { path: "photo-upload", element: <Suspense fallback={<ManagementSkeleton />}><BulkPhotoUploadPage /></Suspense> },
+              { path: "bulletin-board", element: <Suspense fallback={<ManagementSkeleton />}><BulletinBoardPage /></Suspense> },
+              { path: "communication", element: <Suspense fallback={<ManagementSkeleton />}><MassCommunicationPage /></Suspense> },
+              { path: "verification", element: <Suspense fallback={<ManagementSkeleton />}><IdentityVerificationPage /></Suspense> },
+              { path: "contracts", element: <Suspense fallback={<ManagementSkeleton />}><ContractDetailsPage /></Suspense> },
+              { path: "data-drive", element: <Suspense fallback={<ManagementSkeleton />}><DataDrivePage /></Suspense> },
             ]
           },
-          { path: "setup",
+          {
+            path: "setup",
             Component: EmployeeSetupLayout,
             children: [
               { index: true, element: <Navigate to="letter-template" replace /> },
               { path: "letter-template", element: <Suspense fallback={<ManagementSkeleton />}><LetterTemplatePage /></Suspense> },
-              { path: "policies",        element: <Suspense fallback={<ManagementSkeleton />}><PoliciesFormsPage /></Suspense> },
-              { path: "segment",         element: <Suspense fallback={<ManagementSkeleton />}><EmployeeSegmentPage /></Suspense> },
-              { path: "roles",           element: <Suspense fallback={<ManagementSkeleton />}><EmployeeRolesPage /></Suspense> },
-              { path: "filter",          element: <Suspense fallback={<ManagementSkeleton />}><EmployeeFilterPage /></Suspense> },
+              { path: "policies", element: <Suspense fallback={<ManagementSkeleton />}><PoliciesFormsPage /></Suspense> },
+              { path: "segment", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeSegmentPage /></Suspense> },
+              { path: "roles", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeRolesPage /></Suspense> },
+              { path: "filter", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeFilterPage /></Suspense> },
             ]
           },
           { path: "import", element: <Navigate to="/admin/employees/management/excel-import" replace /> },
@@ -138,16 +138,14 @@ export const router = createBrowserRouter([
       },
     ],
   },
-
-  // Employee portal
   {
     path: "/employee",
     Component: EmployeeLayout,
     children: [
-      { index: true,         element: <Navigate to="/employee/dashboard" replace /> },
-      { path: "dashboard",   Component: EmployeeDashboard },
-      { path: "profile",     Component: EmployeeProfilePage },
-      { path: "attendance",  Component: EmployeeAttendancePage },
+      { index: true, element: <Navigate to="/employee/dashboard" replace /> },
+      { path: "dashboard", Component: EmployeeDashboard },
+      { path: "profile", Component: EmployeeProfilePage },
+      { path: "attendance", Component: EmployeeAttendancePage },
       {
         path: "leaves",
         Component: EmployeeLeavesLayout,
@@ -163,16 +161,35 @@ export const router = createBrowserRouter([
           { path: "notifications", Component: EmployeeLeaveNotificationsPage },
         ],
       },
-      { path: "payslips",    Component: EmployeePayslipsPage },
-      { path: "documents",   Component: EmployeeDocumentsPage },
-      { path: "canteen",     Component: EmployeeCanteenPage },
+      { path: "payslips", Component: EmployeePayslipsPage },
+      { path: "documents", Component: EmployeeDocumentsPage },
+      { path: "canteen", Component: EmployeeCanteenPage },
     ],
   },
-
-  // Legacy redirect
   {
     path: "/employees/*",
     element: <Navigate to="/admin/employees" replace />,
+  },
+  {
+    path: "/superadmin",
+    Component: AdminLayout,
+    children: [
+      {
+        path: "masters",
+        children: [
+          {
+            index: true,
+            element: (
+              <Navigate
+                to={`${MASTER_CATEGORIES[0]?.key}/${MASTER_CATEGORIES[0]?.masters[0]?.key}`}
+                replace
+              />
+            ),
+          },
+          { path: ":category/:masterName", Component: SuperadminMastersPage },
+        ],
+      },
+    ],
   },
 ]);
 
