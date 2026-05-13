@@ -89,6 +89,7 @@ export const MASTER_CATEGORIES: MasterCategoryConfig[] = [
       "EmployeeType",
       "EmployeeCategory",
       "EmployeeStatus",
+      "EmployeeNumberSeries",
       "SourceOfHire",
       "SourceOfHireType",
       "PayrollStatus",

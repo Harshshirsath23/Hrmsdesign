@@ -8,6 +8,7 @@ import {
   BarChart3,
   FileSpreadsheet,
   GitGraph,
+  LayoutDashboard,
 } from "lucide-react";
 import { useEmployee } from "../../../context/EmployeeContext";
 
@@ -23,6 +24,7 @@ export function EmployeesShell() {
   const isReports = location.pathname.includes("/reports");
   const isImport = location.pathname.includes("/import");
   const isOrgChart = location.pathname.includes("/org-chart");
+  const isMain = location.pathname.includes("/main");
 
   const activeTab = isInformation
     ? "information"
@@ -38,6 +40,8 @@ export function EmployeesShell() {
     ? "import"
     : isOrgChart
     ? "org-chart"
+    : isMain
+    ? "main"
     : "directory";
 
   return (
@@ -45,6 +49,7 @@ export function EmployeesShell() {
       {/* Sub-header with tabs */}
       <div className="bg-card border-b border-border px-6 flex items-center justify-between h-14 flex-shrink-0 z-10">
         <div className="flex items-center gap-1">
+
           <button
             onClick={() => {
               clearSelection();
@@ -131,6 +136,19 @@ export function EmployeesShell() {
             <GitGraph className="w-4 h-4" />
             Org Chart
           </button>
+
+          <button
+            onClick={() => navigate("/admin/employees/main")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
+              activeTab === "main"
+                ? "bg-secondary text-foreground font-semibold"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Main
+          </button>
+
 
           {selectedEmployeeId && (
             <button

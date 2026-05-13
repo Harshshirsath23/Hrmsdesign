@@ -1,6 +1,9 @@
 export interface Employee {
   id: string;
   name: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
   employeeId: string;
   designation: string;
   department: string;
@@ -14,35 +17,108 @@ export interface Employee {
   initials: string;
   avatarColor: string;
   reportingManagerId?: string;
+  
   // Profile details
+  salutation?: string;
+  preferredName?: string;
+  alternateMobile?: string;
+  extensionNumber?: string;
+  bio?: string;
+  
+  // Personal details
+  actualDob?: string;
   dateOfBirth: string;
   gender: string;
   maritalStatus: string;
   bloodGroup: string;
   nationality: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
-  // Bank details
+  religion?: string;
+  caste?: string;
+  casteCategory?: string;
+  residentialStatus?: string;
+  placeOfBirth?: string;
+  identificationMark?: string;
+  isPhysicallyChallenged?: boolean;
+  isInternationalEmployee?: boolean;
+  fathersName?: string;
+  motherName?: string;
+  spouseName?: string;
+  
+  currentAddress?: {
+    addressLine1: string;
+    addressLine2: string;
+    landmark: string;
+    city: string;
+    state: string;
+    country: string;
+    pincode: string;
+    startDate: string;
+    toDate: string;
+    isSameAsPermanent: boolean;
+  };
+  permanentAddress?: {
+    addressLine1: string;
+    addressLine2: string;
+    landmark: string;
+    city: string;
+    state: string;
+    country: string;
+    pincode: string;
+    startDate: string;
+    toDate: string;
+  };
+
+  // Bank & Statutory details
   bankName: string;
   accountNumber: string;
   ifscCode: string;
+  panNumber?: string;
+  aadhaarNumber?: string;
+  uanNumber?: string;
   pfNumber: string;
   esiNumber: string;
+  taxRegime?: string;
+
   // Family
   family: {
     name: string;
     relationship: string;
     dob: string;
     occupation: string;
+    gender: string;
+    bloodGroup: string;
+    phone: string;
+    isDependent: boolean;
+    isEmergencyContact: boolean;
+    isNominee?: boolean;
   }[];
-  // Passport
+
+  // Nominees (if separate from family)
+  nominees?: {
+    name: string;
+    relationship: string;
+    dob: string;
+    sharePercentage: string;
+    phone: string;
+  }[];
+
+  // Passport & Visa
   passportNumber: string;
+  passportHolderName?: string;
+  passportIssueDate?: string;
+  passportPlaceOfIssue?: string;
+  passportCountryOfIssue?: string;
+  passportCategory?: string;
+  passportStatus?: string;
   passportExpiry: string;
   visaType: string;
+  visaNumber?: string;
   visaExpiry: string;
   visaCountry: string;
+  visaSponsor?: string;
+  visaIssueDate?: string;
+  visaStatus?: string;
+
   // Position History
   positionHistory: {
     title: string;
@@ -51,6 +127,7 @@ export interface Employee {
     to: string;
     reportingTo: string;
   }[];
+
   // Previous Employment
   previousEmployment: {
     company: string;
@@ -59,6 +136,7 @@ export interface Employee {
     to: string;
     reasonForLeaving: string;
   }[];
+
   // Salary
   basicSalary: number;
   hra: number;
@@ -70,12 +148,17 @@ export interface Employee {
   tds: number;
   netSalary: number;
 
-  // New Work Details fields
+  // Work Details
   employeeType?: string;
+  employeeCategory?: string;
+  shift?: string;
+  functionalManager?: string;
+  hrPartner?: string;
   confirmationDate?: string;
   employmentStatus?: string;
   probationPeriod?: string;
   noticePeriod?: string;
+  noticePeriodDays?: string;
   referredBy?: string;
   reportingTo?: string;
 
@@ -88,12 +171,55 @@ export interface Employee {
     startDate: string;
     endDate: string;
     grade: string;
+    percentageCgpa?: string;
     educationLevel: string;
     modeOfStudy: string;
     country: string;
     certificateUrl?: string;
     certificateName?: string;
   }[];
+
+  // Insurance
+  insurance?: {
+    policyType: string;
+    policyNumber: string;
+    provider: string;
+    coverageAmount: string;
+    startDate: string;
+    endDate: string;
+    nomineeName: string;
+  }[];
+
+  // Languages
+  languages?: {
+    language: string;
+    proficiency: string;
+    canRead: boolean;
+    canWrite: boolean;
+    canSpeak: boolean;
+  }[];
+
+  // Assets
+  assets?: {
+    name: string;
+    code: string;
+    type: string;
+    assignedDate: string;
+    returnDate?: string;
+    condition: string;
+    remarks?: string;
+  }[];
+
+  // Medical Information
+  medicalInfo?: {
+    relationship?: string;
+    conditions?: string;
+    allergies?: string;
+    bloodGroup?: string;
+    doctorName?: string;
+    insuranceProvider?: string;
+    insurancePolicyNumber?: string;
+  };
 
   // Background Check
   backgroundCheck?: {
@@ -104,6 +230,14 @@ export interface Employee {
     reportUrl?: string;
     verifiedBy?: string;
     referenceNumber?: string;
+  };
+
+  // Emergency Contact (subset of communication)
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    phone: string;
+    alternatePhone?: string;
   };
 }
 
@@ -189,9 +323,39 @@ export const employees: Employee[] = [
     pfNumber: "KN/BAN/12345/001",
     esiNumber: "ESI/2021/001234",
     family: [
-      { name: "Priya Sharma", relationship: "Spouse", dob: "1994-03-10", occupation: "Teacher" },
-      { name: "Ramesh Sharma", relationship: "Father", dob: "1962-11-05", occupation: "Retired" },
-      { name: "Sunita Sharma", relationship: "Mother", dob: "1965-08-14", occupation: "Homemaker" },
+      { 
+        name: "Priya Sharma", 
+        relationship: "Spouse", 
+        dob: "1994-03-10", 
+        occupation: "Teacher",
+        gender: "Female",
+        bloodGroup: "O+",
+        phone: "+91 98765 00001",
+        isDependent: true,
+        isEmergencyContact: true
+      },
+      { 
+        name: "Ramesh Sharma", 
+        relationship: "Father", 
+        dob: "1962-11-05", 
+        occupation: "Retired",
+        gender: "Male",
+        bloodGroup: "B+",
+        phone: "+91 98765 00002",
+        isDependent: true,
+        isEmergencyContact: false
+      },
+      { 
+        name: "Sunita Sharma", 
+        relationship: "Mother", 
+        dob: "1965-08-14", 
+        occupation: "Homemaker",
+        gender: "Female",
+        bloodGroup: "A+",
+        phone: "+91 98765 00003",
+        isDependent: true,
+        isEmergencyContact: false
+      },
     ],
     passportNumber: "J9876543",
     passportExpiry: "2029-05-12",
