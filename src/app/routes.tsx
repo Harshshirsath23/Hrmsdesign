@@ -49,6 +49,19 @@ import { InformationLayout } from "./components/employees/InformationLayout";
 // Employee portal
 import { ManagerLayout } from "./pages/manager/ManagerLayout";
 import { ManagerDashboard } from "./pages/manager/ManagerDashboard";
+import { ManagerAttendancePage } from "./pages/manager/ManagerAttendancePage";
+import { ManagerLeavesLayout } from "./pages/manager/leaves/ManagerLeavesLayout";
+import { ManagerLeaveDashboardPage } from "./pages/manager/leaves/ManagerLeaveDashboardPage";
+import { ManagerLeaveApplyPage } from "./pages/manager/leaves/ManagerLeaveApplyPage";
+import { ManagerLeaveApplicationsPage } from "./pages/manager/leaves/ManagerLeaveApplicationsPage";
+import { ManagerLeaveBalancePage } from "./pages/manager/leaves/ManagerLeaveBalancePage";
+import { ManagerLeaveHolidaysPage } from "./pages/manager/leaves/ManagerLeaveHolidaysPage";
+import { ManagerLeaveTeamCalendarPage } from "./pages/manager/leaves/ManagerLeaveTeamCalendarPage";
+import { ManagerLeavePolicyPage } from "./pages/manager/leaves/ManagerLeavePolicyPage";
+import { ManagerLeaveNotificationsPage } from "./pages/manager/leaves/ManagerLeaveNotificationsPage";
+import { ManagerPayslipsPage } from "./pages/manager/ManagerPayslipsPage";
+import { ManagerDocumentsPage } from "./pages/manager/ManagerDocumentsPage";
+import { ManagerProfilePage } from "./pages/manager/ManagerProfilePage";
 import { EmployeeLayout } from "./pages/employee/EmployeeLayout";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeAttendancePage } from "./pages/employee/EmployeeAttendancePage";
@@ -146,11 +159,30 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/manager/dashboard" replace /> },
       { path: "dashboard", Component: ManagerDashboard },
-      { path: "team", element: <div className="p-8 text-center text-muted-foreground font-medium">My Team Module (Coming Soon)</div> },
-      { path: "attendance", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Attendance Module (Coming Soon)</div> },
-      { path: "leaves", element: <div className="p-8 text-center text-muted-foreground font-medium">Leave Management Module (Coming Soon)</div> },
-      { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Reports Module (Coming Soon)</div> },
-      { path: "settings", element: <div className="p-8 text-center text-muted-foreground font-medium">Settings Module (Coming Soon)</div> },
+      { path: "profile", Component: ManagerProfilePage },
+      { path: "attendance", Component: ManagerAttendancePage },
+      {
+        path: "leaves",
+        Component: ManagerLeavesLayout,
+        children: [
+          { index: true, element: <Navigate to="dashboard" replace /> },
+          { path: "dashboard", Component: ManagerLeaveDashboardPage },
+          { path: "apply", Component: ManagerLeaveApplyPage },
+          { path: "applications", Component: ManagerLeaveApplicationsPage },
+          { path: "balance", Component: ManagerLeaveBalancePage },
+          { path: "holidays", Component: ManagerLeaveHolidaysPage },
+          { path: "team", Component: ManagerLeaveTeamCalendarPage },
+          { path: "policy", Component: ManagerLeavePolicyPage },
+          { path: "notifications", Component: ManagerLeaveNotificationsPage },
+        ],
+      },
+      { path: "payslips", Component: ManagerPayslipsPage },
+      { path: "documents", Component: ManagerDocumentsPage },
+      { path: "team-dashboard", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Dashboard (Coming Soon)</div> },
+      { path: "team-attendance", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Attendance (Coming Soon)</div> },
+      { path: "approvals", element: <div className="p-8 text-center text-muted-foreground font-medium">Approvals (Coming Soon)</div> },
+      { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Reports (Coming Soon)</div> },
+      { path: "org-chart", element: <div className="p-8 text-center text-muted-foreground font-medium">Organization Chart (Coming Soon)</div> },
     ],
   },
   {
