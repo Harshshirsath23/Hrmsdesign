@@ -69,6 +69,42 @@ export interface Employee {
   pf: number;
   tds: number;
   netSalary: number;
+
+  // New Work Details fields
+  employeeType?: string;
+  confirmationDate?: string;
+  employmentStatus?: string;
+  probationPeriod?: string;
+  noticePeriod?: string;
+  referredBy?: string;
+  reportingTo?: string;
+
+  // Education Details
+  education?: {
+    qualification: string;
+    specialization: string;
+    institutionName: string;
+    university: string;
+    startDate: string;
+    endDate: string;
+    grade: string;
+    educationLevel: string;
+    modeOfStudy: string;
+    country: string;
+    certificateUrl?: string;
+    certificateName?: string;
+  }[];
+
+  // Background Check
+  backgroundCheck?: {
+    verificationStatus: string;
+    completedOn?: string;
+    agencyName?: string;
+    remarks?: string;
+    reportUrl?: string;
+    verifiedBy?: string;
+    referenceNumber?: string;
+  };
 }
 
 export const employees: Employee[] = [
@@ -203,6 +239,46 @@ export const employees: Employee[] = [
     pf: 9000,
     tds: 8500,
     netSalary: 102500,
+    employeeType: "Permanent",
+    confirmationDate: "2021-09-15",
+    employmentStatus: "Confirmed",
+    probationPeriod: "6 Months",
+    noticePeriod: "60 Days",
+    referredBy: "Self",
+    reportingTo: "Vikram Nair",
+    education: [
+      {
+        qualification: "Bachelor of Technology",
+        specialization: "Computer Science",
+        institutionName: "IIT Bombay",
+        university: "IIT Bombay",
+        startDate: "2014-07-01",
+        endDate: "2018-05-31",
+        grade: "8.5 CGPA",
+        educationLevel: "Bachelor's",
+        modeOfStudy: "Full Time",
+        country: "India",
+        certificateName: "BTech_Degree.pdf"
+      },
+      {
+        qualification: "Higher Secondary",
+        specialization: "Science",
+        institutionName: "KV No. 1",
+        university: "CBSE",
+        startDate: "2012-04-01",
+        endDate: "2014-03-31",
+        grade: "92%",
+        educationLevel: "Higher Secondary",
+        modeOfStudy: "Full Time",
+        country: "India"
+      }
+    ],
+    backgroundCheck: {
+      verificationStatus: "Verified",
+      completedOn: "2021-04-10",
+      agencyName: "TrustVerify Inc.",
+      remarks: "All documents and previous employment verified successfully."
+    }
   },
   {
     id: "2",

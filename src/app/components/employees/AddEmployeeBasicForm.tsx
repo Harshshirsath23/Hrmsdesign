@@ -13,7 +13,8 @@ import {
   ChevronRight, ArrowLeft, Save, FileText, Briefcase, Clock, CreditCard,
   Calendar, User, Shield, Upload, X, Check, AlertCircle, CheckCircle2,
   ChevronDown, Search, Eye, EyeOff, MapPin, Users, Building2, Loader2,
-  ImageOff, Image, Bell, HelpCircle, Tag, MessageSquare, Mail, Phone
+  ImageOff, Image, Bell, HelpCircle, Tag, MessageSquare, Mail, Phone,
+  GraduationCap, Plus, Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/app/components/ui/button';
@@ -88,6 +89,31 @@ const formSchema = z.object({
   employeeTags: z.array(z.string()).optional(),
   hrNotes: z.string().max(1000, 'Max 1000 characters').optional(),
   internalNotes: z.string().max(1000, 'Max 1000 characters').optional(),
+
+  // NEW SECTIONS
+  educationDetails: z.array(z.object({
+    educationLevel: z.string(),
+    qualification: z.string(),
+    specialization: z.string(),
+    institutionName: z.string(),
+    boardUniversity: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
+    grade: z.string(),
+    modeOfStudy: z.string(),
+    country: z.string(),
+    certificateUrl: z.string().optional(),
+  })).optional(),
+
+  backgroundCheck: z.object({
+    verificationStatus: z.enum(['Pending', 'In Progress', 'Verified', 'Failed', 'Not Required']),
+    completedOn: z.string().optional(),
+    agencyName: z.string().optional(),
+    remarks: z.string().optional(),
+    reportUrl: z.string().optional(),
+    verifiedBy: z.string().optional(),
+    referenceNumber: z.string().optional(),
+  }).optional(),
 }).refine(
   (data) => {
     if (!data.dateOfBirth || !data.dateOfJoining) return true;
@@ -505,6 +531,12 @@ export default function AddEmployeeBasicForm() {
       employeeTags: [],
       hrNotes: '',
       internalNotes: '',
+      educationDetails: [],
+      backgroundCheck: {
+        verificationStatus: 'Pending',
+        agencyName: '',
+        remarks: '',
+      },
     },
     mode: 'onChange',
   });
@@ -871,8 +903,161 @@ export default function AddEmployeeBasicForm() {
                     />
                     <label htmlFor="allow-fill" className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
                       Allow employee to fill remaining information during onboarding
-                    </label>
                   </div>
+                </div>
+              </motion.div>
+
+              {/* ── Education Details Repeater ─────────────────── */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-[2.5rem] border border-white/40 dark:border-gray-800/40 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.04)]"
+              >
+                <SectionHeader title="Education Details" icon={GraduationCap} description="Academic qualifications and certifications" />
+                
+                <div className="space-y-6">
+                  {(watch('educationDetails') || []).map((edu, index) => (
+                    <div key={index} className="p-6 rounded-[2rem] border border-border bg-slate-50/50 dark:bg-slate-900/30 relative group/edu">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const current = watch('educationDetails') || [];
+                          setValue('educationDetails', current.filter((_, i) => i !== index));
+                        }}
+                        className="absolute right-4 top-4 p-2 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all opacity-0 group-hover/edu:opacity-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField label="Level">
+                          <Select value={edu.educationLevel} onValueChange={(v) => {
+                            const current = [...(watch('educationDetails') || [])];
+                            current[index].educationLevel = v;
+                            setValue('educationDetails', current);
+                          }}>
+                            <SelectTrigger className="h-10 rounded-xl">
+                              <SelectValue placeholder="Select Level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {['SSC', 'HSC', 'Diploma', 'Bachelor\'s', 'Master\'s', 'PhD'].map(l => (
+                                <SelectItem key={l} value={l}>{l}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormField>
+                        <FormField label="Qualification / Degree">
+                          <Input value={edu.qualification} onChange={(e) => {
+                            const current = [...(watch('educationDetails') || [])];
+                            current[index].qualification = e.target.value;
+                            setValue('educationDetails', current);
+                          }} className="h-10 rounded-xl" />
+                        </FormField>
+                        <FormField label="Field of Study">
+                          <Input value={edu.specialization} onChange={(e) => {
+                            const current = [...(watch('educationDetails') || [])];
+                            current[index].specialization = e.target.value;
+                            setValue('educationDetails', current);
+                          }} className="h-10 rounded-xl" />
+                        </FormField>
+                        <FormField label="Institution Name">
+                          <Input value={edu.institutionName} onChange={(e) => {
+                            const current = [...(watch('educationDetails') || [])];
+                            current[index].institutionName = e.target.value;
+                            setValue('educationDetails', current);
+                          }} className="h-10 rounded-xl" />
+                        </FormField>
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField label="Start Date">
+                            <Input type="date" value={edu.startDate} onChange={(e) => {
+                              const current = [...(watch('educationDetails') || [])];
+                              current[index].startDate = e.target.value;
+                              setValue('educationDetails', current);
+                            }} className="h-10 rounded-xl text-xs" />
+                          </FormField>
+                          <FormField label="End Date">
+                            <Input type="date" value={edu.endDate} onChange={(e) => {
+                              const current = [...(watch('educationDetails') || [])];
+                              current[index].endDate = e.target.value;
+                              setValue('educationDetails', current);
+                            }} className="h-10 rounded-xl text-xs" />
+                          </FormField>
+                        </div>
+                        <FormField label="Grade / CGPA">
+                          <Input value={edu.grade} onChange={(e) => {
+                            const current = [...(watch('educationDetails') || [])];
+                            current[index].grade = e.target.value;
+                            setValue('educationDetails', current);
+                          }} className="h-10 rounded-xl" />
+                        </FormField>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      const current = watch('educationDetails') || [];
+                      setValue('educationDetails', [...current, {
+                        educationLevel: 'Bachelor\'s',
+                        qualification: '',
+                        specialization: '',
+                        institutionName: '',
+                        boardUniversity: '',
+                        startDate: '',
+                        endDate: '',
+                        grade: '',
+                        modeOfStudy: 'Regular',
+                        country: 'India'
+                      }]);
+                    }}
+                    className="w-full h-14 border-dashed border-2 hover:border-primary hover:bg-primary/5 rounded-[1.5rem] flex items-center justify-center gap-2 text-xs font-black text-muted-foreground hover:text-primary transition-all"
+                  >
+                    <Plus size={16} />
+                    ADD EDUCATION RECORD
+                  </Button>
+                </div>
+              </motion.div>
+
+              {/* ── Background Check ───────────────────────────── */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-[2.5rem] border border-white/40 dark:border-gray-800/40 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.04)]"
+              >
+                <SectionHeader title="Background Check" icon={Shield} description="Verification status and agency details" />
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <FormField label="Verification Status">
+                    <Select 
+                      value={watch('backgroundCheck.verificationStatus')} 
+                      onValueChange={(v) => setValue('backgroundCheck.verificationStatus', v as any)}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['Pending', 'In Progress', 'Verified', 'Failed', 'Not Required'].map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                  <FormField label="Agency Name">
+                    <Input {...form.register('backgroundCheck.agencyName')} className="h-11 rounded-xl" placeholder="E.g. AuthBridge" />
+                  </FormField>
+                  <FormField label="Verified By">
+                    <Input {...form.register('backgroundCheck.verifiedBy')} className="h-11 rounded-xl" placeholder="Auditor Name" />
+                  </FormField>
+                  <FormField label="Reference Number">
+                    <Input {...form.register('backgroundCheck.referenceNumber')} className="h-11 rounded-xl" placeholder="Case ID" />
+                  </FormField>
+                  <FormField label="Remarks" className="sm:col-span-2">
+                    <Textarea {...form.register('backgroundCheck.remarks')} className="rounded-xl min-h-[80px] resize-none" placeholder="Verification notes..." />
+                  </FormField>
                 </div>
               </motion.div>
             </div>

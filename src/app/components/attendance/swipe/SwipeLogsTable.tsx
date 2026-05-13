@@ -10,11 +10,17 @@ import {
   UserCheck,
   Smartphone,
   Globe,
-  Monitor
+  Monitor,
+  Eye,
+  Edit,
+  Trash2,
+  Download
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { cn } from "../../ui/utils";
 import { SwipeLog } from "../../../modules/attendance/types";
+import { KebabMenu, KebabMenuItem } from "../../ui/KebabMenu";
+import { toast } from "sonner";
 
 interface SwipeLogsTableProps {
   logs: SwipeLog[];
@@ -130,10 +136,18 @@ export function SwipeLogsTable({ logs, onSelectSwipe }: SwipeLogsTableProps) {
               </td>
 
               {/* Actions */}
-              <td className="px-6 py-4 text-right">
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                  <MoreVertical className="w-4 h-4 text-slate-400" />
-                </button>
+              <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                <KebabMenu 
+                  size="sm"
+                  items={[
+                    { label: "View Details", icon: Eye, onClick: () => onSelectSwipe(log) },
+                    { label: "Manual Override", icon: Edit, onClick: () => toast.info(`Manual override for ${log.employeeName}`) },
+                    { label: "Download Log", icon: Download, onClick: () => toast.success("Log downloaded") },
+                    { label: "Delete Log", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                      if (confirm("Delete this swipe log?")) toast.success("Log deleted");
+                    }},
+                  ]}
+                />
               </td>
             </tr>
           ))}

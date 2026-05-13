@@ -26,6 +26,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
+import { KebabMenu } from "../../../components/ui/KebabMenu";
 import { 
   MOCK_SWIPE_LOGS, 
   MOCK_DEPARTMENTS, 
@@ -261,6 +262,14 @@ export function SwipeLogsPage() {
             >
               <RefreshCw className={cn("w-4 h-4 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
+            <KebabMenu 
+              items={[
+                { label: "Sync Configuration", icon: Settings, onClick: () => toast.info("Opening sync settings...") },
+                { label: "View System Logs", icon: History, onClick: () => setShowAllActivityModal(true) },
+                { label: "Security Audit", icon: ShieldCheck, onClick: () => toast.success("Security scan completed: 0 threats") },
+                { label: "Clear Local Cache", icon: Trash2, variant: "destructive", separator: true, onClick: () => toast.error("Cache cleared") },
+              ]}
+            />
           </div>
         </div>
       </div>

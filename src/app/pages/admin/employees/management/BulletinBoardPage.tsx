@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Megaphone, Pin, Calendar, Users, Eye, Edit3, Trash2, Plus, Paperclip } from "lucide-react";
+import { Megaphone, Pin, Calendar, Users, Eye, Edit3, Trash2, Plus, Paperclip, PinOff, Copy, Archive } from "lucide-react";
+import { KebabMenu } from "../../../../components/ui/KebabMenu";
+import { toast } from "sonner";
 
 interface Notice {
   id: string;
@@ -101,13 +102,20 @@ export function BulletinBoardPage() {
                         Attachment.pdf
                       </button>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors">
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-secondary rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                      <KebabMenu 
+                        size="sm"
+                        items={[
+                          { label: "View Notice", icon: Eye, onClick: () => toast.info(`Viewing ${notice.title}`) },
+                          { label: "Edit Notice", icon: Edit3, onClick: () => toast.info(`Editing ${notice.title}`) },
+                          { label: notice.isPinned ? "Unpin Notice" : "Pin Notice", icon: notice.isPinned ? PinOff : Pin, onClick: () => toast.success(notice.isPinned ? "Unpinned" : "Pinned") },
+                          { label: "Duplicate", icon: Copy, onClick: () => toast.info("Notice duplicated") },
+                          { label: "Archive", icon: Archive, onClick: () => toast.info("Notice archived") },
+                          { label: "Delete", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                            if (confirm(`Permanently delete "${notice.title}"?`)) toast.error("Notice deleted");
+                          }},
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>

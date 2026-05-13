@@ -1,5 +1,6 @@
-import React from "react";
-import { HardDrive, Folder, File, Search, Upload, Download, MoreVertical, ChevronRight, Share2, Clock } from "lucide-react";
+import { HardDrive, Folder, File, Search, Upload, Download, MoreVertical, ChevronRight, Share2, Clock, Eye, Edit, Trash2 } from "lucide-react";
+import { KebabMenu } from "../../../../components/ui/KebabMenu";
+import { toast } from "sonner";
 
 export function DataDrivePage() {
   return (
@@ -82,9 +83,19 @@ export function DataDrivePage() {
                   <div className="w-10 h-10 bg-blue-500/10 text-blue-600 rounded-lg flex items-center justify-center">
                     <Folder className="w-5 h-5 fill-current" />
                   </div>
-                  <button className="p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                  </button>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <KebabMenu 
+                      size="sm"
+                      items={[
+                        { label: "Open Folder", icon: Eye, onClick: () => toast.info(`Opening ${folder.name}`) },
+                        { label: "Rename", icon: Edit, onClick: () => toast.info(`Renaming ${folder.name}`) },
+                        { label: "Share Access", icon: Share2, onClick: () => toast.info(`Sharing ${folder.name}`) },
+                        { label: "Delete Folder", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                          if (confirm(`Delete folder "${folder.name}" and all its contents?`)) toast.error("Folder deleted");
+                        }},
+                      ]}
+                    />
+                  </div>
                 </div>
                 <h4 className="text-sm font-bold text-foreground mb-1">{folder.name}</h4>
                 <p className="text-xs text-muted-foreground">{folder.items} items • {folder.size}</p>

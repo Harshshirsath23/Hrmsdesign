@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useCallback, memo } from "react";
-import { 
-  Download, 
-  Upload, 
-  RefreshCw, 
-  Home, 
+import {
+  Download,
+  Upload,
+  RefreshCw,
+  Home,
   ChevronRight,
   FileSpreadsheet,
   Printer,
@@ -21,7 +21,6 @@ import {
   Users,
   Briefcase,
   Zap,
-  MoreVertical,
   Edit2,
   Lock,
   Unlock,
@@ -38,55 +37,56 @@ import {
   Plus,
   Save,
   Check,
-  MoreHorizontal
+  Trash2
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
+import { KebabMenu } from "../../../components/ui/KebabMenu";
 import { useEmployee } from "../../../context/EmployeeContext";
 import * as XLSX from "xlsx";
-import { 
-  MOCK_MATRIX_DATA, 
-  MOCK_DEPARTMENTS, 
-  MOCK_DESIGNATIONS, 
-  MOCK_EMPLOYEES 
+import {
+  MOCK_MATRIX_DATA,
+  MOCK_DEPARTMENTS,
+  MOCK_DESIGNATIONS,
+  MOCK_EMPLOYEES
 } from "../../../modules/attendance/mockData";
 import { cn } from "../../../components/ui/utils";
 import { toast } from "sonner";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter, 
-  DialogDescription 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "../../../components/ui/select";
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
 } from "../../../components/ui/popover";
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
 } from "../../../components/ui/tooltip";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
   SheetTitle,
   SheetDescription
 } from "../../../components/ui/sheet";
-import { 
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -124,7 +124,7 @@ const MatrixCell = memo(({ emp, day, onUpdate, onOpenDrawer }: any) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <div 
+        <div
           className={cn(
             "w-full h-full min-h-[32px] rounded-md border flex items-center justify-center text-[10px] font-black cursor-pointer transition-all duration-200 hover:scale-110 active:scale-95 group relative overflow-hidden shadow-sm",
             config.color
@@ -142,16 +142,16 @@ const MatrixCell = memo(({ emp, day, onUpdate, onOpenDrawer }: any) => {
             </div>
             <span className={cn("px-2 py-0.5 rounded text-[10px] font-black uppercase", config.color)}>{config.label}</span>
           </div>
-          
+
           <div className="grid grid-cols-4 gap-1.5">
             {Object.keys(STATUS_CODES).slice(0, 12).map(code => (
-              <button 
-                key={code} 
+              <button
+                key={code}
                 className={cn(
-                  "h-8 flex items-center justify-center rounded-lg text-[10px] font-black border transition-all hover:scale-110 active:scale-90", 
+                  "h-8 flex items-center justify-center rounded-lg text-[10px] font-black border transition-all hover:scale-110 active:scale-90",
                   STATUS_CODES[code].color,
                   status === code ? "ring-2 ring-slate-900 ring-offset-1" : "opacity-60 hover:opacity-100"
-                )} 
+                )}
                 onClick={() => onUpdate(emp, dateKey, code)}
               >
                 {code}
@@ -204,10 +204,10 @@ export function AttendanceMatrixPage() {
   const { selectEmployee } = useEmployee();
   const [data, setData] = useState(MOCK_MATRIX_DATA || []);
   const [selectedMonth, setSelectedMonth] = useState(new Date(2026, 4, 1)); // May 2026
-  
+
   // Grid Configuration State
   const [gridConfig, setGridConfig] = useState({
-    density: "default", 
+    density: "default",
     stickyEmployee: true,
     showSummaries: true
   });
@@ -242,11 +242,11 @@ export function AttendanceMatrixPage() {
     return data.filter(emp => {
       // 1. Search Logic (Name, ID, Dept)
       const searchStr = filters.search.toLowerCase();
-      const nameMatch = !filters.search || 
-                        emp.name?.toLowerCase().includes(searchStr) || 
-                        emp.id?.toLowerCase().includes(searchStr) || 
-                        emp.department?.toLowerCase().includes(searchStr);
-      
+      const nameMatch = !filters.search ||
+        emp.name?.toLowerCase().includes(searchStr) ||
+        emp.id?.toLowerCase().includes(searchStr) ||
+        emp.department?.toLowerCase().includes(searchStr);
+
       // 2. Department Logic
       const deptMatch = filters.department === "all" || emp.department === filters.department;
 
@@ -315,7 +315,7 @@ export function AttendanceMatrixPage() {
 
     setIsImporting(true);
     const toastId = toast.loading("Processing Excel file...");
-    
+
     try {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -324,7 +324,7 @@ export function AttendanceMatrixPage() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const json: any[] = XLSX.utils.sheet_to_json(worksheet);
-        
+
         setImportPreview(json);
         setShowImportModal(false);
         setIsImporting(false);
@@ -398,56 +398,68 @@ export function AttendanceMatrixPage() {
 
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-800 mr-2">
-               <Button variant="ghost" size="sm" className="h-8 text-[11px] font-bold rounded-lg px-3" onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}>
-                 <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-               </Button>
-               <span className="px-4 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase min-w-[120px] text-center">
-                 {format(selectedMonth, "MMMM yyyy")}
-               </span>
-               <Button variant="ghost" size="sm" className="h-8 text-[11px] font-bold rounded-lg px-3" onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}>
-                 <ChevronRight className="w-3.5 h-3.5" />
-               </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-[11px] font-bold rounded-lg px-3" onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}>
+                <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+              </Button>
+              <span className="px-4 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase min-w-[120px] text-center">
+                {format(selectedMonth, "MMMM yyyy")}
+              </span>
+              <Button variant="ghost" size="sm" className="h-8 text-[11px] font-bold rounded-lg px-3" onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Button>
             </div>
             <Button variant="outline" size="sm" className="h-10 gap-2 font-bold text-[11px] border-emerald-100 hover:bg-emerald-50 rounded-xl px-4" onClick={handleExport}>
               <Download className="w-3.5 h-3.5 text-emerald-500" /> EXPORT
             </Button>
-            <Button 
-               variant="outline" 
-               size="sm" 
-               className="h-10 gap-2 font-bold text-[11px] border-blue-100 hover:bg-blue-50 rounded-xl px-4 bg-blue-50/30" 
-               onClick={() => setShowImportModal(true)}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 gap-2 font-bold text-[11px] border-blue-100 hover:bg-blue-50 rounded-xl px-4 bg-blue-50/30"
+              onClick={() => setShowImportModal(true)}
             >
               <Upload className="w-3.5 h-3.5 text-blue-500" /> IMPORT EXCEL
             </Button>
             <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800); }}>
               <RefreshCw className={cn("w-4 h-4 text-slate-400", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
+            <KebabMenu
+              items={[
+                { label: "Matrix Settings", icon: SlidersHorizontal, onClick: () => toast.info("Opening matrix configuration...") },
+                { label: "View Audit Trail", icon: History, onClick: () => toast.info("Loading audit trail...") },
+                { label: "Lock Attendance", icon: Lock, onClick: () => toast.success("Attendance locked for this month") },
+                {
+                  label: "Reset Matrix", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                    if (confirm("Reset all manual updates for this month?")) toast.error("Matrix reset");
+                  }
+                },
+              ]}
+            />
           </div>
         </div>
 
         {/* Filter/Search Bar */}
         <div className="flex items-center gap-4 py-1">
-           <div className="flex-1 max-w-[350px] relative">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-             <Input 
-               className="pl-9 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-xs shadow-inner" 
-               placeholder="Search by Employee Name, ID, or Dept..."
-               value={filters.search}
-               onChange={e => setFilters({...filters, search: e.target.value})}
-             />
-           </div>
-           <div className="w-[180px]">
-             <Select value={filters.department} onValueChange={v => setFilters({...filters, department: v})}>
-               <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent font-bold text-xs">
-                 <SelectValue placeholder="All Departments" />
-               </SelectTrigger>
-               <SelectContent>
-                 <SelectItem value="all">All Departments</SelectItem>
-                 {MOCK_DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-               </SelectContent>
-             </Select>
+          <div className="flex-1 max-w-[350px] relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              className="pl-9 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-xs shadow-inner"
+              placeholder="Search by Employee Name, ID, or Dept..."
+              value={filters.search}
+              onChange={e => setFilters({ ...filters, search: e.target.value })}
+            />
+          </div>
+          <div className="w-[180px]">
+            <Select value={filters.department} onValueChange={v => setFilters({ ...filters, department: v })}>
+              <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent font-bold text-xs">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {MOCK_DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </SelectContent>
+            </Select>
 
-           </div>
+          </div>
         </div>
       </div>
 
@@ -525,10 +537,10 @@ export function AttendanceMatrixPage() {
                     </td>
                     {monthDays.map((day, dIdx) => (
                       <td key={dIdx} className="p-1 border-r border-slate-50 dark:border-slate-800">
-                        <MatrixCell 
-                          emp={emp} 
-                          day={day} 
-                          onUpdate={handleUpdateAttendance} 
+                        <MatrixCell
+                          emp={emp}
+                          day={day}
+                          onUpdate={handleUpdateAttendance}
                           onOpenDrawer={openDrawer}
                         />
                       </td>
@@ -537,16 +549,16 @@ export function AttendanceMatrixPage() {
                       <td className="sticky right-0 z-[20] bg-white dark:bg-slate-900 group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800 border-l border-slate-200 dark:border-slate-800 px-4 py-3 shadow-[-5px_0_15px_rgba(0,0,0,0.02)]">
                         <div className="flex items-center justify-around">
                           <div className="flex flex-col items-center">
-                             <span className="text-[12px] font-black text-emerald-600">{emp.summary?.P || 0}</span>
-                             <div className="w-4 h-0.5 bg-emerald-100 rounded-full" />
+                            <span className="text-[12px] font-black text-emerald-600">{emp.summary?.P || 0}</span>
+                            <div className="w-4 h-0.5 bg-emerald-100 rounded-full" />
                           </div>
                           <div className="flex flex-col items-center">
-                             <span className="text-[12px] font-black text-red-600">{emp.summary?.A || 0}</span>
-                             <div className="w-4 h-0.5 bg-red-100 rounded-full" />
+                            <span className="text-[12px] font-black text-red-600">{emp.summary?.A || 0}</span>
+                            <div className="w-4 h-0.5 bg-red-100 rounded-full" />
                           </div>
                           <div className="flex flex-col items-center">
-                             <span className="text-[12px] font-black text-orange-600">{emp.summary?.L || 0}</span>
-                             <div className="w-4 h-0.5 bg-orange-100 rounded-full" />
+                            <span className="text-[12px] font-black text-orange-600">{emp.summary?.L || 0}</span>
+                            <div className="w-4 h-0.5 bg-orange-100 rounded-full" />
                           </div>
                         </div>
                       </td>
@@ -556,108 +568,108 @@ export function AttendanceMatrixPage() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Footer Legend & Settings Bar */}
           <div className="bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-xl px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-             <div className="flex items-center gap-6">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <ShieldCheck className="w-3 h-3" /> Grid Legend:
-                </span>
-                {Object.entries(STATUS_CODES).slice(0, 8).map(([code, cfg]: any) => (
-                  <div key={code} className="flex items-center gap-2.5">
-                    <div className={cn("w-6 h-6 rounded-lg border flex items-center justify-center text-[9px] font-black shadow-sm", cfg.color)}>
-                      {code}
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">{cfg.label}</span>
+            <div className="flex items-center gap-6">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <ShieldCheck className="w-3 h-3" /> Grid Legend:
+              </span>
+              {Object.entries(STATUS_CODES).slice(0, 8).map(([code, cfg]: any) => (
+                <div key={code} className="flex items-center gap-2.5">
+                  <div className={cn("w-6 h-6 rounded-lg border flex items-center justify-center text-[9px] font-black shadow-sm", cfg.color)}>
+                    {code}
                   </div>
-                ))}
-             </div>
+                  <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">{cfg.label}</span>
+                </div>
+              ))}
+            </div>
 
+          </div>
+        </div>
       </div>
-    </div>
-</div>
 
-    {/* --- Drawers & Modals --- */}
+      {/* --- Drawers & Modals --- */}
 
       {/* 1. Employee Details Drawer */}
       <Sheet open={showDrawer} onOpenChange={setShowDrawer}>
         <SheetContent className="sm:max-w-[550px] p-0 border-l-0 overflow-y-auto no-scrollbar shadow-2xl">
           <SheetHeader className="p-0">
-             <div className="bg-slate-900 p-10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 z-10">
-                   <Button variant="ghost" size="icon" className="text-white/30 hover:text-white" onClick={() => setShowDrawer(false)}>
-                     <X className="w-6 h-6" />
-                   </Button>
+            <div className="bg-slate-900 p-10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 z-10">
+                <Button variant="ghost" size="icon" className="text-white/30 hover:text-white" onClick={() => setShowDrawer(false)}>
+                  <X className="w-6 h-6" />
+                </Button>
+              </div>
+              <div className="relative z-10 flex flex-col items-center text-center space-y-5">
+                <div className="w-28 h-28 rounded-[40px] bg-emerald-500 border-4 border-white/10 p-1 shadow-2xl">
+                  <div className="w-full h-full rounded-[34px] bg-white flex items-center justify-center text-3xl font-black text-emerald-600">
+                    {selectedEmployee?.name?.[0]}
+                  </div>
                 </div>
-                <div className="relative z-10 flex flex-col items-center text-center space-y-5">
-                   <div className="w-28 h-28 rounded-[40px] bg-emerald-500 border-4 border-white/10 p-1 shadow-2xl">
-                      <div className="w-full h-full rounded-[34px] bg-white flex items-center justify-center text-3xl font-black text-emerald-600">
-                        {selectedEmployee?.name?.[0]}
-                      </div>
-                   </div>
-                   <div>
-                      <h3 className="text-2xl font-bold text-white tracking-tight">{selectedEmployee?.name}</h3>
-                      <p className="text-[11px] font-black text-emerald-400 uppercase tracking-widest mt-1 opacity-80">{selectedEmployee?.id} • {selectedEmployee?.designation}</p>
-                   </div>
-                   <div className="flex items-center gap-6 pt-2">
-                      <div className="flex flex-col items-center px-4 border-r border-white/10">
-                         <span className="text-xl font-black text-white">92%</span>
-                         <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">On Time</span>
-                      </div>
-                      <div className="flex flex-col items-center px-4">
-                         <span className="text-xl font-black text-white">22</span>
-                         <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Present</span>
-                      </div>
-                   </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white tracking-tight">{selectedEmployee?.name}</h3>
+                  <p className="text-[11px] font-black text-emerald-400 uppercase tracking-widest mt-1 opacity-80">{selectedEmployee?.id} • {selectedEmployee?.designation}</p>
                 </div>
-             </div>
+                <div className="flex items-center gap-6 pt-2">
+                  <div className="flex flex-col items-center px-4 border-r border-white/10">
+                    <span className="text-xl font-black text-white">92%</span>
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">On Time</span>
+                  </div>
+                  <div className="flex flex-col items-center px-4">
+                    <span className="text-xl font-black text-white">22</span>
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Present</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </SheetHeader>
 
           <div className="p-8 space-y-10">
-             <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-1.5">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</p>
-                   <p className="text-sm font-bold text-slate-800 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> {selectedEmployee?.department}</p>
-                </div>
-                <div className="space-y-1.5">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employment</p>
-                   <p className="text-sm font-bold text-slate-800 flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-500" /> Full Time Regular</p>
-                </div>
-             </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</p>
+                <p className="text-sm font-bold text-slate-800 flex items-center gap-2"><Building2 className="w-4 h-4 text-blue-500" /> {selectedEmployee?.department}</p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employment</p>
+                <p className="text-sm font-bold text-slate-800 flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-500" /> Full Time Regular</p>
+              </div>
+            </div>
 
-             <div className="space-y-5">
-                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3">
-                   <Calendar className="w-4 h-4 text-emerald-500" /> Monthly Attendance Map
-                </h4>
-                <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 shadow-inner">
-                   <PersonalAttendanceCalendar emp={selectedEmployee} month={selectedMonth} />
-                </div>
-             </div>
+            <div className="space-y-5">
+              <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-emerald-500" /> Monthly Attendance Map
+              </h4>
+              <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 shadow-inner">
+                <PersonalAttendanceCalendar emp={selectedEmployee} month={selectedMonth} />
+              </div>
+            </div>
 
-             <div className="space-y-5">
-                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3">
-                   <History className="w-4 h-4 text-blue-500" /> Change Logs
-                </h4>
-                <div className="space-y-4">
-                   {selectedEmployee?.attendance?.[format(new Date(2026, 4, 11), "yyyy-MM-dd")]?.history?.map((log: any, i: number) => (
-                      <div key={i} className="flex gap-4 group">
-                         <div className="flex flex-col items-center">
-                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />
-                            <div className="w-px flex-1 bg-slate-100 mt-2" />
-                         </div>
-                         <div className="flex-1 space-y-1 bg-slate-50/50 p-3 rounded-2xl border border-transparent hover:border-slate-100 transition-all">
-                            <div className="flex items-center justify-between">
-                               <p className="text-[11px] font-black text-slate-800">{log.action}</p>
-                               <span className="text-[10px] font-bold text-slate-400">{log.time}</span>
-                            </div>
-                            <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-                              From <span className="font-black text-slate-400">{log.from}</span> to <span className="font-black text-emerald-600">{log.to}</span> by <span className="text-blue-600 font-bold">{log.user}</span>
-                            </p>
-                         </div>
+            <div className="space-y-5">
+              <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3">
+                <History className="w-4 h-4 text-blue-500" /> Change Logs
+              </h4>
+              <div className="space-y-4">
+                {selectedEmployee?.attendance?.[format(new Date(2026, 4, 11), "yyyy-MM-dd")]?.history?.map((log: any, i: number) => (
+                  <div key={i} className="flex gap-4 group">
+                    <div className="flex flex-col items-center">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />
+                      <div className="w-px flex-1 bg-slate-100 mt-2" />
+                    </div>
+                    <div className="flex-1 space-y-1 bg-slate-50/50 p-3 rounded-2xl border border-transparent hover:border-slate-100 transition-all">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-black text-slate-800">{log.action}</p>
+                        <span className="text-[10px] font-bold text-slate-400">{log.time}</span>
                       </div>
-                   )) || <p className="text-[11px] text-slate-400 italic text-center py-4">No recent history for this month</p>}
-                </div>
-             </div>
+                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                        From <span className="font-black text-slate-400">{log.from}</span> to <span className="font-black text-emerald-600">{log.to}</span> by <span className="text-blue-600 font-bold">{log.user}</span>
+                      </p>
+                    </div>
+                  </div>
+                )) || <p className="text-[11px] text-slate-400 italic text-center py-4">No recent history for this month</p>}
+              </div>
+            </div>
           </div>
         </SheetContent>
       </Sheet>
@@ -666,41 +678,41 @@ export function AttendanceMatrixPage() {
       <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
         <DialogContent className="sm:max-w-[500px] rounded-[40px] p-0 overflow-hidden border-0 shadow-2xl">
           <div className="bg-blue-600 p-8 text-center space-y-2 relative overflow-hidden">
-             <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                <div className="grid grid-cols-8 gap-4 p-4">
-                   {Array.from({length: 32}).map((_, i) => <div key={i} className="aspect-square bg-white rounded-lg rotate-12" />)}
-                </div>
-             </div>
-             <Upload className="w-12 h-12 text-white mx-auto relative z-10" />
-             <h3 className="text-xl font-bold text-white relative z-10">Import Attendance Data</h3>
-             <p className="text-[11px] text-blue-100 font-medium opacity-80 relative z-10 uppercase tracking-widest">Upload XLSX or XLS formatted template</p>
+            <div className="absolute top-0 left-0 w-full h-full opacity-10">
+              <div className="grid grid-cols-8 gap-4 p-4">
+                {Array.from({ length: 32 }).map((_, i) => <div key={i} className="aspect-square bg-white rounded-lg rotate-12" />)}
+              </div>
+            </div>
+            <Upload className="w-12 h-12 text-white mx-auto relative z-10" />
+            <h3 className="text-xl font-bold text-white relative z-10">Import Attendance Data</h3>
+            <p className="text-[11px] text-blue-100 font-medium opacity-80 relative z-10 uppercase tracking-widest">Upload XLSX or XLS formatted template</p>
           </div>
           <div className="p-8 space-y-6">
-             <div 
-               className="py-12 border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center space-y-4 bg-slate-50/50 hover:bg-slate-50 hover:border-blue-500 transition-all cursor-pointer group"
-               onClick={() => document.getElementById('excel-upload')?.click()}
-             >
-               <input 
-                 type="file" 
-                 id="excel-upload" 
-                 className="hidden" 
-                 accept=".xlsx, .xls"
-                 onChange={handleFileUpload}
-               />
-               <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                 <FileSpreadsheet className="w-8 h-8" />
-               </div>
-               <div className="text-center space-y-1">
-                 <p className="text-sm font-bold text-slate-900">Drop your file here or browse</p>
-                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Support XLSX, XLS (MAX. 5MB)</p>
-               </div>
-             </div>
-             <div className="flex gap-3">
-                <Button variant="ghost" className="flex-1 h-12 rounded-2xl font-bold text-slate-500" onClick={() => setShowImportModal(false)}>CANCEL</Button>
-                <Button className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-lg" onClick={() => document.getElementById('excel-upload')?.click()}>
-                  {isImporting ? "PROCESSING..." : "SELECT FILE"}
-                </Button>
-             </div>
+            <div
+              className="py-12 border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center space-y-4 bg-slate-50/50 hover:bg-slate-50 hover:border-blue-500 transition-all cursor-pointer group"
+              onClick={() => document.getElementById('excel-upload')?.click()}
+            >
+              <input
+                type="file"
+                id="excel-upload"
+                className="hidden"
+                accept=".xlsx, .xls"
+                onChange={handleFileUpload}
+              />
+              <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                <FileSpreadsheet className="w-8 h-8" />
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-bold text-slate-900">Drop your file here or browse</p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Support XLSX, XLS (MAX. 5MB)</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="ghost" className="flex-1 h-12 rounded-2xl font-bold text-slate-500" onClick={() => setShowImportModal(false)}>CANCEL</Button>
+              <Button className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-lg" onClick={() => document.getElementById('excel-upload')?.click()}>
+                {isImporting ? "PROCESSING..." : "SELECT FILE"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -709,44 +721,44 @@ export function AttendanceMatrixPage() {
       <Dialog open={!!importPreview} onOpenChange={(open) => !open && setImportPreview(null)}>
         <DialogContent className="sm:max-w-[450px] rounded-[40px] p-8 border-0 shadow-2xl">
           <div className="space-y-6">
-             <div className="flex flex-col items-center text-center space-y-3">
-                <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
-                   <ShieldCheck className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">Review & Confirm Changes</h3>
-                <p className="text-[11px] text-slate-500 font-medium px-4">
-                   We parsed the Excel file and found matches for <span className="text-emerald-600 font-black">{importPreview?.length} employees</span>. 
-                   Are you sure you want to proceed with the update?
-                </p>
-             </div>
-             
-             <div className="bg-slate-50 rounded-3xl p-5 border border-slate-100 space-y-3">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                   <Info className="w-3.5 h-3.5" /> SUMMARY OF UPDATES
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="bg-white p-3 rounded-2xl border border-slate-100">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Matched Records</p>
-                      <p className="text-lg font-black text-emerald-600">{importPreview?.length}</p>
-                   </div>
-                   <div className="bg-white p-3 rounded-2xl border border-slate-100">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Target Period</p>
-                      <p className="text-lg font-black text-blue-600">{format(selectedMonth, "MMM yyyy")}</p>
-                   </div>
-                </div>
-                <div className="pt-2">
-                   <p className="text-[10px] text-slate-400 leading-tight">
-                     * This action will override existing attendance records for matched dates and create history logs for each change.
-                   </p>
-                </div>
-             </div>
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Review & Confirm Changes</h3>
+              <p className="text-[11px] text-slate-500 font-medium px-4">
+                We parsed the Excel file and found matches for <span className="text-emerald-600 font-black">{importPreview?.length} employees</span>.
+                Are you sure you want to proceed with the update?
+              </p>
+            </div>
 
-             <div className="flex gap-3">
-                <Button variant="ghost" className="flex-1 h-12 rounded-2xl font-bold text-slate-500" onClick={() => setImportPreview(null)}>ABORT</Button>
-                <Button className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black shadow-xl" onClick={confirmImport}>
-                  YES, CONFIRM UPDATE
-                </Button>
-             </div>
+            <div className="bg-slate-50 rounded-3xl p-5 border border-slate-100 space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Info className="w-3.5 h-3.5" /> SUMMARY OF UPDATES
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-3 rounded-2xl border border-slate-100">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Matched Records</p>
+                  <p className="text-lg font-black text-emerald-600">{importPreview?.length}</p>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-100">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Target Period</p>
+                  <p className="text-lg font-black text-blue-600">{format(selectedMonth, "MMM yyyy")}</p>
+                </div>
+              </div>
+              <div className="pt-2">
+                <p className="text-[10px] text-slate-400 leading-tight">
+                  * This action will override existing attendance records for matched dates and create history logs for each change.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="ghost" className="flex-1 h-12 rounded-2xl font-bold text-slate-500" onClick={() => setImportPreview(null)}>ABORT</Button>
+              <Button className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black shadow-xl" onClick={confirmImport}>
+                YES, CONFIRM UPDATE
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -764,7 +776,7 @@ function StatCard({ title, value, sub, icon, color }: any) {
     cyan: "bg-cyan-50 text-cyan-600 border-cyan-100",
   };
   return (
-    <motion.div 
+    <motion.div
       whileHover={{ y: -5 }}
       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-[28px] shadow-sm space-y-4 transition-all cursor-default relative overflow-hidden group"
     >

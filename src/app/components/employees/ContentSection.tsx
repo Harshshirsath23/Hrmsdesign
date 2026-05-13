@@ -1,6 +1,8 @@
 import { Employee } from "./mockData";
 import { SidebarSection } from "./SidebarMenu";
 import { EmployeeProfile } from "./sections/EmployeeProfile";
+import { EducationDetails } from "./sections/EducationDetails";
+import { BackgroundCheck } from "./sections/BackgroundCheck";
 import { BankDetails } from "./sections/BankDetails";
 import { FamilyDetails } from "./sections/FamilyDetails";
 import { PassportVisa } from "./sections/PassportVisa";
@@ -35,6 +37,10 @@ export function ContentSection({ employee, activeSection }: Props) {
       return <PositionHistory employee={employee} />;
     case "previous":
       return <PreviousEmployment employee={employee} />;
+    case "education":
+      return <EducationDetails employee={employee} />;
+    case "background":
+      return <BackgroundCheck employee={employee} />;
     case "separation":
       return (
         <PlaceholderSection

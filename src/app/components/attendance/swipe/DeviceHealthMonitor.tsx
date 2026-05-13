@@ -5,13 +5,19 @@ import {
   BatteryLow, 
   BatteryWarning, 
   MapPin, 
-  RefreshCw,
   MoreVertical,
-  Activity
+  Activity,
+  Settings,
+  Power,
+  Shield,
+  RefreshCw
+
 } from "lucide-react";
 import { cn } from "../../ui/utils";
 import { DeviceHealth } from "../../../modules/attendance/types";
 import { Button } from "../../ui/button";
+import { KebabMenu } from "../../ui/KebabMenu";
+import { toast } from "sonner";
 
 interface DeviceHealthMonitorProps {
   devices: DeviceHealth[];
@@ -61,9 +67,19 @@ export function DeviceHealthMonitor({ devices, onManageDevices }: DeviceHealthMo
                   </div>
                 </div>
               </div>
-              <button className="p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
-              </button>
+              <div onClick={(e) => e.stopPropagation()}>
+                <KebabMenu 
+                  size="sm"
+                  items={[
+                    { label: "Device Settings", icon: Settings, onClick: () => toast.info(`Settings for ${device.name}`) },
+                    { label: "Update Firmware", icon: Shield, onClick: () => toast.loading("Checking for updates...") },
+                    { label: "Reboot Device", icon: RefreshCw, onClick: () => toast.success("Reboot command sent") },
+                    { label: "Power Off", icon: Power, variant: "destructive", separator: true, onClick: () => {
+                      if (confirm("Shut down this biometric device?")) toast.error("Device powered off");
+                    }},
+                  ]}
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/50">

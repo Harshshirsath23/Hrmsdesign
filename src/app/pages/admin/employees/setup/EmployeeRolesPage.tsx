@@ -1,5 +1,6 @@
-import React from "react";
-import { UserCog, Plus, Shield, ShieldCheck, ShieldAlert, ChevronRight, Search, Settings, Network } from "lucide-react";
+import { UserCog, Plus, Shield, ShieldCheck, ShieldAlert, ChevronRight, Search, Settings, Network, Edit, Copy, History, Trash2 } from "lucide-react";
+import { KebabMenu } from "../../../../components/ui/KebabMenu";
+import { toast } from "sonner";
 
 export function EmployeeRolesPage() {
   return (
@@ -99,9 +100,19 @@ export function EmployeeRolesPage() {
                       <p className="text-xs font-bold text-foreground">{role.access}</p>
                       <p className="text-[10px] text-muted-foreground">Scope: Global</p>
                     </div>
-                    <button className="p-2 hover:bg-secondary rounded-lg text-muted-foreground transition-all group-hover:translate-x-1">
-                      <Settings className="w-4 h-4" />
-                    </button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <KebabMenu 
+                        size="sm"
+                        items={[
+                          { label: "Edit Permissions", icon: Edit, onClick: () => toast.info(`Editing permissions for ${role.name}`) },
+                          { label: "Clone Role", icon: Copy, onClick: () => toast.info("Role cloned successfully") },
+                          { label: "View Audit Trail", icon: History, onClick: () => toast.info("Viewing audit trail") },
+                          { label: "Delete Role", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                            if (confirm(`Delete role "${role.name}"? This will affect ${role.users} users.`)) toast.error("Role deleted");
+                          }},
+                        ]}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}

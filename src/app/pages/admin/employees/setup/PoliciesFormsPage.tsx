@@ -1,5 +1,6 @@
-import React from "react";
-import { ShieldCheck, Upload, Search, File, Folder, MoreVertical, Download, Clock, ChevronRight } from "lucide-react";
+import { ShieldCheck, Upload, Search, File, Folder, MoreVertical, Download, Clock, ChevronRight, Eye, Edit, History, Trash2 } from "lucide-react";
+import { KebabMenu } from "../../../../components/ui/KebabMenu";
+import { toast } from "sonner";
 
 export function PoliciesFormsPage() {
   return (
@@ -104,10 +105,19 @@ export function PoliciesFormsPage() {
                       </td>
                       <td className="px-6 py-4 text-xs font-mono text-muted-foreground">{doc.ver}</td>
                       <td className="px-6 py-4 text-xs text-muted-foreground">{doc.date}</td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="p-1.5 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors">
-                          <Download className="w-4 h-4" />
-                        </button>
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <KebabMenu 
+                          size="sm"
+                          items={[
+                            { label: "View Document", icon: Eye, onClick: () => toast.info(`Previewing ${doc.name}`) },
+                            { label: "Download PDF", icon: Download, onClick: () => toast.success("Download started") },
+                            { label: "Version History", icon: History, onClick: () => toast.info("Opening version history...") },
+                            { label: "Edit Metadata", icon: Edit, onClick: () => toast.info("Opening editor...") },
+                            { label: "Delete", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                              if (confirm(`Permanently delete ${doc.name}?`)) toast.error("Document deleted");
+                            }},
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

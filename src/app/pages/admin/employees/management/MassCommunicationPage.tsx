@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Send, Mail, MessageSquare, Bell, Filter, Calendar, History, ChevronRight } from "lucide-react";
+import { Send, Mail, MessageSquare, Bell, Filter, Calendar, History, ChevronRight, FileText, RefreshCw, BarChart2, Trash2, Eye } from "lucide-react";
+import { KebabMenu } from "../../../../components/ui/KebabMenu";
+import { toast } from "sonner";
 
 export function MassCommunicationPage() {
   const [channel, setChannel] = useState<"email" | "sms" | "push">("email");
@@ -133,7 +134,20 @@ export function MassCommunicationPage() {
                       <p className="text-[10px] text-muted-foreground">May 11 • 98% Success</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <KebabMenu 
+                      size="sm"
+                      items={[
+                        { label: "View Report", icon: FileText, onClick: () => toast.info("Viewing delivery report") },
+                        { label: "View Content", icon: Eye, onClick: () => toast.info("Viewing message content") },
+                        { label: "Resend Message", icon: RefreshCw, onClick: () => toast.success("Message queued for resending") },
+                        { label: "Export Analytics", icon: BarChart2, onClick: () => toast.success("Analytics exported to PDF") },
+                        { label: "Delete Log", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                          if (confirm("Permanently delete this delivery log?")) toast.error("Log deleted");
+                        }},
+                      ]}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

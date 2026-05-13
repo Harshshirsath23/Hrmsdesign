@@ -8,8 +8,16 @@ import { Button } from "../ui/button";
 import { Calendar } from "../ui/calendar";
 import { format } from "date-fns";
 import { cn } from "../ui/utils";
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { Input } from "../ui/input";
+import { KebabMenu } from "../ui/KebabMenu";
+import { Download, Megaphone, Printer, FileSpreadsheet } from "lucide-react";
+import { toast } from "sonner";
+import { 
+  Tooltip as UITooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "../ui/tooltip";
 
 interface WhosInTodayProps {
   data: {
@@ -119,6 +127,16 @@ export function WhosInToday({ data, filters, setFilters }: WhosInTodayProps) {
                 {MOCK_TEAMS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-2">
+              <KebabMenu 
+                items={[
+                  { label: "Export PDF", icon: Download, onClick: () => toast.success("PDF Report Generated") },
+                  { label: "Export Excel", icon: FileSpreadsheet, onClick: () => toast.success("Excel Sheet Exported") },
+                  { label: "Print View", icon: Printer, onClick: () => window.print() },
+                  { label: "Broadcast Alert", icon: Megaphone, separator: true, onClick: () => toast.info("Opening alert composer...") },
+                ]}
+              />
+            </div>
           </div>
         </div>
       </CardHeader>

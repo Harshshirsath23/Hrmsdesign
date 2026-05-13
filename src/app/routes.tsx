@@ -47,6 +47,8 @@ import { EmployeeDirectory } from "./components/employees/EmployeeDirectory";
 import { InformationLayout } from "./components/employees/InformationLayout";
 
 // Employee portal
+import { ManagerLayout } from "./pages/manager/ManagerLayout";
+import { ManagerDashboard } from "./pages/manager/ManagerDashboard";
 import { EmployeeLayout } from "./pages/employee/EmployeeLayout";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeAttendancePage } from "./pages/employee/EmployeeAttendancePage";
@@ -136,6 +138,19 @@ export const router = createBrowserRouter([
           { path: "org-chart", element: <Suspense fallback={<div className="p-8 text-center animate-pulse font-bold text-slate-400">Loading Org Chart...</div>}><OrganizationChartPage /></Suspense> },
         ],
       },
+    ],
+  },
+  {
+    path: "/manager",
+    Component: ManagerLayout,
+    children: [
+      { index: true, element: <Navigate to="/manager/dashboard" replace /> },
+      { path: "dashboard", Component: ManagerDashboard },
+      { path: "team", element: <div className="p-8 text-center text-muted-foreground font-medium">My Team Module (Coming Soon)</div> },
+      { path: "attendance", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Attendance Module (Coming Soon)</div> },
+      { path: "leaves", element: <div className="p-8 text-center text-muted-foreground font-medium">Leave Management Module (Coming Soon)</div> },
+      { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Reports Module (Coming Soon)</div> },
+      { path: "settings", element: <div className="p-8 text-center text-muted-foreground font-medium">Settings Module (Coming Soon)</div> },
     ],
   },
   {
