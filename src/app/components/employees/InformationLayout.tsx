@@ -27,6 +27,8 @@ export function InformationLayout() {
     documents: "Employee Documents",
     contracts: "Employee Contracts",
     salary: "Employee Salary",
+    education: "Education Details",
+    background: "Background Check",
   };
 
   const statusStyle: Record<string, string> = {

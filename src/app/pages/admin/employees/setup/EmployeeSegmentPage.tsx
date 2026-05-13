@@ -1,5 +1,6 @@
-import React from "react";
-import { Users, Plus, Search, Filter, MapPin, Briefcase, UserCheck, ChevronRight, BarChart3 } from "lucide-react";
+import { Users, Plus, Search, Filter, MapPin, Briefcase, UserCheck, ChevronRight, BarChart3, Edit, Copy, Trash2, Send } from "lucide-react";
+import { KebabMenu } from "../../../../components/ui/KebabMenu";
+import { toast } from "sonner";
 
 export function EmployeeSegmentPage() {
   return (
@@ -115,7 +116,19 @@ export function EmployeeSegmentPage() {
                       View Employees
                       <ChevronRight className="w-3 h-3" />
                     </button>
-                    <button className="text-[11px] font-bold text-muted-foreground hover:text-foreground">Settings</button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <KebabMenu 
+                        size="sm"
+                        items={[
+                          { label: "Edit Rules", icon: Edit, onClick: () => toast.info(`Editing rules for ${segment.name}`) },
+                          { label: "Duplicate Segment", icon: Copy, onClick: () => toast.info("Segment duplicated") },
+                          { label: "Send Communication", icon: Send, onClick: () => toast.info("Redirecting to Mass Communication...") },
+                          { label: "Delete", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                            if (confirm(`Delete segment "${segment.name}"?`)) toast.error("Segment deleted");
+                          }},
+                        ]}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,12 +1,12 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { 
-  ReactFlow, 
-  Background, 
-  Controls, 
-  useNodesState, 
-  useEdgesState, 
-  addEdge, 
-  Position, 
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Position,
   MarkerType,
   Handle,
   NodeProps,
@@ -18,15 +18,15 @@ import "@xyflow/react/dist/style.css";
 import * as d3 from "d3-hierarchy";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
-import { 
-  Search, 
-  Maximize, 
-  Minimize, 
-  Plus, 
-  Minus, 
-  Download, 
-  RefreshCw, 
-  FileImage, 
+import {
+  Search,
+  Maximize,
+  Minimize,
+  Plus,
+  Minus,
+  Download,
+  RefreshCw,
+  FileImage,
   FileText,
   ChevronDown,
   ChevronUp,
@@ -41,11 +41,16 @@ import {
   Send,
   ExternalLink,
   Users,
-  Layout
+  Layout,
+  Printer,
+  ShieldCheck,
+  Trash2
 } from "lucide-react";
 import { employees, Employee } from "../../../components/employees/mockData";
 import { cn } from "../../../components/ui/utils";
 import { Button } from "../../../components/ui/button";
+import { KebabMenu } from "../../../components/ui/KebabMenu";
+import { toast } from "sonner";
 import { Input } from "../../../components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
 import { motion, AnimatePresence } from "motion";
@@ -68,16 +73,16 @@ interface OrgNodeData {
 // --- Custom Node Component ---
 const OrgNode = ({ data }: NodeProps<any>) => {
   const { employee, isRoot, childCount, onNodeClick } = data as OrgNodeData;
-  
+
   return (
-    <div 
+    <div
       className={cn(
         "group relative flex flex-col rounded-2xl border transition-all duration-300",
         data.isCompact ? "p-3 w-[200px]" : "p-4 w-[260px]",
         "bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl",
         "hover:shadow-2xl hover:scale-[1.02] cursor-pointer",
-        isRoot 
-          ? "border-emerald-500/50 shadow-emerald-500/10 ring-1 ring-emerald-500/20" 
+        isRoot
+          ? "border-emerald-500/50 shadow-emerald-500/10 ring-1 ring-emerald-500/20"
           : "border-slate-200 dark:border-slate-800 shadow-lg shadow-black/5"
       )}
       onClick={() => onNodeClick?.(employee)}
@@ -93,13 +98,13 @@ const OrgNode = ({ data }: NodeProps<any>) => {
         {/* Avatar */}
         <div className="relative">
           {employee.avatar ? (
-            <img 
-              src={employee.avatar} 
-              alt={employee.name} 
+            <img
+              src={employee.avatar}
+              alt={employee.name}
               className={cn("rounded-xl object-cover border-2 border-white dark:border-slate-800 shadow-sm", data.isCompact ? "w-10 h-10" : "w-12 h-12")}
             />
           ) : (
-            <div 
+            <div
               className={cn("rounded-xl flex items-center justify-center text-white font-bold border-2 border-white dark:border-slate-800 shadow-sm", data.isCompact ? "w-10 h-10 text-xs" : "w-12 h-12 text-sm")}
               style={{ backgroundColor: employee.avatarColor }}
             >
@@ -130,23 +135,23 @@ const OrgNode = ({ data }: NodeProps<any>) => {
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{employee.employeeId}</span>
           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{employee.department}</span>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {childCount && childCount > 0 ? (
-            <button 
+            <button
               className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group/btn hover:bg-emerald-500 hover:text-white transition-all"
               onClick={(e) => {
                 e.stopPropagation();
                 data.onToggleExpand?.(employee.id);
               }}
             >
-               {data.isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {data.isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
           ) : null}
           {childCount && childCount > 0 && (
             <div className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-               <Users className="w-2.5 h-2.5 text-slate-500" />
-               <span className="text-[10px] font-black text-slate-600 dark:text-slate-400">{childCount}</span>
+              <Users className="w-2.5 h-2.5 text-slate-500" />
+              <span className="text-[10px] font-black text-slate-600 dark:text-slate-400">{childCount}</span>
             </div>
           )}
         </div>
@@ -183,7 +188,7 @@ const getLayoutedElements = (employees: Employee[], direction = 'TB', isCompact 
   const nodeHeight = isCompact ? 90 : 120;
   const spacingX = isCompact ? 50 : 100;
   const spacingY = isCompact ? 60 : 100;
-  
+
   // D3 Tree layout
   const treeLayout = d3.tree().nodeSize(direction === 'TB' ? [nodeWidth + spacingX, nodeHeight + spacingY] : [nodeHeight + spacingY, nodeWidth + spacingX]);
   treeLayout(root);
@@ -196,7 +201,7 @@ const getLayoutedElements = (employees: Employee[], direction = 'TB', isCompact 
     if (d.data.id === virtualRootId) return;
 
     const isRoot = d.parent?.data.id === virtualRootId;
-    
+
     // Swap X and Y for horizontal layout
     const x = direction === 'TB' ? d.x : d.y;
     const y = direction === 'TB' ? d.y : d.x;
@@ -204,8 +209,8 @@ const getLayoutedElements = (employees: Employee[], direction = 'TB', isCompact 
     nodes.push({
       id: d.data.id,
       type: 'orgNode',
-      data: { 
-        employee: d.data, 
+      data: {
+        employee: d.data,
         isRoot,
         isCompact,
         childCount: d.children?.length || 0,
@@ -237,7 +242,7 @@ export function OrganizationChartPage() {
   const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  
+
   // Persist view mode settings
   const [viewMode, setViewMode] = useState<"vertical" | "horizontal">(() => {
     return (localStorage.getItem("orgChart_direction") as any) || "vertical";
@@ -245,7 +250,7 @@ export function OrganizationChartPage() {
   const [isCompact, setIsCompact] = useState(() => {
     return localStorage.getItem("orgChart_compact") === "true";
   });
-  
+
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(employees.map(e => e.id)));
 
   const onNodeClick = useCallback((emp: Employee) => {
@@ -264,15 +269,15 @@ export function OrganizationChartPage() {
 
   const layout = useCallback(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      employees, 
+      employees,
       viewMode === 'vertical' ? 'TB' : 'LR',
       isCompact
     );
-    
+
     const finalNodes = layoutedNodes.map(n => ({
       ...n,
-      data: { 
-        ...n.data, 
+      data: {
+        ...n.data,
         isExpanded: expandedNodes.has(n.id),
         isCompact,
         onToggleExpand: toggleExpand,
@@ -299,8 +304,8 @@ export function OrganizationChartPage() {
     setSearchTerm(term);
     if (!term) return;
 
-    const found = employees.find(e => 
-      e.name.toLowerCase().includes(term.toLowerCase()) || 
+    const found = employees.find(e =>
+      e.name.toLowerCase().includes(term.toLowerCase()) ||
       e.employeeId.toLowerCase().includes(term.toLowerCase()) ||
       e.designation.toLowerCase().includes(term.toLowerCase())
     );
@@ -314,7 +319,7 @@ export function OrganizationChartPage() {
         const manager = employees.find(e => e.id === current);
         current = manager?.reportingManagerId;
       }
-      
+
       setExpandedNodes(prev => {
         const next = new Set(prev);
         ancestors.forEach(id => next.add(id));
@@ -370,7 +375,7 @@ export function OrganizationChartPage() {
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950 overflow-hidden relative">
-      
+
       {/* --- Top Toolbar --- */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between z-30 shadow-sm sticky top-0">
         <div className="flex flex-col">
@@ -388,10 +393,10 @@ export function OrganizationChartPage() {
         {/* Search */}
         <div className="flex-1 max-w-[400px] mx-8 relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-          <Input 
+          <Input
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-11 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-xs shadow-inner" 
+            className="pl-10 h-11 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-xs shadow-inner"
             placeholder="Search by Name, ID, Designation..."
           />
         </div>
@@ -399,41 +404,55 @@ export function OrganizationChartPage() {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-             <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black px-3 rounded-lg" onClick={expandAll}>EXPAND ALL</Button>
-             <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black px-3 rounded-lg" onClick={collapseAll}>COLLAPSE ALL</Button>
+            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black px-3 rounded-lg" onClick={expandAll}>EXPAND ALL</Button>
+            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black px-3 rounded-lg" onClick={collapseAll}>COLLAPSE ALL</Button>
           </div>
 
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => zoomIn()} title="Zoom In"><Plus className="w-4 h-4" /></Button>
-             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => zoomOut()} title="Zoom Out"><Minus className="w-4 h-4" /></Button>
-             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
-             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => fitView()} title="Fit to Screen"><Maximize className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => zoomIn()} title="Zoom In"><Plus className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => zoomOut()} title="Zoom Out"><Minus className="w-4 h-4" /></Button>
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => fitView()} title="Fit to Screen"><Maximize className="w-4 h-4" /></Button>
           </div>
 
           <div className="flex items-center gap-2 ml-2">
-             <Button 
-               variant="outline" 
-               size="sm" 
-               className="h-10 gap-2 font-bold text-[11px] rounded-xl px-4" 
-               onClick={() => handleExport('png')}
-               disabled={isExporting}
-             >
-               {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileImage className="w-3.5 h-3.5 text-emerald-500" />} 
-               PNG
-             </Button>
-             <Button 
-               variant="outline" 
-               size="sm" 
-               className="h-10 gap-2 font-bold text-[11px] rounded-xl px-4" 
-               onClick={() => handleExport('pdf')}
-               disabled={isExporting}
-             >
-               {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-red-500" />} 
-               PDF
-             </Button>
-             <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => window.location.reload()}>
-               <RefreshCw className="w-4 h-4 text-slate-400" />
-             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 gap-2 font-bold text-[11px] rounded-xl px-4"
+              onClick={() => handleExport('png')}
+              disabled={isExporting}
+            >
+              {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileImage className="w-3.5 h-3.5 text-emerald-500" />}
+              PNG
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 gap-2 font-bold text-[11px] rounded-xl px-4"
+              onClick={() => handleExport('pdf')}
+              disabled={isExporting}
+            >
+              {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-red-500" />}
+              PDF
+            </Button>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => window.location.reload()}>
+              <RefreshCw className="w-4 h-4 text-slate-400" />
+            </Button>
+            <KebabMenu
+              items={[
+                { label: "Auto-Layout Chart", icon: Layout, onClick: () => { layout(); toast.info("Layout optimized"); } },
+                { label: "Print View", icon: Printer, onClick: () => window.print() },
+                { label: "Verify Hierarchy", icon: ShieldCheck, onClick: () => toast.success("No orphan records found") },
+                {
+                  label: "Clear Cache", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                    localStorage.removeItem("orgChart_direction");
+                    localStorage.removeItem("orgChart_compact");
+                    window.location.reload();
+                  }
+                },
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -457,40 +476,40 @@ export function OrganizationChartPage() {
         >
           <Background color="#94A3B8" gap={20} size={1} opacity={0.2} />
           <Controls showInteractive={false} position="bottom-right" className="bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" />
-          
+
           <Panel position="top-left" className="m-6 space-y-4">
-             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-2xl w-[200px] space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                   <Layout className="w-4 h-4 text-emerald-500" />
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">View Mode</span>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                   <Button 
-                    variant={viewMode === 'vertical' ? 'secondary' : 'ghost'} 
-                    size="sm" 
-                    className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
-                    onClick={() => setViewMode('vertical')}
-                   >
-                     <div className="w-1.5 h-4 bg-emerald-500 rounded-full" /> Vertical Tree
-                   </Button>
-                   <Button 
-                    variant={viewMode === 'horizontal' ? 'secondary' : 'ghost'} 
-                    size="sm" 
-                    className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
-                    onClick={() => setViewMode('horizontal')}
-                   >
-                     <div className="w-4 h-1.5 bg-blue-500 rounded-full" /> Horizontal Tree
-                   </Button>
-                   <Button 
-                    variant={isCompact ? 'secondary' : 'ghost'} 
-                    size="sm" 
-                    className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
-                    onClick={() => setIsCompact(!isCompact)}
-                   >
-                     <div className="w-2.5 h-2.5 bg-amber-500 rounded-lg" /> Compact View
-                   </Button>
-                </div>
-             </div>
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-2xl w-[200px] space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Layout className="w-4 h-4 text-emerald-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">View Mode</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  variant={viewMode === 'vertical' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
+                  onClick={() => setViewMode('vertical')}
+                >
+                  <div className="w-1.5 h-4 bg-emerald-500 rounded-full" /> Vertical Tree
+                </Button>
+                <Button
+                  variant={viewMode === 'horizontal' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
+                  onClick={() => setViewMode('horizontal')}
+                >
+                  <div className="w-4 h-1.5 bg-blue-500 rounded-full" /> Horizontal Tree
+                </Button>
+                <Button
+                  variant={isCompact ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
+                  onClick={() => setIsCompact(!isCompact)}
+                >
+                  <div className="w-2.5 h-2.5 bg-amber-500 rounded-lg" /> Compact View
+                </Button>
+              </div>
+            </div>
           </Panel>
         </ReactFlow>
       </div>
@@ -499,93 +518,93 @@ export function OrganizationChartPage() {
       <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <SheetContent className="sm:max-w-[500px] p-0 border-l-0 overflow-y-auto no-scrollbar shadow-2xl bg-white dark:bg-slate-950">
           <SheetHeader className="p-0 relative">
-             <div className="h-48 bg-gradient-to-br from-slate-900 to-emerald-950 relative overflow-hidden">
-                {/* Decorative Pattern */}
-                <div className="absolute inset-0 opacity-10 pointer-events-none">
-                   <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-                   <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-500 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
-                </div>
-                
-                <div className="absolute top-6 right-6">
-                   <Button variant="ghost" size="icon" className="text-white/40 hover:text-white" onClick={() => setIsDrawerOpen(false)}>
-                     <X className="w-6 h-6" />
-                   </Button>
-                </div>
+            <div className="h-48 bg-gradient-to-br from-slate-900 to-emerald-950 relative overflow-hidden">
+              {/* Decorative Pattern */}
+              <div className="absolute inset-0 opacity-10 pointer-events-none">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-500 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
+              </div>
 
-                <div className="absolute -bottom-12 left-8 flex items-end gap-6">
-                   <div className="w-32 h-32 rounded-[40px] bg-white dark:bg-slate-900 p-1 shadow-2xl">
-                      {selectedEmp?.avatar ? (
-                        <img src={selectedEmp.avatar} alt="" className="w-full h-full rounded-[36px] object-cover" />
-                      ) : (
-                        <div 
-                          className="w-full h-full rounded-[36px] flex items-center justify-center text-white text-3xl font-black"
-                          style={{ backgroundColor: selectedEmp?.avatarColor }}
-                        >
-                          {selectedEmp?.initials}
-                        </div>
-                      )}
-                   </div>
-                   <div className="mb-4">
-                      <h3 className="text-2xl font-black text-white leading-none">{selectedEmp?.name}</h3>
-                      <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-2">{selectedEmp?.employeeId} • {selectedEmp?.designation}</p>
-                   </div>
+              <div className="absolute top-6 right-6">
+                <Button variant="ghost" size="icon" className="text-white/40 hover:text-white" onClick={() => setIsDrawerOpen(false)}>
+                  <X className="w-6 h-6" />
+                </Button>
+              </div>
+
+              <div className="absolute -bottom-12 left-8 flex items-end gap-6">
+                <div className="w-32 h-32 rounded-[40px] bg-white dark:bg-slate-900 p-1 shadow-2xl">
+                  {selectedEmp?.avatar ? (
+                    <img src={selectedEmp.avatar} alt="" className="w-full h-full rounded-[36px] object-cover" />
+                  ) : (
+                    <div
+                      className="w-full h-full rounded-[36px] flex items-center justify-center text-white text-3xl font-black"
+                      style={{ backgroundColor: selectedEmp?.avatarColor }}
+                    >
+                      {selectedEmp?.initials}
+                    </div>
+                  )}
                 </div>
-             </div>
+                <div className="mb-4">
+                  <h3 className="text-2xl font-black text-white leading-none">{selectedEmp?.name}</h3>
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-2">{selectedEmp?.employeeId} • {selectedEmp?.designation}</p>
+                </div>
+              </div>
+            </div>
           </SheetHeader>
 
           <div className="pt-20 px-8 pb-10 space-y-10">
-             <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</p>
-                   <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                     <Building2 className="w-4 h-4 text-blue-500" /> {selectedEmp?.department}
-                   </p>
-                </div>
-                <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joining Date</p>
-                   <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                     <Calendar className="w-4 h-4 text-emerald-500" /> {selectedEmp?.joiningDate}
-                   </p>
-                </div>
-             </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-blue-500" /> {selectedEmp?.department}
+                </p>
+              </div>
+              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joining Date</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-emerald-500" /> {selectedEmp?.joiningDate}
+                </p>
+              </div>
+            </div>
 
-             <div className="space-y-4">
-                <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Contact Information</h4>
-                <div className="space-y-3">
-                   <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center"><Mail className="w-4 h-4 text-blue-600" /></div>
-                         <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{selectedEmp?.email}</span>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="w-3.5 h-3.5" /></Button>
-                   </div>
-                   <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center"><Phone className="w-4 h-4 text-green-600" /></div>
-                         <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{selectedEmp?.phone}</span>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="w-3.5 h-3.5" /></Button>
-                   </div>
+            <div className="space-y-4">
+              <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Contact Information</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center"><Mail className="w-4 h-4 text-blue-600" /></div>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{selectedEmp?.email}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="w-3.5 h-3.5" /></Button>
                 </div>
-             </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center"><Phone className="w-4 h-4 text-green-600" /></div>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{selectedEmp?.phone}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="w-3.5 h-3.5" /></Button>
+                </div>
+              </div>
+            </div>
 
-             <div className="space-y-4">
-                <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Quick Actions</h4>
-                <div className="grid grid-cols-2 gap-3">
-                   <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-emerald-100 hover:bg-emerald-50">
-                      <Users className="w-4 h-4 text-emerald-600" /> VIEW PROFILE
-                   </Button>
-                   <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-blue-100 hover:bg-blue-50">
-                      <Edit2 className="w-4 h-4 text-blue-600" /> EDIT EMPLOYEE
-                   </Button>
-                   <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-purple-100 hover:bg-purple-50">
-                      <Send className="w-4 h-4 text-purple-600" /> MESSAGE
-                   </Button>
-                   <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-orange-100 hover:bg-orange-50">
-                      <FileText className="w-4 h-4 text-orange-600" /> PAYROLL
-                   </Button>
-                </div>
-             </div>
+            <div className="space-y-4">
+              <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Quick Actions</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-emerald-100 hover:bg-emerald-50">
+                  <Users className="w-4 h-4 text-emerald-600" /> VIEW PROFILE
+                </Button>
+                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-blue-100 hover:bg-blue-50">
+                  <Edit2 className="w-4 h-4 text-blue-600" /> EDIT EMPLOYEE
+                </Button>
+                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-purple-100 hover:bg-purple-50">
+                  <Send className="w-4 h-4 text-purple-600" /> MESSAGE
+                </Button>
+                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-orange-100 hover:bg-orange-50">
+                  <FileText className="w-4 h-4 text-orange-600" /> PAYROLL
+                </Button>
+              </div>
+            </div>
           </div>
         </SheetContent>
       </Sheet>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
   Building2, Eye, EyeOff, Lock, Mail,
-  ShieldCheck, User, ArrowRight,
+  ShieldCheck, User, Users, ArrowRight,
 } from "lucide-react";
 import { useAuth, UserRole } from "../context/AuthContext";
 
@@ -10,17 +10,20 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [role, setRole]               = useState<UserRole>("admin");
-  const [email, setEmail]             = useState("");
-  const [password, setPassword]       = useState("");
+  const [role, setRole] = useState<UserRole>("admin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError]             = useState("");
-  const [loading, setLoading]         = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const fillDemo = () => {
     if (role === "admin") {
       setEmail("admin@hrms.com");
       setPassword("Admin@123");
+    } else if (role === "manager") {
+      setEmail("manager@hrms.com");
+      setPassword("Manager@123");
     } else {
       setEmail("emp001@company.com");
       setPassword("Emp@123");
@@ -36,7 +39,13 @@ export function LoginPage() {
     const result = await login(email, password, role);
     setLoading(false);
     if (result.success) {
-      navigate(role === "admin" ? "/admin/dashboard" : "/employee/dashboard", { replace: true });
+      if (role === "admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else if (role === "manager") {
+        navigate("/manager/dashboard", { replace: true });
+      } else {
+        navigate("/employee/dashboard", { replace: true });
+      }
     } else {
       setError(result.message || "Invalid credentials.");
     }
@@ -106,21 +115,22 @@ export function LoginPage() {
 
           {/* Role toggle */}
           <div className="flex gap-2 p-1 bg-[#E9ECEF] rounded-lg mb-8">
-            {(["admin", "employee"] as UserRole[]).map((r) => (
+            {(["admin", "manager", "employee"] as UserRole[]).map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => { setRole(r); setError(""); setEmail(""); setPassword(""); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-semibold transition-all duration-150 ${
-                  role === r
-                    ? "bg-white text-[#212529] shadow-sm border border-[#DEE2E6]"
-                    : "text-[#6C757D] hover:text-[#212529]"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-semibold transition-all duration-150 ${role === r
+                  ? "bg-white text-[#212529] shadow-sm border border-[#DEE2E6]"
+                  : "text-[#6C757D] hover:text-[#212529]"
+                  }`}
               >
                 {r === "admin"
                   ? <ShieldCheck className="w-4 h-4" />
-                  : <User className="w-4 h-4" />}
-                {r === "admin" ? "Admin" : "Employee"}
+                  : r === "manager"
+                    ? <Users className="w-4 h-4" />
+                    : <User className="w-4 h-4" />}
+                {r === "admin" ? "Admin" : r === "manager" ? "Manager" : "Employee"}
               </button>
             ))}
           </div>
@@ -197,19 +207,19 @@ export function LoginPage() {
           {/* Demo credentials */}
           <div className="mt-8 p-4 border border-[#DEE2E6] rounded-lg bg-white">
             <p className="text-xs font-semibold text-[#6C757D] uppercase tracking-wider mb-3">
-              Demo Credentials — {role === "admin" ? "Admin" : "Employee"}
+              Demo Credentials — {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Employee"}
             </p>
             <div className="space-y-1.5 mb-3">
               <div className="flex justify-between text-sm">
                 <span className="text-[#6C757D]">Email</span>
                 <span className="font-mono text-xs font-semibold text-[#212529] bg-[#F8F9FA] px-2 py-0.5 rounded border border-[#DEE2E6]">
-                  {role === "admin" ? "admin@hrms.com" : "emp001@company.com"}
+                  {role === "admin" ? "admin@hrms.com" : role === "manager" ? "manager@hrms.com" : "emp001@company.com"}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[#6C757D]">Password</span>
                 <span className="font-mono text-xs font-semibold text-[#212529] bg-[#F8F9FA] px-2 py-0.5 rounded border border-[#DEE2E6]">
-                  {role === "admin" ? "Admin@123" : "Emp@123"}
+                  {role === "admin" ? "Admin@123" : role === "manager" ? "Manager@123" : "Emp@123"}
                 </span>
               </div>
             </div>

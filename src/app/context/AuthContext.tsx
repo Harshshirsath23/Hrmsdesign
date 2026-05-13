@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 
-export type UserRole = "admin" | "employee";
+export type UserRole = "admin" | "manager" | "employee";
 
 export interface AuthUser {
   email: string;
@@ -23,6 +23,13 @@ const DUMMY_CREDENTIALS: Record<UserRole, { email: string; password: string; nam
     password: "Admin@123",
     name: "Admin User",
     initials: "AD",
+  },
+  manager: {
+    email: "manager@hrms.com",
+    password: "Manager@123",
+    name: "Priya Patel",
+    initials: "PP",
+    employeeId: "MGR001",
   },
   employee: {
     email: "emp001@company.com",

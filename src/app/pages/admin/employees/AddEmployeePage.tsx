@@ -38,6 +38,9 @@ import {
   ArrowLeft,
   Save,
   ExternalLink,
+  GraduationCap,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════
@@ -101,6 +104,20 @@ interface FormState {
   password: string;
   role: string;
   sendInvite: boolean;
+  // NEW FIELDS
+  education: {
+    level: string;
+    qualification: string;
+    specialization: string;
+    institution: string;
+    yearOfPassing: string;
+    grade: string;
+  }[];
+  bgcStatus: string;
+  bgcAgency: string;
+  bgcVerifiedBy: string;
+  bgcReference: string;
+  bgcRemarks: string;
 }
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -117,7 +134,9 @@ const SECTIONS = [
   { id: "s-payroll", n: 4, label: "Payroll Information", Icon: CreditCard },
   { id: "s-leave", n: 5, label: "Leave Configuration", Icon: Calendar },
   { id: "s-documents", n: 6, label: "Documents", Icon: FileText },
-  { id: "s-account", n: 7, label: "Account Access", Icon: Shield },
+  { id: "s-education", n: 7, label: "Education Details", Icon: GraduationCap },
+  { id: "s-background", n: 8, label: "Background Check", Icon: Shield },
+  { id: "s-account", n: 9, label: "Account Access", Icon: Shield },
 ];
 
 const DEPTS = [
@@ -247,6 +266,12 @@ const INIT: FormState = {
   password: "",
   role: "employee",
   sendInvite: true,
+  education: [],
+  bgcStatus: "Pending",
+  bgcAgency: "",
+  bgcVerifiedBy: "",
+  bgcReference: "",
+  bgcRemarks: "",
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1761,11 +1786,154 @@ export function AddEmployeePage() {
             </SC>
 
             {/* ─────────────────────────────────────────────
-                SECTION 7 · ACCOUNT ACCESS
+                SECTION 7 · EDUCATION DETAILS
+            ───────────────────────────────────────────── */}
+            <SC
+              id="s-education"
+              n={7}
+              title="Education Details"
+              desc="Academic qualifications and professional certifications"
+              Icon={GraduationCap}
+            >
+              <div className="col-span-2 space-y-6">
+                {(form.education || []).map((edu, index) => (
+                  <div key={index} className="p-5 rounded-xl border border-border bg-secondary/10 relative group">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const next = [...form.education];
+                        next.splice(index, 1);
+                        set("education", next);
+                      }}
+                      className="absolute right-3 top-3 p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FF label="Level">
+                        <Sel 
+                          value={edu.level} 
+                          onChange={(e) => {
+                            const next = [...form.education];
+                            next[index].level = e.target.value;
+                            set("education", next);
+                          }}
+                          opts={[
+                            { v: "ssc", l: "SSC" },
+                            { v: "hsc", l: "HSC" },
+                            { v: "bachelors", l: "Bachelor's" },
+                            { v: "masters", l: "Master's" },
+                            { v: "phd", l: "PhD" }
+                          ]}
+                        />
+                      </FF>
+                      <FF label="Qualification">
+                        <Inp 
+                          value={edu.qualification} 
+                          onChange={(e) => {
+                            const next = [...form.education];
+                            next[index].qualification = e.target.value;
+                            set("education", next);
+                          }}
+                          placeholder="E.g. B.Tech Computer Science"
+                        />
+                      </FF>
+                      <FF label="Institution">
+                        <Inp 
+                          value={edu.institution} 
+                          onChange={(e) => {
+                            const next = [...form.education];
+                            next[index].institution = e.target.value;
+                            set("education", next);
+                          }}
+                          placeholder="University Name"
+                        />
+                      </FF>
+                      <FF label="Year of Passing">
+                        <Inp 
+                          value={edu.yearOfPassing} 
+                          onChange={(e) => {
+                            const next = [...form.education];
+                            next[index].yearOfPassing = e.target.value;
+                            set("education", next);
+                          }}
+                          placeholder="2020"
+                        />
+                      </FF>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => set("education", [...(form.education || []), { level: "bachelors", qualification: "", specialization: "", institution: "", yearOfPassing: "", grade: "" }])}
+                  className="w-full h-12 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground hover:border-foreground hover:text-foreground transition-all"
+                >
+                  <Plus size={14} />
+                  Add Education Record
+                </button>
+              </div>
+            </SC>
+
+            {/* ─────────────────────────────────────────────
+                SECTION 8 · BACKGROUND CHECK
+            ───────────────────────────────────────────── */}
+            <SC
+              id="s-background"
+              n={8}
+              title="Background Check"
+              desc="Verification status and agency audit details"
+              Icon={Shield}
+            >
+              <FF label="Verification Status">
+                <Sel 
+                  value={form.bgcStatus} 
+                  onChange={(e) => set("bgcStatus", e.target.value)}
+                  opts={[
+                    { v: "Pending", l: "Pending" },
+                    { v: "In Progress", l: "In Progress" },
+                    { v: "Verified", l: "Verified" },
+                    { v: "Failed", l: "Failed" },
+                    { v: "Not Required", l: "Not Required" }
+                  ]}
+                />
+              </FF>
+              <FF label="Agency Name">
+                <Inp 
+                  value={form.bgcAgency} 
+                  onChange={(e) => set("bgcAgency", e.target.value)}
+                  placeholder="Verification Agency"
+                />
+              </FF>
+              <FF label="Verified By">
+                <Inp 
+                  value={form.bgcVerifiedBy} 
+                  onChange={(e) => set("bgcVerifiedBy", e.target.value)}
+                  placeholder="Auditor Name"
+                />
+              </FF>
+              <FF label="Reference Number">
+                <Inp 
+                  value={form.bgcReference} 
+                  onChange={(e) => set("bgcReference", e.target.value)}
+                  placeholder="Case Reference ID"
+                />
+              </FF>
+              <FF label="Remarks" span2>
+                <textarea
+                  value={form.bgcRemarks}
+                  onChange={(e) => set("bgcRemarks", e.target.value)}
+                  placeholder="Add any internal remarks regarding the background check..."
+                  className="flat-input w-full min-h-[80px] p-3 text-sm resize-none"
+                />
+              </FF>
+            </SC>
+
+            {/* ─────────────────────────────────────────────
+                SECTION 9 · ACCOUNT ACCESS
             ───────────────────────────────────────────── */}
             <SC
               id="s-account"
-              n={7}
+              n={9}
               title="Account Access"
               desc="System credentials and role-based access permissions"
               Icon={Shield}

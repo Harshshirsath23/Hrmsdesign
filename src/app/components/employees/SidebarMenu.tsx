@@ -11,6 +11,8 @@ import {
   FileText,
   FilePen,
   DollarSign,
+  GraduationCap,
+  ShieldCheck,
 } from "lucide-react";
 
 export type SidebarSection =
@@ -20,6 +22,8 @@ export type SidebarSection =
   | "passport"
   | "position"
   | "previous"
+  | "education"
+  | "background"
   | "separation"
   | "access"
   | "nomination"
@@ -40,6 +44,8 @@ const menuItems: MenuItem[] = [
   { id: "passport",   label: "Passport & Visa",     icon: Globe      },
   { id: "position",   label: "Position History",    icon: Briefcase  },
   { id: "previous",   label: "Previous Employment", icon: Building2  },
+  { id: "education",  label: "Education Details",   icon: GraduationCap },
+  { id: "background", label: "Background Check",    icon: ShieldCheck },
   { id: "separation", label: "Separation",          icon: LogOut     },
   { id: "access",     label: "Access Card Details", icon: Key        },
   { id: "nomination", label: "Nomination Details",  icon: Award      },

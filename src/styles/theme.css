@@ -48,6 +48,13 @@
   --accent-purple:   var(--c-800);
   --accent-blue:     var(--c-700);
   --accent-pink:     var(--c-600);
+
+  /* ── Overlay Tokens ── */
+  --overlay-bg: #FFFFFF;
+  --overlay-foreground: #111827;
+  --overlay-border: #E5E7EB;
+  --overlay-hover: #F3F4F6;
+  --overlay-selected: #EEF6FF;
 }
 
 /* ── Dark Mode Token Overrides ──────────────────────────── */
@@ -74,6 +81,13 @@
   --text-muted:     #ADB5BD;
   --glass-bg:       var(--card);
   --glass-border:   var(--border);
+
+  /* ── Overlay Tokens ── */
+  --overlay-bg: #111827;
+  --overlay-foreground: #F9FAFB;
+  --overlay-border: #374151;
+  --overlay-hover: #1F2937;
+  --overlay-selected: #1E3A5F;
 }
 
 /* ── Tailwind Theme Mapping ─────────────────────────────── */
@@ -92,6 +106,8 @@
   --color-accent-foreground:    var(--accent-foreground);
   --color-border:               var(--border);
   --color-ring:                 var(--ring);
+  --color-popover:              var(--overlay-bg);
+  --color-popover-foreground:   var(--overlay-foreground);
 
   /* Legacy color tokens kept for backward compat */
   --color-accent-purple:  var(--accent-purple);
@@ -367,6 +383,51 @@
   }
   .page-enter {
     animation: fade-up 200ms ease-out both;
+  }
+
+  /* ── Global Overlay & Dropdown Fixes ────────────────── */
+  /* Target all Radix/Shadcn overlay components */
+  [data-slot="select-content"],
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="command"],
+  [data-slot="calendar"],
+  [data-slot="hover-card-content"],
+  [data-slot="tooltip-content"],
+  [data-slot="context-menu-content"],
+  [data-slot="menubar-content"],
+  [data-role="menu"],
+  [role="listbox"],
+  [role="menu"],
+  [role="combobox"],
+  .radix-popover-content,
+  .radix-select-content,
+  .radix-dropdown-menu-content,
+  .radix-context-menu-content {
+    background-color: var(--overlay-bg) !important;
+    color: var(--overlay-foreground) !important;
+    border: 1px solid var(--overlay-border) !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: var(--shadow-elevated) !important;
+    z-index: 9999 !important;
+  }
+
+  /* Ensure items have correct hover/selected states */
+  [data-slot="select-item"]:focus,
+  [data-slot="dropdown-menu-item"]:focus,
+  [data-slot="command-item"][aria-selected="true"],
+  [role="option"]:hover,
+  [role="menuitem"]:hover {
+    background-color: var(--overlay-hover) !important;
+    color: var(--overlay-foreground) !important;
+  }
+
+  [data-slot="select-item"][data-state="checked"],
+  [role="option"][aria-selected="true"] {
+    background-color: var(--overlay-selected) !important;
   }
 }
 

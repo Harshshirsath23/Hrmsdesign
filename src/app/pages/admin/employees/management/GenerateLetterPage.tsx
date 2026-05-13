@@ -1,164 +1,293 @@
 import React, { useState } from "react";
-import { FileText, Download, Mail, Eye, CheckCircle2 } from "lucide-react";
+import { 
+  FileText, 
+  History, 
+  Plus, 
+  Send, 
+  Archive, 
+  ChevronRight, 
+  Download, 
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  X,
+  Printer
+} from "lucide-react";
+import { cn } from "../../../../components/ui/utils";
+import { LetterWizard } from "./LetterManagement/LetterWizard";
+import { LetterHistory } from "./LetterManagement/LetterHistory";
+import { LetterDetails } from "./LetterManagement/LetterDetails";
+import { LetterBatch } from "./LetterManagement/types";
+import { MOCK_HISTORY } from "./LetterManagement/mockData";
+import { Button } from "../../../../components/ui/button";
+import { KebabMenu } from "../../../../components/ui/KebabMenu";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
+import { employees } from "../../../../components/employees/mockData";
+import { MOCK_TEMPLATES } from "./LetterManagement/mockData";
 
-const LETTER_TYPES = [
-  "Offer Letter",
-  "Appointment Letter",
-  "Experience Letter",
-  "Relieving Letter",
-  "Promotion Letter",
-  "Salary Revision Letter",
-];
+type ViewMode = "wizard" | "history" | "details";
 
 export function GenerateLetterPage() {
-  const [selectedLetter, setSelectedLetter] = useState(LETTER_TYPES[0]);
-  const [employeeId, setEmployeeId] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [batches, setBatches] = useState<LetterBatch[]>(() => {
+    const saved = localStorage.getItem("hrms_letter_batches");
+    return saved ? JSON.parse(saved) : MOCK_HISTORY;
+  });
+  
+  const [view, setView] = useState<ViewMode>("history");
+  const [wizardStep, setWizardStep] = useState(1);
+  const [selectedBatch, setSelectedBatch] = useState<LetterBatch | null>(null);
+  const [initialData, setInitialData] = useState<Partial<LetterBatch> | undefined>(undefined);
+  const [isPreviewing, setIsPreviewing] = useState(false);
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      setShowPreview(true);
-    }, 1500);
+  const persistBatches = (newBatches: LetterBatch[]) => {
+    setBatches(newBatches);
+    localStorage.setItem("hrms_letter_batches", JSON.stringify(newBatches));
+  };
+
+  const handleCreateNew = () => {
+    setInitialData(undefined);
+    setWizardStep(1);
+    setView("wizard");
+  };
+
+  const handleRepublish = (batch: LetterBatch) => {
+    setInitialData({ ...batch, status: "Draft" });
+    setWizardStep(3); // Start at preview step
+    setView("wizard");
+  };
+
+  const handleDuplicate = (batch: LetterBatch) => {
+    setInitialData({ ...batch, id: "", status: "Draft" });
+    setWizardStep(1); // Start at configuration step
+    setView("wizard");
+  };
+
+  const handlePreview = (batch: LetterBatch) => {
+    setSelectedBatch(batch);
+    setIsPreviewing(true);
+  };
+
+  const handleViewDetails = (batch: LetterBatch) => {
+    setSelectedBatch(batch);
+    setView("details");
+  };
+
+  const handleSaveDraft = (batch: Partial<LetterBatch>, currentStep: number) => {
+    const newBatch: LetterBatch = {
+      ...batch,
+      id: batch.id || `BATCH-${Math.floor(Math.random() * 10000)}`,
+      status: "Draft",
+      currentStep,
+      createdBy: batch.createdBy || "Admin User",
+      createdAt: batch.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    } as LetterBatch;
+
+    const exists = batches.find(b => b.id === newBatch.id);
+    const updatedBatches = exists 
+      ? batches.map(b => b.id === newBatch.id ? newBatch : b)
+      : [newBatch, ...batches];
+
+    persistBatches(updatedBatches);
+    setView("history");
+  };
+
+  const handleWizardComplete = (batch: LetterBatch) => {
+    const finalBatch: LetterBatch = {
+      ...batch,
+      id: batch.id || `BATCH-${Math.floor(Math.random() * 10000)}`,
+      status: batch.approvalWorkflow === "No Approval Required" ? "Published" : "Pending Approval",
+      publishedAt: batch.approvalWorkflow === "No Approval Required" ? new Date().toISOString() : undefined,
+      updatedAt: new Date().toISOString()
+    };
+
+    const exists = batches.find(b => b.id === finalBatch.id);
+    const updatedBatches = exists 
+      ? batches.map(b => b.id === finalBatch.id ? finalBatch : b)
+      : [finalBatch, ...batches];
+
+    persistBatches(updatedBatches);
+    setView("history");
+  };
+
+  const handleWizardCancel = () => {
+    setView("history");
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-6 rounded-xl border border-border shadow-sm">
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
-            Generate Document
-          </h2>
-          <p className="text-sm text-muted-foreground">Select a letter type and employee to generate a professional document.</p>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Dynamic Header based on view */}
+      {view !== "wizard" && (
+        <div className="px-8 py-6 border-b border-border bg-card/50 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-20">
+          <div className="space-y-1">
+            <h1 className="text-xl font-black text-foreground tracking-tight uppercase flex items-center gap-2">
+              {view === "history" ? <History className="w-5 h-5 text-primary" /> : <FileText className="w-5 h-5 text-primary" />}
+              {view === "history" ? "Letter Generation History" : "Batch Details"}
+            </h1>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+              {view === "history" 
+                ? "View and manage all generated official documents" 
+                : "Comprehensive breakdown of the selected document batch"}
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {view === "history" && (
+              <Button 
+                onClick={handleCreateNew}
+                className="h-11 px-6 rounded-2xl bg-primary text-white hover:bg-primary/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Generate New Letter
+              </Button>
+            )}
+            <div className="h-8 w-px bg-border mx-2" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl border border-border">
+              <Download size={18} />
+            </Button>
+            <KebabMenu 
+              items={[
+                { label: "Export Metadata", icon: FileText, onClick: () => toast.info("Exporting all metadata...") },
+                { label: "Bulk Print", icon: Printer, onClick: () => window.print() },
+                { label: "Archive History", icon: Archive, separator: true, onClick: () => toast.success("History archived") },
+              ]}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto bg-background/50 relative">
+        <div className={cn("h-full", view !== "wizard" ? "p-8 max-w-[1600px] mx-auto" : "")}>
+          {view === "wizard" && (
+            <LetterWizard 
+              onCancel={handleWizardCancel} 
+              onComplete={handleWizardComplete} 
+              onSaveDraft={handleSaveDraft}
+              initialData={initialData}
+              initialStep={wizardStep}
+            />
+          )}
+
+          {view === "history" && (
+            <LetterHistory 
+              onViewDetails={handleViewDetails} 
+              onPreview={handlePreview}
+              onRepublish={handleRepublish}
+              onDuplicate={handleDuplicate}
+              batches={batches}
+            />
+          )}
+
+          {view === "details" && selectedBatch && (
+            <LetterDetails 
+              batch={selectedBatch} 
+              onBack={() => setView("history")} 
+            />
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Configuration Panel */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-4">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Letter Settings</h3>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Letter Type</label>
-              <select 
-                value={selectedLetter}
-                onChange={(e) => setSelectedLetter(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+      {/* Preview Modal */}
+      {isPreviewing && selectedBatch && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-background w-full max-w-6xl max-h-full overflow-hidden rounded-[2.5rem] shadow-2xl border border-border flex flex-col">
+            <div className="px-8 py-6 border-b border-border flex items-center justify-between bg-card">
+              <div>
+                <h3 className="text-xl font-black text-foreground uppercase tracking-tight">Letter Preview</h3>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                  Reviewing {selectedBatch.letterType} for {selectedBatch.selectedEmployeeIds.length} recipients
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsPreviewing(false)} className="rounded-xl">
+                <X size={20} />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8">
+              <LetterPreviewContent batch={selectedBatch} />
+            </div>
+            <div className="px-8 py-4 border-t border-border bg-card flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setIsPreviewing(false)} className="rounded-xl px-6 h-11 text-xs font-black uppercase tracking-widest">
+                Close
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  const printContent = document.getElementById('modal-letter-preview');
+                  if (printContent) {
+                    const win = window.open('', '_blank');
+                    win?.document.write(`<html><head><title>Print</title></head><body>${printContent.innerHTML}<script>window.print();window.close();</script></body></html>`);
+                    win?.document.close();
+                  }
+                }}
+                className="rounded-xl px-6 h-11 text-xs font-black uppercase tracking-widest"
               >
-                {LETTER_TYPES.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+                <Printer className="w-4 h-4 mr-2" /> Print
+              </Button>
+              <Button className="rounded-xl px-8 h-11 bg-primary text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                <Download className="w-4 h-4 mr-2" /> Download All
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Employee ID / Name</label>
-              <input 
-                type="text"
-                placeholder="Search employee..."
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating || !employeeId}
-              className="w-full py-2.5 bg-foreground text-background font-semibold rounded-lg hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  Generate Letter
-                </>
-              )}
-            </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-          <div className="bg-secondary/30 p-4 rounded-xl border border-border/50">
-            <h4 className="text-xs font-bold text-foreground uppercase mb-2">Dynamic Placeholders</h4>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              The system will automatically populate: <br/>
-              <span className="font-mono bg-background px-1 rounded">{"{employee_name}"}</span>, 
-              <span className="font-mono bg-background px-1 rounded">{"{designation}"}</span>, 
-              <span className="font-mono bg-background px-1 rounded">{"{doj}"}</span>, 
-              <span className="font-mono bg-background px-1 rounded">{"{salary}"}</span>
+// Sub-component to handle preview content with employee switcher
+function LetterPreviewContent({ batch }: { batch: LetterBatch }) {
+  const [previewId, setPreviewId] = useState(batch.selectedEmployeeIds[0]);
+  const template = MOCK_TEMPLATES.find(t => t.id === batch.templateId);
+  const employee = employees.find(e => e.id === previewId);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4 bg-secondary/30 p-4 rounded-2xl border border-border/50">
+        <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Recipient:</span>
+        <Select value={previewId} onValueChange={setPreviewId}>
+          <SelectTrigger className="h-10 bg-background rounded-xl w-64">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {batch.selectedEmployeeIds.map(id => (
+              <SelectItem key={id} value={id}>
+                {employees.find(e => e.id === id)?.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div 
+        id="modal-letter-preview"
+        className="bg-white dark:bg-slate-950 border border-border shadow-inner rounded-[1.5rem] p-12 min-h-[600px] overflow-auto mx-auto max-w-4xl text-slate-900 dark:text-slate-100"
+      >
+        {template && employee ? (
+          <div 
+            dangerouslySetInnerHTML={{ 
+              __html: template.content
+                .replace(/{{employee_name}}/g, employee.name)
+                .replace(/{{employee_id}}/g, employee.employeeId)
+                .replace(/{{designation}}/g, employee.designation)
+                .replace(/{{department}}/g, employee.department)
+                .replace(/{{joining_date}}/g, employee.joiningDate)
+                .replace(/{{effective_date}}/g, batch.effectiveDate)
+                .replace(/{{salary}}/g, "₹ 8,45,000")
+                .replace(/{{current_date}}/g, new Date().toLocaleDateString())
+            }} 
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-96 text-muted-foreground opacity-50">
+            <AlertCircle size={48} className="mb-4" />
+            <p className="text-sm font-black uppercase tracking-widest text-center">
+              Template or Employee data missing.<br/>Preview unavailable.
             </p>
           </div>
-        </div>
-
-        {/* Preview Panel */}
-        <div className="lg:col-span-2">
-          <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden h-full flex flex-col min-h-[500px]">
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
-              <span className="text-sm font-semibold">Document Preview</span>
-              {showPreview && (
-                <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground" title="Download PDF">
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground" title="Send via Email">
-                    <Mail className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex-1 p-8 flex flex-col items-center justify-center text-center">
-              {showPreview ? (
-                <div className="w-full max-w-2xl bg-background border border-border shadow-2xl p-12 text-left space-y-6 aspect-[1/1.414]">
-                  <div className="flex justify-between items-start mb-12">
-                    <div className="space-y-1">
-                      <h1 className="text-2xl font-bold uppercase tracking-widest text-primary">Company Name</h1>
-                      <p className="text-xs text-muted-foreground">123 Business Street, Tech City</p>
-                    </div>
-                    <div className="text-right text-xs text-muted-foreground">
-                      <p>Date: {new Date().toLocaleDateString()}</p>
-                      <p>Ref: HR/LET/2026/001</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h2 className="text-center font-bold underline text-lg uppercase mb-8">{selectedLetter}</h2>
-                    <p className="text-sm">To,<br/><strong>{employeeId || "Employee Name"}</strong></p>
-                    <p className="text-sm leading-relaxed">
-                      This is to certify that Mr./Ms. <strong>{employeeId || "Employee Name"}</strong> is working with us as <strong>Software Engineer</strong> since <strong>01-Jan-2024</strong>.
-                    </p>
-                    <p className="text-sm leading-relaxed">
-                      We appreciate your contributions to the organization and look forward to your continued success.
-                    </p>
-                  </div>
-
-                  <div className="mt-20 pt-12 border-t border-border/50">
-                    <p className="text-sm font-bold">Authorized Signatory</p>
-                    <p className="text-xs text-muted-foreground">Human Resources Department</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
-                    <Eye className="w-8 h-8 text-muted-foreground opacity-50" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">No Preview Available</p>
-                    <p className="text-xs text-muted-foreground">Select an employee and click "Generate" to see the document here.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
+

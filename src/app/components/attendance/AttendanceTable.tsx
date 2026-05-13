@@ -1,5 +1,8 @@
 import { Fragment, useMemo, useState } from "react";
 import { attendanceDataset, useAttendanceStore } from "../../modules/attendance/store";
+import { KebabMenu } from "../ui/KebabMenu";
+import { Eye, Maximize2, Minimize2, Edit, FileText, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function AttendanceTable({ employeeId }: { employeeId?: string }) {
   const { filters, setSelectedDate } = useAttendanceStore();
@@ -73,9 +76,19 @@ export function AttendanceTable({ employeeId }: { employeeId?: string }) {
                     <td className="p-3">{row.status}</td>
                     <td className="p-3">{row.lop}</td>
                     <td className="p-3">{rowException?.type || "—"}</td>
-                    <td className="p-3 space-x-1">
-                      <button className="text-xs px-2 py-1 border border-border rounded" onClick={() => setSelectedDate(row.date)}>View</button>
-                      <button className="text-xs px-2 py-1 border border-border rounded" onClick={() => setExpandedRow(expanded ? null : row.id)}>Expand</button>
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <KebabMenu 
+                        size="sm"
+                        items={[
+                          { label: "View Details", icon: Eye, onClick: () => setSelectedDate(row.date) },
+                          { label: expanded ? "Collapse Row" : "Expand Row", icon: expanded ? Minimize2 : Maximize2, onClick: () => setExpandedRow(expanded ? null : row.id) },
+                          { label: "Regularize Punch", icon: Edit, onClick: () => toast.info("Redirecting to regularization...") },
+                          { label: "View Log File", icon: FileText, onClick: () => toast.info("Opening raw log file") },
+                          { label: "Delete Record", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
+                            if (confirm("Permanently delete this attendance record?")) toast.error("Record deleted");
+                          }},
+                        ]}
+                      />
                     </td>
                   </tr>
                   {expanded && (
