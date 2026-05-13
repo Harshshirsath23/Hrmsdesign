@@ -1,182 +1,368 @@
-import { useState } from "react";
-import { Outlet, Navigate } from "react-router";
+import { useMemo, useState } from "react";
+import { Outlet, useNavigate, Navigate, useLocation } from "react-router";
 import {
-    LayoutDashboard, Users, Calendar, FileText, Settings, LogOut,
-    Bell, Search, Menu, X, ChevronDown, BarChart3, Clock,
-    CheckCircle2, AlertCircle
+  LayoutDashboard,
+  Clock,
+  CalendarDays,
+  Wallet,
+  Coffee,
+  FileText,
+  Bell,
+  LogOut,
+  Building2,
+  ChevronRight,
+  ChevronDown,
+  Menu,
+  UserRoundCog,
+  Sun,
+  Moon,
+  PenLine,
+  FileStack,
+  Scale,
+  Palmtree,
+  Users,
+  ScrollText,
+  BarChart3,
+  CheckCircle2,
+  UserCheck,
+  Building,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { cn } from "../../components/ui/utils";
+import { useTheme } from "../../context/ThemeContext";
 
-const sidebarItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/manager/dashboard", badge: null },
-    { icon: Users, label: "My Team", path: "/manager/team", badge: null },
-    { icon: Calendar, label: "Attendance", path: "/manager/attendance", badge: null },
-    { icon: FileText, label: "Leave Requests", path: "/manager/leaves", badge: "3" },
-    { icon: BarChart3, label: "Reports", path: "/manager/reports", badge: null },
-    { icon: Settings, label: "Settings", path: "/manager/settings", badge: null },
+const NAV_ITEMS = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/manager/dashboard" },
+  { icon: UserRoundCog, label: "My Profile", path: "/manager/profile" },
+  { icon: Clock, label: "Attendance", path: "/manager/attendance" },
+  { icon: CalendarDays, label: "My Leaves", path: "/manager/leaves" },
+  { icon: Wallet, label: "Payslips", path: "/manager/payslips" },
+  { icon: FileText, label: "Documents", path: "/manager/documents" },
+  { icon: Users, label: "Team Dashboard", path: "/manager/team-dashboard" },
+  { icon: UserCheck, label: "Team Attendance", path: "/manager/team-attendance" },
+  { icon: CheckCircle2, label: "Approvals", path: "/manager/approvals" },
+  { icon: BarChart3, label: "Reports", path: "/manager/reports" },
+  { icon: Building, label: "Organization Chart", path: "/manager/org-chart" },
+];
+
+const LEAVE_ITEMS = [
+  { icon: LayoutDashboard, label: "Leave Dashboard", path: "/manager/leaves/dashboard" },
+  { icon: PenLine, label: "Apply Leave", path: "/manager/leaves/apply" },
+  { icon: FileStack, label: "My Applications", path: "/manager/leaves/applications" },
+  { icon: Scale, label: "Leave Balance", path: "/manager/leaves/balance" },
+  { icon: Palmtree, label: "Holiday Calendar", path: "/manager/leaves/holidays" },
+  { icon: Users, label: "Team Calendar", path: "/manager/leaves/team" },
+  { icon: ScrollText, label: "Leave Policy", path: "/manager/leaves/policy" },
+  { icon: Bell, label: "Notifications", path: "/manager/leaves/notifications" },
 ];
 
 export function ManagerLayout() {
-    const { user, logout } = useAuth();
-    const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, logout, isAuthenticated } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
-    if (!user || user.role !== "manager") {
-        return <Navigate to="/login" replace />;
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [collapsed, setCollapsed] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(
+    location.pathname.startsWith("/manager/leaves")
+  );
+
+  if (!isAuthenticated || user?.role !== "manager") {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isActive = (path: string) =>
+    path === "/manager/leaves"
+      ? location.pathname.startsWith("/manager/leaves")
+      : location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
+  const currentPage = useMemo(() => {
+    if (location.pathname.startsWith("/manager/leaves")) {
+      const seg = location.pathname.split("/").filter(Boolean).pop() ?? "dashboard";
+
+      const titles: Record<string, string> = {
+        leaves: "Leave center",
+        dashboard: "Leave · Dashboard",
+        apply: "Leave · Apply",
+        applications: "Leave · Applications",
+        balance: "Leave · Balance",
+        holidays: "Leave · Holidays",
+        team: "Leave · Team",
+        policy: "Leave · Policy",
+        notifications: "Leave · Notifications",
+      };
+
+      return titles[seg] ?? "Leave center";
     }
 
-    return (
-        <div className="flex h-screen bg-[#F1F5F9]">
-            {/* Sidebar */}
-            <aside
-                className={cn(
-                    "fixed inset-y-0 left-0 z-50 flex flex-col bg-[#1E293B] text-white transition-all duration-300",
-                    sidebarOpen ? "w-64" : "w-20",
-                    "lg:relative",
-                    mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-                )}
-            >
-                {/* Logo */}
-                <div className="flex items-center justify-between p-4 border-b border-[#334155]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#3B82F6] rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">HR</span>
-                        </div>
-                        {sidebarOpen && (
-                            <span className="font-bold text-lg tracking-tight">HRMS</span>
-                        )}
-                    </div>
-                    <button
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="lg:hidden text-[#94A3B8] hover:text-white"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+    return NAV_ITEMS.find((n) => isActive(n.path))?.label ?? "Dashboard";
+  }, [location.pathname]);
 
-                {/* User Info */}
-                <div className="p-4 border-b border-[#334155]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#3B82F6] flex items-center justify-center font-bold">
-                            {user.initials}
-                        </div>
-                        {sidebarOpen && (
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold truncate">{user.name}</p>
-                                <p className="text-xs text-[#94A3B8] truncate">Manager</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
+  return (
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      {/* ── Sidebar ─────────────────────────────────────── */}
+      <aside
+        className={`flex flex-col flex-shrink-0 bg-card border-r border-border
+          transition-all duration-200 ease-in-out overflow-hidden
+          ${collapsed ? "w-[72px]" : "w-60"}`}
+      >
+        {/* Logo */}
+        <div
+          className={`h-16 flex items-center flex-shrink-0 border-b border-border
+          ${collapsed ? "justify-center px-0" : "px-5 gap-3"}`}
+        >
+          <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-4 h-4 text-primary-foreground" />
+          </div>
 
-                {/* Navigation */}
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                    {sidebarItems.map((item) => (
-                        <a
-                            key={item.path}
-                            href={item.path}
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
-                                "text-[#94A3B8] hover:text-white hover:bg-[#334155]",
-                                "group relative"
-                            )}
-                        >
-                            <item.icon className="w-5 h-5 flex-shrink-0" />
-                            {sidebarOpen ? (
-                                <>
-                                    <span className="text-sm font-medium flex-1">{item.label}</span>
-                                    {item.badge && (
-                                        <span className="text-xs bg-[#3B82F6] text-white px-2 py-0.5 rounded-full">
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </>
-                            ) : (
-                                <div className="absolute left-full ml-2 px-3 py-2 bg-[#0F172A] text-white text-sm rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                                    {item.label}
-                                    {item.badge && (
-                                        <span className="ml-2 bg-[#3B82F6] px-2 py-0.5 rounded-full text-xs">
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                        </a>
-                    ))}
-                </nav>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-foreground leading-tight">
+                HR<span className="text-muted-foreground">MS</span>
+              </p>
 
-                {/* Logout */}
-                <div className="p-4 border-t border-[#334155]">
-                    <button
-                        onClick={logout}
-                        className={cn(
-                            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-colors",
-                            "text-[#94A3B8] hover:text-red-400 hover:bg-[#334155]"
-                        )}
-                    >
-                        <LogOut className="w-5 h-5" />
-                        {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
-                {/* Top Header */}
-                <header className="bg-white border-b border-[#E2E8F0] px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setMobileMenuOpen(true)}
-                            className="lg:hidden text-[#64748B] hover:text-[#0F172A]"
-                        >
-                            <Menu className="w-6 h-6" />
-                        </button>
-                        <button
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="hidden lg:flex items-center text-[#64748B] hover:text-[#0F172A]"
-                        >
-                            <Menu className="w-5 h-5" />
-                        </button>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                className="pl-10 pr-4 py-2 w-64 bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <button className="relative text-[#64748B] hover:text-[#0F172A]">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full">
-                                3
-                            </span>
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-[#3B82F6] flex items-center justify-center text-white text-sm font-bold">
-                                {user.initials}
-                            </div>
-                            <ChevronDown className="w-4 h-4 text-[#64748B]" />
-                        </div>
-                    </div>
-                </header>
-
-                {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-6">
-                    <Outlet />
-                </main>
+              <p className="text-[10px] text-muted-foreground tracking-widest uppercase font-medium">
+                Manager Portal
+              </p>
             </div>
-
-            {/* Mobile sidebar overlay */}
-            {mobileMenuOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={() => setMobileMenuOpen(false)}
-                />
-            )}
+          )}
         </div>
-    );
+
+        {/* Nav section label */}
+        {!collapsed && (
+          <p className="px-5 pt-6 pb-2 text-[10px] text-muted-foreground tracking-widest uppercase font-semibold">
+            Navigation
+          </p>
+        )}
+
+        {/* Nav items */}
+        <nav
+          className={`flex-1 overflow-y-auto space-y-0.5 ${
+            collapsed ? "px-3 pt-4" : "px-3"
+          }`}
+        >
+          {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
+            const active = isActive(path);
+
+            if (path === "/employee/leaves") {
+              return (
+                <div key={path}>
+                  <button
+                    onClick={() => setLeaveOpen((p) => !p)}
+                    title={collapsed ? label : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                      transition-all duration-150 relative
+                      ${
+                        active
+                          ? "bg-secondary text-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      }
+                      ${collapsed ? "justify-center" : ""}`}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
+                    )}
+
+                    <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+
+                    {!collapsed && (
+                      <>
+                        <span>My Leaves</span>
+
+                        <ChevronDown
+                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${
+                            leaveOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  {!collapsed && leaveOpen && (
+                    <div className="mt-1 ml-4 space-y-1 border-l border-border pl-3">
+                      {LEAVE_ITEMS.map(({ icon: SubIcon, label, path }) => {
+                        const subActive = location.pathname === path;
+
+                        return (
+                          <button
+                            key={path}
+                            onClick={() => navigate(path)}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all
+                              ${
+                                subActive
+                                  ? "bg-secondary text-foreground font-semibold"
+                                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              }`}
+                          >
+                            <SubIcon className="w-4 h-4 flex-shrink-0" />
+                            <span>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={path}
+                onClick={() => navigate(path)}
+                title={collapsed ? label : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  transition-all duration-150 relative
+                  ${
+                    active
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }
+                  ${collapsed ? "justify-center" : ""}`}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
+                )}
+
+                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+
+                {!collapsed && <span>{label}</span>}
+
+                {!collapsed && active && (
+                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-muted-foreground" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Collapse toggle */}
+        <div className="px-3 pb-3 border-t border-border pt-3">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+              text-muted-foreground hover:bg-secondary hover:text-foreground
+              transition-all duration-150 ${collapsed ? "justify-center" : ""}`}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <Menu className="w-[18px] h-[18px] flex-shrink-0" />
+
+            {!collapsed && <span>Collapse</span>}
+          </button>
+        </div>
+
+        {/* User */}
+        <div className="border-t border-border p-3">
+          {collapsed ? (
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="w-full flex items-center justify-center py-2.5 rounded-lg
+                text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              <LogOut className="w-[18px] h-[18px]" />
+            </button>
+          ) : (
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary transition-colors">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  {user?.initials}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                    {user?.name}
+                  </p>
+
+                  <p className="text-xs text-muted-foreground truncate">
+                    Manager
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-border transition-colors flex-shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Main area ────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Topbar */}
+        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+          <div>
+            <h1 className="text-base font-semibold text-foreground">
+              {currentPage}
+            </h1>
+
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {new Date().toLocaleDateString("en-IN", {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-border
+                text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title={isDark ? "Light mode" : "Dark mode"}
+            >
+              {isDark ? (
+                <Sun className="w-4 h-4" />
+              ) : (
+                <Moon className="w-4 h-4" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/employee/leaves/notifications")}
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border
+                text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+
+              <span
+                className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-foreground"
+                aria-hidden
+              />
+            </button>
+
+            <div className="w-px h-6 bg-border mx-1" />
+
+            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-border bg-secondary">
+              <div className="w-7 h-7 rounded-md bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold">
+                {user?.initials}
+              </div>
+
+              <span className="text-sm font-medium text-foreground hidden sm:block">
+                {user?.name}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
 }
