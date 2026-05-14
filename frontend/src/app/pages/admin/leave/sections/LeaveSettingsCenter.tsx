@@ -13,7 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../../components/ui/dialog";
-import { SETTINGS_SECTIONS, useLeaveSettingsStore } from "../../../../modules/adminLeave/settings";
+import {
+  buildNewDraftDefaultsFromSchema,
+  getSettingsSectionsForContext,
+  resolveSectionKeyForContext,
+  useLeaveSettingsStore,
+} from "../../../../modules/adminLeave/settings";
 import type {
   LeaveSettingsRecord,
   LeaveSettingsSectionKey,
@@ -109,22 +114,29 @@ export function LeaveSettingsCenter({
   targetSection,
   createSignal,
   onCreateHandled,
+  mastersIntegration,
 }: {
   targetSection?: LeaveSettingsSectionKey;
   createSignal?: number;
   onCreateHandled?: () => void;
+  /** When true, sidebar omits General / Feature Flags / Audit / System (Master Management only). */
+  mastersIntegration?: boolean;
 }) {
   const { user } = useAuth();
   const actor = user?.name ?? "Admin User";
   const store = useLeaveSettingsStore();
-  const [activeSection, setActiveSection] = useState<LeaveSettingsSectionKey>("general");
+  const sectionsContext = mastersIntegration ? "master-management" : "standalone";
+  const sections = useMemo(() => getSettingsSectionsForContext(sectionsContext), [sectionsContext]);
+  const [activeSection, setActiveSection] = useState<LeaveSettingsSectionKey>(() =>
+    resolveSectionKeyForContext(targetSection, sectionsContext),
+  );
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<LeaveSettingsRecord | null>(null);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
 
-  const section = SETTINGS_SECTIONS.find((s) => s.key === activeSection) ?? SETTINGS_SECTIONS[0];
+  const section = sections.find((s) => s.key === activeSection) ?? sections[0];
   const rows = store.data[activeSection] ?? [];
 
   const filteredRows = useMemo(() => {
@@ -140,10 +152,7 @@ export function LeaveSettingsCenter({
     setEditing(null);
     setDraft({
       id: `cfg-${Date.now()}`,
-      name: "",
-      code: "",
-      is_active: true,
-      ...Object.fromEntries(section.schema.map((f) => [f.key, f.type === "boolean" ? false : ""])),
+      ...buildNewDraftDefaultsFromSchema(section.schema),
     });
     setEditorOpen(true);
   };
@@ -174,8 +183,8 @@ export function LeaveSettingsCenter({
 
   useEffect(() => {
     if (!targetSection) return;
-    setActiveSection(targetSection);
-  }, [targetSection]);
+    setActiveSection(resolveSectionKeyForContext(targetSection, sectionsContext));
+  }, [targetSection, sectionsContext]);
 
   useEffect(() => {
     if (!createSignal) return;
@@ -191,7 +200,7 @@ export function LeaveSettingsCenter({
           Leave Settings
         </p>
         <nav className="space-y-0.5">
-          {SETTINGS_SECTIONS.map((s) => {
+          {sections.map((s) => {
             const isActive = s.key === activeSection;
             return (
               <button

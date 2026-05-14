@@ -20,9 +20,9 @@ export function EmployeeLeaveHolidaysPage() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">Holiday calendar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          {/* <p className="mt-1 text-sm text-muted-foreground">
             List, monthly grid, and yearly overview with optional holiday styling.
-          </p>
+          </p> */}
         </div>
         <div className="flex gap-1 rounded-xl border border-border bg-secondary/50 p-1">
           {VIEWS.map((t) => (
