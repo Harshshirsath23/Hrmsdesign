@@ -58,6 +58,13 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
     "Cancelled": { color: "text-slate-500", bg: "bg-slate-500/10", icon: AlertCircle }
   };
 
+  const safeFormatDate = (dateString: string | undefined | null, formatStr: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return format(date, formatStr);
+  };
+
   const filteredHistory = useMemo(() => {
     return batches.filter(item => {
       const searchLower = search.toLowerCase();
@@ -147,7 +154,7 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{batch.letterType}</span>
                           <span className="w-1 h-1 rounded-full bg-border" />
-                          <span className="text-[10px] font-medium text-muted-foreground">{format(new Date(batch.createdAt), "dd MMM yyyy")}</span>
+                          <span className="text-[10px] font-medium text-muted-foreground">{safeFormatDate(batch.createdAt, "dd MMM yyyy")}</span>
                         </div>
                       </div>
                     </div>
@@ -159,7 +166,7 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs font-bold text-foreground">{format(new Date(batch.effectiveDate), "dd MMM yyyy")}</span>
+                    <span className="text-xs font-bold text-foreground">{safeFormatDate(batch.effectiveDate, "dd MMM yyyy")}</span>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn("text-[9px] font-black uppercase tracking-widest rounded-md border-transparent px-2 py-1 flex items-center gap-1.5 w-fit", config.bg, config.color)}>

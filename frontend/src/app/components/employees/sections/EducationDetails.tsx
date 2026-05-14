@@ -106,29 +106,32 @@ export function EducationDetails({ employee }: Props) {
                       <p className="text-[11px] font-bold text-muted-foreground ml-5">{edu.university}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Duration & Mode</p>
-                      <p className="text-sm font-black flex items-center gap-2">
-                        <Calendar size={14} className="text-primary/60" />
-                        {formatDate(edu.startDate)} — {formatDate(edu.endDate)}
-                      </p>
-                      <p className="text-[11px] font-bold text-muted-foreground ml-5 uppercase tracking-wider">{edu.modeOfStudy}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Grade / Result</p>
-                      <p className="text-sm font-black text-primary flex items-center gap-2">
-                        <Award size={14} className="text-primary" />
-                        {edu.grade}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
                       <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Location</p>
                       <p className="text-sm font-black flex items-center gap-2">
                         <MapPin size={14} className="text-primary/60" />
                         {edu.country}
                       </p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Duration & Results</p>
+                      <p className="text-sm font-black flex items-center gap-2">
+                        <Calendar size={14} className="text-primary/60" />
+                        {formatDate(edu.startDate)} — {formatDate(edu.endDate)}
+                      </p>
+                      <div className="flex gap-4 ml-5 mt-1">
+                        <div>
+                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Grade</p>
+                          <p className="text-[11px] font-bold">{edu.grade}</p>
+                        </div>
+                        {edu.percentageCgpa && (
+                          <div>
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Percentage/CGPA</p>
+                            <p className="text-[11px] font-bold">{edu.percentageCgpa}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

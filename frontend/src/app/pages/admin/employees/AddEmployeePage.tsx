@@ -41,7 +41,10 @@ import {
   GraduationCap,
   Plus,
   Trash2,
+  Monitor,
 } from "lucide-react";
+import { MasterSelect } from "@/app/components/ui/MasterSelect";
+import { SearchableSelect } from "@/app/components/ui/SearchableSelect";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -104,6 +107,26 @@ interface FormState {
   password: string;
   role: string;
   sendInvite: boolean;
+  salutation: string;
+  attendanceSchemeId: string;
+  shiftAssignmentId: string;
+  assetCategory: string;
+  assetCondition: string;
+  assetType: string;
+  assetId: string;
+  activeTab: "new" | "rehire";
+  familyDetails: {
+    name: string;
+    relationship: string;
+    dob: string;
+    gender: string;
+    bloodGroup: string;
+    phone: string;
+    occupation: string;
+    isDependent: boolean;
+    isEmergencyContact: boolean;
+    isNominee: boolean;
+  }[];
   // NEW FIELDS
   education: {
     level: string;
@@ -118,6 +141,18 @@ interface FormState {
   bgcVerifiedBy: string;
   bgcReference: string;
   bgcRemarks: string;
+  nominees: {
+    name: string;
+    relationship: string;
+    dob: string;
+    percentage: string;
+  }[];
+  rehireDate: string;
+  rehireRemarks: string;
+  restoreSalary: boolean;
+  restoreAssets: boolean;
+  restoreLeaves: boolean;
+  restoreDocs: boolean;
 }
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -129,14 +164,16 @@ type Touched = Partial<Record<keyof FormState, boolean>>;
 
 const SECTIONS = [
   { id: "s-basic", n: 1, label: "Basic Information", Icon: User },
-  { id: "s-job", n: 2, label: "Job Details", Icon: Briefcase },
-  { id: "s-attendance", n: 3, label: "Attendance Settings", Icon: Clock },
-  { id: "s-payroll", n: 4, label: "Payroll Information", Icon: CreditCard },
-  { id: "s-leave", n: 5, label: "Leave Configuration", Icon: Calendar },
-  { id: "s-documents", n: 6, label: "Documents", Icon: FileText },
-  { id: "s-education", n: 7, label: "Education Details", Icon: GraduationCap },
-  { id: "s-background", n: 8, label: "Background Check", Icon: Shield },
-  { id: "s-account", n: 9, label: "Account Access", Icon: Shield },
+  { id: "s-family", n: 2, label: "Family & Nominees", Icon: UserPlus },
+  { id: "s-job", n: 3, label: "Job Details", Icon: Briefcase },
+  { id: "s-attendance", n: 4, label: "Attendance Settings", Icon: Clock },
+  { id: "s-payroll", n: 5, label: "Payroll Information", Icon: CreditCard },
+  { id: "s-leave", n: 6, label: "Leave Configuration", Icon: Calendar },
+  { id: "s-documents", n: 7, label: "Documents", Icon: FileText },
+  { id: "s-education", n: 8, label: "Education Details", Icon: GraduationCap },
+  { id: "s-background", n: 9, label: "Background Check", Icon: Shield },
+  { id: "s-assets", n: 10, label: "Asset Management", Icon: Monitor },
+  { id: "s-account", n: 11, label: "Account Access", Icon: Shield },
 ];
 
 const DEPTS = [
@@ -266,6 +303,22 @@ const INIT: FormState = {
   password: "",
   role: "employee",
   sendInvite: true,
+  salutation: "",
+  attendanceSchemeId: "",
+  shiftAssignmentId: "",
+  assetCategory: "",
+  assetCondition: "",
+  assetType: "",
+  assetId: "",
+  activeTab: "new",
+  familyDetails: [],
+  nominees: [],
+  rehireDate: "",
+  rehireRemarks: "",
+  restoreSalary: false,
+  restoreAssets: false,
+  restoreLeaves: false,
+  restoreDocs: false,
   education: [],
   bgcStatus: "Pending",
   bgcAgency: "",
@@ -961,10 +1014,10 @@ function CheckInput({
 }
 
 // Section nav
-function SectionNav({ active }: { active: string }) {
+function SectionNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
   return (
-    <aside className="hidden xl:block w-[188px] shrink-0">
-      <div className="sticky top-6">
+    <aside className="hidden lg:block w-[200px] shrink-0 relative">
+      <div className="sticky top-6 z-20 space-y-4">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.14em] px-2 mb-3">
           Form Sections
         </p>
@@ -977,6 +1030,7 @@ function SectionNav({ active }: { active: string }) {
                 href={`#${id}`}
                 onClick={(e) => {
                   e.preventDefault();
+                  onSelect(id);
                   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
                 className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
@@ -1002,6 +1056,94 @@ function SectionNav({ active }: { active: string }) {
   );
 }
 
+// Mock data for former employees
+const FORMER_EMPLOYEES = [
+  { id: "EMP-10204", name: "Sarah Jenkins", email: "sarah.j@company.com", phone: "9876543210", dept: "Engineering", desig: "Senior Dev", lastWorking: "2024-01-15", reason: "Resigned" },
+  { id: "EMP-10355", name: "Michael Chen", email: "m.chen@company.com", phone: "9822334455", dept: "Marketing", desig: "Manager", lastWorking: "2023-11-30", reason: "Relieved" },
+  { id: "EMP-09882", name: "Priya Sharma", email: "priya.s@company.com", phone: "9000111222", dept: "HR", desig: "Generalist", lastWorking: "2024-03-20", reason: "Separated" },
+];
+
+function RehireSearch({ onSelect }: { onSelect: (emp: any) => void }) {
+  const [q, setQ] = useState("");
+  const filtered = FORMER_EMPLOYEES.filter(e => 
+    e.name.toLowerCase().includes(q.toLowerCase()) || 
+    e.id.toLowerCase().includes(q.toLowerCase())
+  );
+
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="flat-card p-6 border-indigo-500/20 bg-indigo-500/5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+            <Search size={20} />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-foreground">Find Former Employee</h3>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Search by ID, Name, Email or Mobile</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <Inp 
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Start typing name or employee ID..."
+              icon={<Search size={14} />}
+            />
+          </div>
+          <Sel ph="All Departments" opts={[{ v: "eng", l: "Engineering" }, { v: "mkt", l: "Marketing" }]} />
+          <Sel ph="All Reasons" opts={[{ v: "res", l: "Resigned" }, { v: "term", l: "Terminated" }]} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        {filtered.map(emp => (
+          <button
+            key={emp.id}
+            type="button"
+            onClick={() => onSelect(emp)}
+            className="group flex items-center justify-between p-4 rounded-2xl border border-border bg-card hover:border-indigo-500/50 hover:bg-indigo-500/[0.02] hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-xs font-black text-muted-foreground group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                {emp.name.split(' ').map(n => n[0]).join('')}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-foreground">{emp.name}</span>
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase tracking-widest">{emp.id}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[10px] font-bold text-muted-foreground">{emp.desig} · {emp.dept}</span>
+                  <span className="w-1 h-1 rounded-full bg-border" />
+                  <span className="text-[10px] font-bold text-indigo-500">Last Day: {emp.lastWorking}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+               <div className="text-right hidden sm:block">
+                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reason</p>
+                 <p className="text-[11px] font-black text-foreground mt-0.5">{emp.reason}</p>
+               </div>
+               <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground group-hover:text-indigo-500 group-hover:border-indigo-500/30 group-hover:bg-indigo-500/10 transition-all">
+                 <Plus size={16} />
+               </div>
+            </div>
+          </button>
+        ))}
+        {filtered.length === 0 && (
+          <div className="p-12 text-center border-2 border-dashed border-border rounded-3xl">
+            <User size={32} className="mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-sm font-bold text-muted-foreground">No former employees found matching your search.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════
@@ -1015,23 +1157,30 @@ export function AddEmployeePage() {
   const [draftSaving, setDraftSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [activeSection, setActiveSection] = useState("s-basic");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // IntersectionObserver for active section
   useEffect(() => {
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
-          if (e.isIntersecting) setActiveSection(e.target.id);
+          if (e.isIntersecting) {
+            setActiveSection(e.target.id);
+          }
         });
       },
-      { rootMargin: "-10% 0px -80% 0px" }
+      { 
+        root: scrollRef.current,
+        rootMargin: "-20% 0px -60% 0px",
+        threshold: 0
+      }
     );
     SECTIONS.forEach((s) => {
       const el = document.getElementById(s.id);
       if (el) obs.observe(el);
     });
     return () => obs.disconnect();
-  }, [submitted]);
+  }, [submitted, form.activeTab, form.firstName]);
 
   // Auto-generate username from name
   useEffect(() => {
@@ -1076,7 +1225,11 @@ export function AddEmployeePage() {
         "joiningDate",
         "aadhaarNumber",
         "reportingManager",
+        "assetCategory",
+        "assetId",
       ];
+      if (form.activeTab === "rehire") REQ.push("rehireDate");
+
       if (REQ.includes(k) && !form[k]) {
         setErrors((e) => ({ ...e, [k]: "This field is required" }));
         return false;
@@ -1113,7 +1266,11 @@ export function AddEmployeePage() {
       "joiningDate",
       "aadhaarNumber",
       "reportingManager",
+      "assetCategory",
+      "assetId",
     ];
+    if (form.activeTab === "rehire") REQ.push("rehireDate");
+
     const errs: Errors = {};
     let ok = true;
     REQ.forEach((k) => {
@@ -1204,8 +1361,36 @@ export function AddEmployeePage() {
   // ── Form ─────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full min-h-0">
+      {/* Tabs Navigation */}
+      <div className="px-6 py-3 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-30">
+        <div className="flex items-center gap-1 p-1 bg-secondary/50 rounded-xl w-fit border border-border/50">
+          <button
+            type="button"
+            onClick={() => set("activeTab", "new")}
+            className={`px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
+              form.activeTab === "new"
+                ? "bg-foreground text-primary-foreground shadow-lg scale-[1.02]"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            New Employee
+          </button>
+          <button
+            type="button"
+            onClick={() => set("activeTab", "rehire")}
+            className={`px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
+              form.activeTab === "rehire"
+                ? "bg-foreground text-primary-foreground shadow-lg scale-[1.02]"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            Rehire Employee
+          </button>
+        </div>
+      </div>
+
       {/* Scrollable form area */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-6 pb-4">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-6 pb-4">
         {/* Page header */}
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
@@ -1217,14 +1402,18 @@ export function AddEmployeePage() {
               <ArrowLeft size={14} />
             </button>
             <div>
-              <h1 className="text-base font-semibold text-foreground leading-tight">
-                Add New Employee
+              <h1 className="text-base font-semibold text-foreground leading-tight flex items-center gap-2">
+                {form.activeTab === "new" ? "Add New Employee" : "Rehire Former Employee"}
+                {form.activeTab === "rehire" && form.firstName && (
+                  <span className="px-1.5 py-0.5 rounded bg-indigo-500 text-white text-[8px] font-black uppercase tracking-tighter">
+                    Rehired
+                  </span>
+                )}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Complete all required sections · Auto-ID:
-                <span className="font-mono font-semibold text-foreground ml-1">
-                  {form.employeeId}
-                </span>
+                {form.activeTab === "new" 
+                  ? "Register a fresh talent into the system" 
+                  : `Reactivating profile for ${form.firstName} ${form.lastName}`}
               </p>
             </div>
           </div>
@@ -1242,18 +1431,87 @@ export function AddEmployeePage() {
         </div>
 
         {/* Layout: SectionNav + Form */}
-        <div className="flex gap-8 items-start">
-          <SectionNav active={activeSection} />
+        <div className="flex gap-8 items-stretch">
+          {form.activeTab === "new" || form.employeeId ? (
+            <SectionNav active={activeSection} onSelect={setActiveSection} />
+          ) : null}
 
-          <form
-            id="add-employee-form"
-            onSubmit={handleSubmit}
-            noValidate
-            className="flex-1 flex flex-col gap-4 min-w-0"
-          >
-            {/* ─────────────────────────────────────────────
-                SECTION 1 · BASIC INFORMATION
-            ───────────────────────────────────────────── */}
+          <div className="flex-1 min-w-0">
+            {form.activeTab === "rehire" && !form.firstName ? (
+              <RehireSearch 
+                onSelect={(emp) => {
+                  setForm(f => ({
+                    ...f,
+                    firstName: emp.name.split(' ')[0],
+                    lastName: emp.name.split(' ')[1] || "",
+                    email: emp.email,
+                    phone: emp.phone,
+                    department: emp.dept,
+                    designation: emp.desig,
+                    // In a real app, you'd fetch the full profile here
+                  }));
+                }}
+              />
+            ) : (
+              <form
+                id="add-employee-form"
+                onSubmit={handleSubmit}
+                noValidate
+                className="flex flex-col gap-4"
+              >
+                {form.activeTab === "rehire" && (
+                  <div className="p-6 rounded-3xl border-2 border-indigo-500/30 bg-indigo-500/[0.03] shadow-xl shadow-indigo-500/5 mb-6 animate-in zoom-in-95 duration-500">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg">
+                        <RefreshCw size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-foreground">Rehire Configuration</h3>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Update details for the new employment period</p>
+                      </div>
+                      <div className="ml-auto">
+                        <span className="px-3 py-1 rounded-full bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest animate-pulse">Rehiring</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FF label="New Rehire Date" required error={errors.rehireDate}>
+                        <Inp 
+                          type="date"
+                          value={form.rehireDate}
+                          onChange={(e) => set("rehireDate", e.target.value)}
+                        />
+                      </FF>
+                      <FF label="New Employee ID (Optional)" hint="Leave blank for auto-generation">
+                        <Inp 
+                          value={form.employeeId}
+                          onChange={(e) => set("employeeId", e.target.value)}
+                          placeholder="E.g. EMP-2024-001"
+                        />
+                      </FF>
+                      <div className="md:col-span-2">
+                        <FF label="Rehire Remarks">
+                          <Inp 
+                            value={form.rehireRemarks}
+                            onChange={(e) => set("rehireRemarks", e.target.value)}
+                            placeholder="Reason for rehire or additional notes..."
+                          />
+                        </FF>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-indigo-500/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <Toggle on={form.restoreSalary} setOn={(v) => set("restoreSalary", v)} label="Restore Salary" desc="Prev. structure" />
+                      <Toggle on={form.restoreAssets} setOn={(v) => set("restoreAssets", v)} label="Restore Assets" desc="Prev. assignments" />
+                      <Toggle on={form.restoreLeaves} setOn={(v) => set("restoreLeaves", v)} label="Restore Leaves" desc="Prev. balances" />
+                      <Toggle on={form.restoreDocs} setOn={(v) => set("restoreDocs", v)} label="Restore Docs" desc="Prev. uploads" />
+                    </div>
+                  </div>
+                )}
+
+                {/* ─────────────────────────────────────────────
+                    SECTION 1 · BASIC INFORMATION
+                ───────────────────────────────────────────── */}
             <SC
               id="s-basic"
               n={1}
@@ -1263,13 +1521,20 @@ export function AddEmployeePage() {
             >
               {/* LEFT SIDE */}
               <div className="flex flex-col gap-5">
+                <FF label="Salutation" required>
+                  <MasterSelect
+                    masterName="Salutation"
+                    value={form.salutation}
+                    onChange={(v) => set("salutation", v)}
+                  />
+                </FF>
+
                 <FF label="Employee Number Series" required>
                   <div className="space-y-1.5">
-                    <Sel
+                    <MasterSelect
+                      masterName="EmployeeNumberSeries"
                       value={form.employeeSeries}
-                      onChange={(e) => set("employeeSeries", e.target.value)}
-                      ph="Select series"
-                      opts={SERIES}
+                      onChange={(v) => set("employeeSeries", v)}
                     />
                     <button
                       type="button"
@@ -1335,35 +1600,26 @@ export function AddEmployeePage() {
                 </FF>
 
                 <FF label="Gender" required>
-                  <Radio
-                    opts={GENDER_OPTS}
-                    val={form.gender}
-                    set={(v) => set("gender", v)}
-                    name="gender"
+                  <MasterSelect
+                    masterName="Gender"
+                    value={form.gender}
+                    onChange={(v) => set("gender", v)}
                   />
                 </FF>
 
                 <FF label="Reporting Manager" required hint="Searchable — type to filter">
-                  <SearchSel
+                  <SearchableSelect
                     value={form.reportingManager}
                     onChange={(v) => set("reportingManager", v)}
-                    opts={MANAGERS}
-                    ph="Search managers…"
+                    options={MANAGERS.map(m => ({ value: m.v, label: m.l }))}
                   />
                 </FF>
 
                 <FF label="Status" required>
-                  <Sel
+                  <MasterSelect
+                    masterName="EmployeeStatus"
                     value={form.status}
-                    onChange={(e) => set("status", e.target.value)}
-                    ph="Select status"
-                    opts={[
-                      { v: "active", l: "Active" },
-                      { v: "probation", l: "Probation" },
-                      { v: "notice-period", l: "Notice Period" },
-                      { v: "resigned", l: "Resigned" },
-                      { v: "terminated", l: "Terminated" },
-                    ]}
+                    onChange={(v) => set("status", v)}
                   />
                 </FF>
 
@@ -1496,11 +1752,238 @@ export function AddEmployeePage() {
             </SC>
 
             {/* ─────────────────────────────────────────────
+                SECTION 2 · FAMILY & NOMINEES
+            ───────────────────────────────────────────── */}
+            <SC
+              id="s-family"
+              n={2}
+              title="Family & Nominees"
+              desc="Declare family members and assign nominees for benefits"
+              Icon={UserPlus}
+            >
+              <div className="flex flex-col gap-6">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Family Details</h4>
+                    <button
+                      type="button"
+                      onClick={() => set("familyDetails", [...form.familyDetails, { 
+                        name: "", 
+                        relationship: "", 
+                        dob: "", 
+                        gender: "Male",
+                        bloodGroup: "",
+                        phone: "",
+                        occupation: "",
+                        isDependent: true,
+                        isEmergencyContact: false,
+                        isNominee: false 
+                      }])}
+                      className="flex items-center gap-1.5 text-[10px] font-black text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-widest"
+                    >
+                      <Plus size={12} />
+                      Add Member
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {form.familyDetails.map((member, idx) => (
+                      <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl border border-border bg-secondary/20 relative group">
+                        <button 
+                          type="button"
+                          onClick={() => set("familyDetails", form.familyDetails.filter((_, i) => i !== idx))}
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <X size={12} />
+                        </button>
+                        <FF label="Full Name">
+                          <Inp 
+                            value={member.name}
+                            onChange={(e) => {
+                              const news = [...form.familyDetails];
+                              news[idx].name = e.target.value;
+                              set("familyDetails", news);
+                            }}
+                            placeholder="Rajesh Kumar"
+                          />
+                        </FF>
+                        <FF label="Relationship">
+                          <Sel 
+                            value={member.relationship}
+                            onChange={(e) => {
+                              const news = [...form.familyDetails];
+                              news[idx].relationship = e.target.value;
+                              set("familyDetails", news);
+                            }}
+                            ph="Select..."
+                            opts={[{ v: "Father", l: "Father" }, { v: "Mother", l: "Mother" }, { v: "Spouse", l: "Spouse" }, { v: "Child", l: "Child" }]}
+                          />
+                        </FF>
+                        <FF label="Date of Birth">
+                          <Inp 
+                            type="date"
+                            value={member.dob}
+                            onChange={(e) => {
+                              const news = [...form.familyDetails];
+                              news[idx].dob = e.target.value;
+                              set("familyDetails", news);
+                            }}
+                          />
+                        </FF>
+                        <FF label="Gender">
+                          <Sel 
+                            value={member.gender}
+                            onChange={(e) => {
+                              const news = [...form.familyDetails];
+                              news[idx].gender = e.target.value;
+                              set("familyDetails", news);
+                            }}
+                            opts={[{ v: "Male", l: "Male" }, { v: "Female", l: "Female" }, { v: "Other", l: "Other" }]}
+                          />
+                        </FF>
+                        <FF label="Blood Group">
+                          <Inp 
+                            value={member.bloodGroup}
+                            onChange={(e) => {
+                              const news = [...form.familyDetails];
+                              news[idx].bloodGroup = e.target.value;
+                              set("familyDetails", news);
+                            }}
+                            placeholder="A+"
+                          />
+                        </FF>
+                        <FF label="Phone Number">
+                          <Inp 
+                            value={member.phone}
+                            onChange={(e) => {
+                              const news = [...form.familyDetails];
+                              news[idx].phone = e.target.value;
+                              set("familyDetails", news);
+                            }}
+                            placeholder="+91"
+                          />
+                        </FF>
+                        <FF label="Occupation">
+                          <Inp 
+                            value={member.occupation}
+                            onChange={(e) => {
+                              const news = [...form.familyDetails];
+                              news[idx].occupation = e.target.value;
+                              set("familyDetails", news);
+                            }}
+                            placeholder="Self-employed"
+                          />
+                        </FF>
+                        <div className="sm:col-span-3 flex flex-wrap gap-4 mt-2">
+                           <Toggle 
+                             on={member.isDependent} 
+                             setOn={(v) => {
+                               const news = [...form.familyDetails];
+                               news[idx].isDependent = v;
+                               set("familyDetails", news);
+                             }}
+                             label="Is Dependent"
+                           />
+                           <Toggle 
+                             on={member.isEmergencyContact} 
+                             setOn={(v) => {
+                               const news = [...form.familyDetails];
+                               news[idx].isEmergencyContact = v;
+                               set("familyDetails", news);
+                             }}
+                             label="Emergency Contact"
+                           />
+                        </div>
+                      </div>
+                    ))}
+                    {form.familyDetails.length === 0 && (
+                      <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl bg-secondary/10">
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest italic">No family members added yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Nominee Details</h4>
+                    <button
+                      type="button"
+                      disabled={form.familyDetails.length === 0}
+                      onClick={() => set("nominees", [...form.nominees, { name: "", relationship: "", dob: "", percentage: "" }])}
+                      className="flex items-center gap-1.5 text-[10px] font-black text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-widest disabled:opacity-30"
+                    >
+                      <Plus size={12} />
+                      Add Nominee
+                    </button>
+                  </div>
+
+                  {form.familyDetails.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center gap-3">
+                      <AlertCircle size={16} className="text-amber-500" />
+                      <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Please add family details first.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {form.nominees.map((nominee, idx) => (
+                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 rounded-xl border border-border bg-indigo-500/5 relative group">
+                          <button 
+                            type="button"
+                            onClick={() => set("nominees", form.nominees.filter((_, i) => i !== idx))}
+                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                          >
+                            <X size={12} />
+                          </button>
+                          <FF label="Nominee Name">
+                            <Sel 
+                              value={nominee.name}
+                              onChange={(e) => {
+                                const name = e.target.value;
+                                const member = form.familyDetails.find(f => f.name === name);
+                                const news = [...form.nominees];
+                                news[idx].name = name;
+                                if (member) {
+                                  news[idx].relationship = member.relationship;
+                                  news[idx].dob = member.dob;
+                                }
+                                set("nominees", news);
+                              }}
+                              ph="Select Name..."
+                              opts={form.familyDetails.map(f => ({ v: f.name, l: f.name }))}
+                            />
+                          </FF>
+                          <FF label="Relationship">
+                            <Inp value={nominee.relationship} readOnly placeholder="Auto-filled" className="bg-secondary/50" />
+                          </FF>
+                          <FF label="DOB">
+                            <Inp value={nominee.dob} readOnly placeholder="Auto-filled" className="bg-secondary/50" />
+                          </FF>
+                          <FF label="Percentage">
+                            <Inp 
+                              type="number"
+                              value={nominee.percentage}
+                              onChange={(e) => {
+                                const news = [...form.nominees];
+                                news[idx].percentage = e.target.value;
+                                set("nominees", news);
+                              }}
+                              placeholder="100"
+                            />
+                          </FF>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </SC>
+
+            {/* ─────────────────────────────────────────────
                 SECTION 2 · JOB DETAILS
             ───────────────────────────────────────────── */}
             <SC
               id="s-job"
-              n={2}
+              n={3}
               title="Job Details"
               desc="Role, department, and employment configuration"
               Icon={Briefcase}
@@ -1572,19 +2055,11 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-attendance"
-              n={3}
+              n={4}
               title="Attendance Settings"
-              desc="Shift type, working hours, and tracking configuration"
+              desc="Shift allocation, leave policy, and attendance tracking"
               Icon={Clock}
             >
-              <FF label="Shift Type" span2>
-                <Segs
-                  opts={["general", "night", "custom"]}
-                  val={form.shiftType}
-                  set={(v) => set("shiftType", v)}
-                />
-              </FF>
-
               <FF label="Working Hours" hint="Start time → End time">
                 <div className="flex items-center gap-2">
                   <input
@@ -1630,7 +2105,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-payroll"
-              n={4}
+              n={5}
               title="Payroll Information"
               desc="Salary structure and banking details"
               Icon={CreditCard}
@@ -1702,7 +2177,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-leave"
-              n={5}
+              n={6}
               title="Leave Configuration"
               desc="Leave policy and opening balances for the employee"
               Icon={Calendar}
@@ -1744,7 +2219,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-documents"
-              n={6}
+              n={7}
               title="Documents"
               desc="Upload required identification and employment documents"
               Icon={FileText}
@@ -1790,7 +2265,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-education"
-              n={7}
+              n={8}
               title="Education Details"
               desc="Academic qualifications and professional certifications"
               Icon={GraduationCap}
@@ -1879,7 +2354,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-background"
-              n={8}
+              n={9}
               title="Background Check"
               desc="Verification status and agency audit details"
               Icon={Shield}
@@ -1929,11 +2404,64 @@ export function AddEmployeePage() {
             </SC>
 
             {/* ─────────────────────────────────────────────
-                SECTION 9 · ACCOUNT ACCESS
+                SECTION 9 · ASSET MANAGEMENT
+            ───────────────────────────────────────────── */}
+            <SC
+              id="s-assets"
+              n={10}
+              title="Asset Management"
+              desc="Company property and equipment assigned to the employee"
+              Icon={Monitor}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <FF label="Asset Category" required error={errors.assetCategory}>
+                  <MasterSelect
+                    masterName="AssetCategory"
+                    value={form.assetCategory}
+                    onChange={(v) => set("assetCategory", v)}
+                  />
+                </FF>
+
+                <FF label="Asset Type / Device Name" required>
+                  <MasterSelect
+                    masterName="AssetType"
+                    value={form.assetType}
+                    onChange={(v) => set("assetType", v)}
+                  />
+                </FF>
+
+                <FF label="Asset ID / Asset Code" required error={errors.assetId}>
+                  <Inp
+                    value={form.assetId}
+                    onChange={(e) => set("assetId", e.target.value)}
+                    placeholder="E.g. AST-2024-001"
+                    icon={<Hash size={13} />}
+                  />
+                </FF>
+
+                <FF label="Asset Condition">
+                  <MasterSelect
+                    masterName="AssetCondition"
+                    value={form.assetCondition}
+                    onChange={(v) => set("assetCondition", v)}
+                  />
+                </FF>
+              </div>
+
+              <div className="mt-8 flex items-start gap-3 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
+                <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
+                  Assigning an asset here will automatically update the inventory status. For bulk asset assignment or peripheral tracking, please use the <strong>Asset Inventory Dashboard</strong> after saving the employee profile.
+                </p>
+              </div>
+            </SC>
+
+            {/* ─────────────────────────────────────────────
+                SECTION 10 · ACCOUNT ACCESS
             ───────────────────────────────────────────── */}
             <SC
               id="s-account"
-              n={9}
+              n={11}
               title="Account Access"
               desc="System credentials and role-based access permissions"
               Icon={Shield}
@@ -1987,6 +2515,7 @@ export function AddEmployeePage() {
               </div>
             </SC>
           </form>
+          )}
         </div>
       </div>
 
@@ -2038,5 +2567,6 @@ export function AddEmployeePage() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

@@ -22,8 +22,14 @@ import { EmployeesShell } from "./pages/admin/employees/EmployeesShell";
 import { AddEmployeePage } from "./pages/admin/employees/AddEmployeePage";
 import { EmployeeManagementLayout } from "./pages/admin/employees/EmployeeManagementLayout";
 import { EmployeeSetupLayout } from "./pages/admin/employees/EmployeeSetupLayout";
-import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
 import { MASTER_CATEGORIES } from "./modules/masters/config";
+// import { MainShell } from "./pages/admin/main/MainShell";
+// import { AnalyticsHubPage } from "./pages/admin/main/AnalyticsHubPage";
+// import { EmployeeDirectoryPage } from "./pages/admin/main/EmployeeDirectoryPage";
+// import { EmployeeDirectoryModulePage } from "./pages/admin/main/EmployeeDirectoryModulePage";
+
+// Superadmin
+import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
 
 // Management Pages (Lazy Loaded)
 const GenerateLetterPage = lazy(() => import("./pages/admin/employees/management/GenerateLetterPage").then(m => ({ default: m.GenerateLetterPage })));
@@ -121,6 +127,16 @@ export const router = createBrowserRouter([
         Component: EmployeesShell,
         children: [
           { index: true, Component: EmployeeDirectory },
+          // {
+          //   path: "main",
+          //   Component: MainShell,
+          //   children: [
+          //     { index: true, element: <Navigate to="directory" replace /> },
+          //     { path: "analytics", Component: AnalyticsHubPage },
+          //     { path: "directory", Component: EmployeeDirectoryPage },
+          //     { path: "directory-module", Component: EmployeeDirectoryModulePage },
+          //   ],
+          // },
           { path: "add", Component: AddEmployeePage },
           { path: "information/:id", Component: InformationLayout },
           {
@@ -244,7 +260,10 @@ export const router = createBrowserRouter([
               />
             ),
           },
-          { path: ":category/:masterName", Component: SuperadminMastersPage },
+          {
+            path: ":category/:masterName",
+            Component: SuperadminMastersPage,
+          },
         ],
       },
     ],
