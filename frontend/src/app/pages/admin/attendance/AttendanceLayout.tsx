@@ -7,12 +7,7 @@ const TABS = [
   { label: "Shift Roster", path: "/admin/attendance/roster" },
   { label: "Swipe Logs", path: "/admin/attendance/swipe-logs" },
   { label: "Attendance Matrix", path: "/admin/attendance/matrix" },
-  { label: "Regularization", path: "/admin/attendance/regularization", disabled: true },
-  { label: "Shift Management", path: "/admin/attendance/shift", disabled: true },
-  { label: "Reports", path: "/admin/attendance/reports", disabled: true },
-  { label: "Exceptions", path: "/admin/attendance/exceptions", disabled: true },
-  { label: "Overtime", path: "/admin/attendance/overtime", disabled: true },
-  { label: "Leave Mapping", path: "/admin/attendance/leave-mapping", disabled: true },
+  { label: "Requests", path: "/admin/attendance/requests" },
 ];
 
 export function AttendanceLayout() {

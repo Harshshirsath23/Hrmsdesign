@@ -1,6 +1,8 @@
+import React from "react";
 import { Link } from "react-router";
 import { Button } from "../../../../components/ui/button";
-import { EmbeddedMasterManagement } from "../../masters/EmbeddedMasterManagement";
+import { LeaveSettingsCenter } from "./LeaveSettingsCenter";
+import { SuperadminSystemSettings } from "./SuperadminSystemSettings";
 
 export function SuperadminSettings() {
   return (
@@ -9,12 +11,16 @@ export function SuperadminSettings() {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-foreground">Settings</h2>
           <Button asChild size="sm" className="h-8 rounded-lg">
-            <Link to="/superadmin/masters">Open Masters in Full View</Link>
+            <Link to="/superadmin/masters">Open Masters</Link>
           </Button>
         </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Centralized superadmin console to manage overall application masters and global controls.
+        </p>
       </div>
 
-      <EmbeddedMasterManagement initialCategoryKey="attendance-leave" />
+      <SuperadminSystemSettings />
+      <LeaveSettingsCenter targetSection="general" />
     </div>
   );
 }

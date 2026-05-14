@@ -65,6 +65,16 @@ export function BankDetails({ employee }: Props) {
         </div>
       </SectionCard>
 
+      {/* Statutory Documents Card */}
+      <SectionCard title="Statutory Documents" icon={Shield}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+          <InfoRow label="PAN Number" value={employee.panNumber || "—"} mono />
+          <InfoRow label="Aadhaar Number" value={employee.aadhaarNumber || "—"} mono />
+          <InfoRow label="UAN Number" value={employee.uanNumber || "—"} mono />
+          <InfoRow label="Tax Regime" value={employee.taxRegime || "—"} />
+        </div>
+      </SectionCard>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SectionCard title="Provident Fund (PF)" icon={Shield}>
           <InfoRow label="PF Number"             value={employee.pfNumber}                              mono />

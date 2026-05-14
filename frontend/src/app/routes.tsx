@@ -13,6 +13,7 @@ import { WhosInPage } from "./pages/admin/attendance/WhosInPage";
 import { ShiftRosterPage } from "./pages/admin/attendance/ShiftRosterPage";
 import { SwipeLogsPage } from "./pages/admin/attendance/SwipeLogsPage";
 const AttendanceMatrixPage = lazy(() => import("./pages/admin/attendance/AttendanceMatrixPage").then(m => ({ default: m.AttendanceMatrixPage })));
+const AttendanceRequestsPage = lazy(() => import("./pages/admin/attendance/AttendanceRequestsPage").then(m => ({ default: m.AttendanceRequestsPage })));
 import { LeavePage } from "./pages/admin/LeavePage";
 import { PayrollPage } from "./pages/admin/PayrollPage";
 import { DocumentsPage } from "./pages/admin/DocumentsPage";
@@ -21,8 +22,14 @@ import { EmployeesShell } from "./pages/admin/employees/EmployeesShell";
 import { AddEmployeePage } from "./pages/admin/employees/AddEmployeePage";
 import { EmployeeManagementLayout } from "./pages/admin/employees/EmployeeManagementLayout";
 import { EmployeeSetupLayout } from "./pages/admin/employees/EmployeeSetupLayout";
-import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
 import { MASTER_CATEGORIES } from "./modules/masters/config";
+// import { MainShell } from "./pages/admin/main/MainShell";
+// import { AnalyticsHubPage } from "./pages/admin/main/AnalyticsHubPage";
+// import { EmployeeDirectoryPage } from "./pages/admin/main/EmployeeDirectoryPage";
+// import { EmployeeDirectoryModulePage } from "./pages/admin/main/EmployeeDirectoryModulePage";
+
+// Superadmin
+import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
 
 // Management Pages (Lazy Loaded)
 const GenerateLetterPage = lazy(() => import("./pages/admin/employees/management/GenerateLetterPage").then(m => ({ default: m.GenerateLetterPage })));
@@ -62,6 +69,8 @@ import { ManagerLeaveNotificationsPage } from "./pages/manager/leaves/ManagerLea
 import { ManagerPayslipsPage } from "./pages/manager/ManagerPayslipsPage";
 import { ManagerDocumentsPage } from "./pages/manager/ManagerDocumentsPage";
 import { ManagerProfilePage } from "./pages/manager/ManagerProfilePage";
+import { ManagerApprovalsLayout } from "./pages/manager/approvals/ManagerApprovalsLayout";
+import ManagerApprovalsRequestsPage from "./pages/manager/approvals/ManagerApprovalsRequestsPage";
 import { EmployeeLayout } from "./pages/employee/EmployeeLayout";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeAttendancePage } from "./pages/employee/EmployeeAttendancePage";
@@ -105,6 +114,7 @@ export const router = createBrowserRouter([
           { path: "roster", Component: ShiftRosterPage },
           { path: "swipe-logs", Component: SwipeLogsPage },
           { path: "matrix", element: <Suspense fallback={<div className="p-8 text-center animate-pulse font-bold text-slate-400">Loading Matrix...</div>}><AttendanceMatrixPage /></Suspense> },
+          { path: "requests", element: <Suspense fallback={<div className="p-8 text-center animate-pulse font-bold text-slate-400">Loading Requests...</div>}><AttendanceRequestsPage /></Suspense> },
         ]
       },
       { path: "leave", Component: LeavePage },
@@ -117,6 +127,16 @@ export const router = createBrowserRouter([
         Component: EmployeesShell,
         children: [
           { index: true, Component: EmployeeDirectory },
+          // {
+          //   path: "main",
+          //   Component: MainShell,
+          //   children: [
+          //     { index: true, element: <Navigate to="directory" replace /> },
+          //     { path: "analytics", Component: AnalyticsHubPage },
+          //     { path: "directory", Component: EmployeeDirectoryPage },
+          //     { path: "directory-module", Component: EmployeeDirectoryModulePage },
+          //   ],
+          // },
           { path: "add", Component: AddEmployeePage },
           { path: "information/:id", Component: InformationLayout },
           {
@@ -180,7 +200,14 @@ export const router = createBrowserRouter([
       { path: "documents", Component: ManagerDocumentsPage },
       { path: "team-dashboard", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Dashboard (Coming Soon)</div> },
       { path: "team-attendance", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Attendance (Coming Soon)</div> },
-      { path: "approvals", element: <div className="p-8 text-center text-muted-foreground font-medium">Approvals (Coming Soon)</div> },
+      {
+        path: "approvals",
+        Component: ManagerApprovalsLayout,
+        children: [
+          { index: true, element: <Navigate to="requests" replace /> },
+          { path: "requests", Component: ManagerApprovalsRequestsPage },
+        ],
+      },
       { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Reports (Coming Soon)</div> },
       { path: "org-chart", element: <div className="p-8 text-center text-muted-foreground font-medium">Organization Chart (Coming Soon)</div> },
     ],
@@ -233,7 +260,10 @@ export const router = createBrowserRouter([
               />
             ),
           },
-          { path: ":category/:masterName", Component: SuperadminMastersPage },
+          {
+            path: ":category/:masterName",
+            Component: SuperadminMastersPage,
+          },
         ],
       },
     ],

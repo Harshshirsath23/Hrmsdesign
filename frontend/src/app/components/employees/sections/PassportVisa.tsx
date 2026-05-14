@@ -77,10 +77,30 @@ export function PassportVisa({ employee }: Props) {
               <p className="text-base font-bold mt-0.5">{employee.nationality}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-6 pt-4 border-t border-primary-foreground/20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-primary-foreground/20">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Name</p>
-              <p className="text-sm font-bold mt-0.5">{employee.name}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Holder Name</p>
+              <p className="text-sm font-bold mt-0.5">{employee.passportHolderName || employee.name}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Place of Issue</p>
+              <p className="text-sm font-bold mt-0.5">{employee.passportPlaceOfIssue || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Country of Issue</p>
+              <p className="text-sm font-bold mt-0.5">{employee.passportCountryOfIssue || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Category</p>
+              <p className="text-sm font-bold mt-0.5">{employee.passportCategory || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Status</p>
+              <p className="text-sm font-bold mt-0.5">{employee.passportStatus || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Issue Date</p>
+              <p className="text-sm font-bold mt-0.5">{employee.passportIssueDate ? new Date(employee.passportIssueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Expiry Date</p>
@@ -125,6 +145,22 @@ export function PassportVisa({ employee }: Props) {
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-sm text-muted-foreground font-medium">Visa Type</span>
               <span className="text-sm font-semibold text-foreground">{employee.visaType}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground font-medium">Visa Sponsor</span>
+              <span className="text-sm font-semibold text-foreground">{employee.visaSponsor || "—"}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground font-medium">Visa Status</span>
+              <span className="text-sm font-semibold text-foreground">{employee.visaStatus || "—"}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground font-medium">Visa Number</span>
+              <span className="text-sm font-semibold text-foreground">{employee.visaNumber || "—"}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground font-medium">Visa Issue Date</span>
+              <span className="text-sm font-semibold text-foreground">{employee.visaIssueDate ? new Date(employee.visaIssueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }) : "—"}</span>
             </div>
             <div className="flex justify-between items-center py-2">
               <span className="text-sm text-muted-foreground font-medium">Visa Expiry</span>

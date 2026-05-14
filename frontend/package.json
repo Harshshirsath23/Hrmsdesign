@@ -74,8 +74,10 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.0",
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
+    "autoprefixer": "^10.5.0",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5"
   },
@@ -97,4 +99,3 @@
     }
   }
 }
-
