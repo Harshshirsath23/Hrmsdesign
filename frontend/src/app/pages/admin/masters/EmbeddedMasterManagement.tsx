@@ -1,15 +1,36 @@
-import { useMemo } from "react";
-import { Navigate, useNavigate, useParams } from "react-router";
-import { Settings2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { MASTER_CATEGORIES, getMasterConfig } from "../../../modules/masters/config";
 import { MasterTable } from "./MasterTable";
 import { LeaveSettingsCenter } from "../leave/sections/LeaveSettingsCenter";
 import type { LeaveSettingsSectionKey } from "../../../modules/adminLeave/settings";
 import { cn } from "../../../components/ui/utils";
 
-export function MasterLayout() {
-  const navigate = useNavigate();
-  const { category = "", masterName = "" } = useParams();
+export type EmbeddedMasterManagementProps = {
+  initialCategoryKey?: string;
+  initialMasterKey?: string;
+};
+
+function resolveInitialCategoryAndMaster(props: EmbeddedMasterManagementProps): { category: string; masterName: string } {
+  const fallback = MASTER_CATEGORIES[0];
+  const fbCat = fallback?.key ?? "";
+  const fbMaster = fallback?.masters[0]?.key ?? "";
+  let categoryKey = fbCat;
+  if (props.initialCategoryKey) {
+    const found = MASTER_CATEGORIES.find((c) => c.key === props.initialCategoryKey);
+    if (found) categoryKey = found.key;
+  }
+  const cat = MASTER_CATEGORIES.find((c) => c.key === categoryKey);
+  const masters = cat?.masters ?? [];
+  let masterKey = masters[0]?.key ?? fbMaster;
+  if (props.initialMasterKey && getMasterConfig(categoryKey, props.initialMasterKey)) {
+    masterKey = props.initialMasterKey;
+  }
+  return { category: categoryKey, masterName: masterKey };
+}
+
+export function EmbeddedMasterManagement(props: EmbeddedMasterManagementProps = {}) {
+  const [category, setCategory] = useState(() => resolveInitialCategoryAndMaster(props).category);
+  const [masterName, setMasterName] = useState(() => resolveInitialCategoryAndMaster(props).masterName);
 
   const currentCategory = MASTER_CATEGORIES.find((c) => c.key === category);
   const fallbackCategory = MASTER_CATEGORIES[0];
@@ -17,7 +38,9 @@ export function MasterLayout() {
 
   if (!currentCategory || !getMasterConfig(category, masterName)) {
     if (!fallbackCategory || !fallbackMaster) return <div className="p-6">No masters configured.</div>;
-    return <Navigate to={`/superadmin/masters/${fallbackCategory.key}/${fallbackMaster.key}`} replace />;
+    setCategory(fallbackCategory.key);
+    setMasterName(fallbackMaster.key);
+    return null;
   }
 
   const selectedConfig = getMasterConfig(category, masterName)!;
@@ -34,26 +57,19 @@ export function MasterLayout() {
               ? "border-border bg-secondary text-foreground"
               : "border-transparent text-muted-foreground hover:border-border hover:bg-secondary/60 hover:text-foreground",
           )}
-          onClick={() => navigate(`/superadmin/masters/${c.key}/${c.masters[0]?.key}`)}
+          onClick={() => {
+            setCategory(c.key);
+            setMasterName(c.masters[0]?.key ?? "");
+          }}
         >
           {c.label}
         </button>
       )),
-    [category, navigate],
+    [category],
   );
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="rounded-xl border border-white/10 bg-[#0f2744] p-4 text-neutral-100 shadow-xl">
-        <div className="flex items-center gap-2">
-          <Settings2 className="h-4 w-4" />
-          <h1 className="text-lg font-semibold tracking-tight">Masters Management</h1>
-        </div>
-        <p className="mt-1 text-xs text-neutral-400">
-          Super Admin console for configuration masters across HRMS domains.
-        </p>
-      </div>
-
+    <div className="space-y-4">
       <div className="flat-card bg-card p-3">
         <div className="flex flex-wrap gap-2">{categoryButtons}</div>
       </div>
@@ -82,7 +98,7 @@ export function MasterLayout() {
                         ? "border-border bg-secondary text-foreground"
                         : "border-transparent text-muted-foreground hover:border-border hover:bg-secondary/50 hover:text-foreground",
                     )}
-                    onClick={() => navigate(`/superadmin/masters/${currentCategory.key}/${m.key}`)}
+                    onClick={() => setMasterName(m.key)}
                   >
                     {m.label}
                   </button>
@@ -101,4 +117,3 @@ export function MasterLayout() {
     </div>
   );
 }
-
