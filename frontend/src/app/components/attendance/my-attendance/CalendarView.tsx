@@ -19,9 +19,10 @@ interface CalendarViewProps {
   currentDate: Date;
   searchTerm: string;
   onRegularize: (date: string) => void;
+  onSwipeDetails?: (record: DailyAttendance) => void;
 }
 
-export function CalendarView({ records, currentDate, searchTerm, onRegularize }: CalendarViewProps) {
+export function CalendarView({ records, currentDate, searchTerm, onSwipeDetails }: CalendarViewProps) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -56,12 +57,15 @@ export function CalendarView({ records, currentDate, searchTerm, onRegularize }:
           ));
 
           return (
-            <motion.div
+            <motion.button
+              type="button"
               key={dateStr}
               initial={{ opacity: 0 }}
               animate={{ opacity: isMatchingSearch ? 1 : 0.3 }}
+              disabled={!record}
+              onClick={() => record && onSwipeDetails?.(record)}
               className={`relative min-h-[120px] p-4 border-r border-b border-white/10 dark:border-white/5 transition-all group ${
-                !isCurrentMonth ? "bg-black/5 dark:bg-white/5 opacity-20" : "hover:bg-white/40 dark:hover:bg-white/5"
+                !isCurrentMonth ? "bg-black/5 dark:bg-white/5 opacity-20" : "text-left hover:bg-white/40 dark:hover:bg-white/5"
               }`}
             >
               {/* Date Number */}
@@ -118,7 +122,7 @@ export function CalendarView({ records, currentDate, searchTerm, onRegularize }:
                   ) : null}
                 </div>
               )}
-            </motion.div>
+            </motion.button>
           );
         })}
       </div>

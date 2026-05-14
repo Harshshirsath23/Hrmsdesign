@@ -17,9 +17,10 @@ interface ListViewProps {
   records: DailyAttendance[];
   onSwipeDetails: (record: DailyAttendance) => void;
   onRegularize: (date: string) => void;
+  readOnly?: boolean;
 }
 
-export function ListView({ records, onSwipeDetails, onRegularize }: ListViewProps) {
+export function ListView({ records, onSwipeDetails, onRegularize, readOnly = false }: ListViewProps) {
   const sortedRecords = [...records].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
@@ -91,12 +92,14 @@ export function ListView({ records, onSwipeDetails, onRegularize }: ListViewProp
                       >
                         <Eye size={16} />
                       </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onRegularize(record.date); }}
-                        className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 shadow-sm hover:scale-110 active:scale-95 transition-all text-muted-foreground hover:text-emerald-500"
-                      >
-                        <Send size={16} />
-                      </button>
+                      {!readOnly && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onRegularize(record.date); }}
+                          className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 shadow-sm hover:scale-110 active:scale-95 transition-all text-muted-foreground hover:text-emerald-500"
+                        >
+                          <Send size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </motion.tr>

@@ -57,6 +57,7 @@ import { InformationLayout } from "./components/employees/InformationLayout";
 import { ManagerLayout } from "./pages/manager/ManagerLayout";
 import { ManagerDashboard } from "./pages/manager/ManagerDashboard";
 import { ManagerAttendancePage } from "./pages/manager/ManagerAttendancePage";
+import { ManagerTeamAttendancePage } from "./pages/manager/ManagerTeamAttendancePage";
 import { ManagerLeavesLayout } from "./pages/manager/leaves/ManagerLeavesLayout";
 import { ManagerLeaveDashboardPage } from "./pages/manager/leaves/ManagerLeaveDashboardPage";
 import { ManagerLeaveApplyPage } from "./pages/manager/leaves/ManagerLeaveApplyPage";
@@ -199,7 +200,7 @@ export const router = createBrowserRouter([
       { path: "payslips", Component: ManagerPayslipsPage },
       { path: "documents", Component: ManagerDocumentsPage },
       { path: "team-dashboard", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Dashboard (Coming Soon)</div> },
-      { path: "team-attendance", element: <div className="p-8 text-center text-muted-foreground font-medium">Team Attendance (Coming Soon)</div> },
+      { path: "team-attendance", Component: ManagerTeamAttendancePage },
       {
         path: "approvals",
         Component: ManagerApprovalsLayout,

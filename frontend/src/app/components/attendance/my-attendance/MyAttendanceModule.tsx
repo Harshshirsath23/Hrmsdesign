@@ -16,9 +16,12 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface MyAttendanceModuleProps {
   employeeId: string;
+  title?: string;
+  subtitle?: string;
+  readOnly?: boolean;
 }
 
-export function MyAttendanceModule({ employeeId }: MyAttendanceModuleProps) {
+export function MyAttendanceModule({ employeeId, title = "My Attendance", subtitle = "Track your work hours, presence, and punctuality insights.", readOnly = false }: MyAttendanceModuleProps) {
   const [view, setView] = useState<"calendar" | "list" | "regularization">("calendar");
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 1)); // Default to May 2026
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,8 +70,8 @@ export function MyAttendanceModule({ employeeId }: MyAttendanceModuleProps) {
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">My Attendance</h1>
-          <p className="text-sm text-muted-foreground font-medium mt-1">Track your work hours, presence, and punctuality insights.</p>
+          <h1 className="text-3xl font-black text-foreground tracking-tight">{title}</h1>
+          <p className="text-sm text-muted-foreground font-medium mt-1">{subtitle}</p>
         </div>
       </div>
 
@@ -108,17 +111,20 @@ export function MyAttendanceModule({ employeeId }: MyAttendanceModuleProps) {
                   currentDate={currentDate}
                   searchTerm={searchTerm}
                   onRegularize={handleRegularize}
+                  onSwipeDetails={handleSwipeDetails}
                 />
               ) : view === "list" ? (
                 <ListView
                   records={employeeRecords}
                   onSwipeDetails={handleSwipeDetails}
                   onRegularize={handleRegularize}
+                  readOnly={readOnly}
                 />
               ) : (
                 <RegularizationTab
                   records={attendanceDataset.records.filter(r => r.employeeId === employeeId)}
                   initialDate={selectedDateForRegularize}
+                  readOnly={readOnly}
                 />
               )}
             </motion.div>

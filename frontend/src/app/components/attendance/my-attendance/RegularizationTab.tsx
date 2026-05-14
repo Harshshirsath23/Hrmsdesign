@@ -21,9 +21,10 @@ import { motion, AnimatePresence } from "motion/react";
 interface RegularizationTabProps {
   records: DailyAttendance[];
   initialDate?: string | null;
+  readOnly?: boolean;
 }
 
-export function RegularizationTab({ records, initialDate }: RegularizationTabProps) {
+export function RegularizationTab({ records, initialDate, readOnly = false }: RegularizationTabProps) {
   const [currentNavDate, setCurrentNavDate] = useState(new Date(2026, 4, 1)); // Default May 2026
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
@@ -166,6 +167,40 @@ export function RegularizationTab({ records, initialDate }: RegularizationTabPro
               </div>
               <h3 className="text-xl font-black text-foreground">Select a date</h3>
               <p className="text-xs font-medium text-muted-foreground mt-2 max-w-[200px]">Pick an eligible day from the calendar to start.</p>
+            </div>
+          ) : readOnly ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                <h3 className="text-lg font-black text-foreground">Regularization Review</h3>
+              </div>
+              <div className="p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex gap-3">
+                <Info size={18} className="text-blue-500 mt-0.5" />
+                <div>
+                  <p className="text-xs font-black text-foreground uppercase tracking-tight">Manager view only</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    You can review attendance and regularization context, but direct edits and employee-side submissions are disabled by policy.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Late By</p>
+                  <p className="text-lg font-black text-foreground">{selectedRecord?.lateMins || 0}m</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Early By</p>
+                  <p className="text-lg font-black text-foreground">{selectedRecord?.earlyExitMins || 0}m</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Work Mode</p>
+                  <p className="text-lg font-black text-foreground">{selectedRecord?.workMode || "-"}</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Approval</p>
+                  <p className="text-lg font-black text-foreground">{selectedRecord?.approvalPending ? "Pending" : "None"}</p>
+                </div>
+              </div>
             </div>
           ) : (
             <form className="space-y-6">
