@@ -72,7 +72,7 @@ export function EmployeeCanteenPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Canteen Menu</h1>
-                {/* <p className="text-xs text-muted-foreground mt-0.5">Today's menu — order by 12:30 PM</p> */}
+                <p className="text-xs text-muted-foreground mt-0.5">Today's menu — order by 12:30 PM</p>
               </div>
             </div>
           </div>

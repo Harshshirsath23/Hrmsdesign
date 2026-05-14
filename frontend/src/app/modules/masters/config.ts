@@ -191,18 +191,7 @@ export const MASTER_CATEGORIES: MasterCategoryConfig[] = [
   makeCategory(
     "attendance-leave",
     "Attendance & Leave Masters",
-    [
-      "Leave Types",
-      "Leave Policies",
-      "Approval Workflows",
-      "Escalation Matrix",
-      "Holidays",
-      "Weekend Configuration",
-      "Accrual Schedules",
-      "Encashment Rules",
-      "Notification Templates",
-      "Request Module Settings",
-    ],
+    ["AttendancePolicy", "RegularizationReason", "OvertimePolicy", "CompOffPolicy", "LeaveType", "LeavePolicy", "LeaveApprovalMatrix"],
   ),
   makeCategory(
     "payroll-compliance",

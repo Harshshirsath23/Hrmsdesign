@@ -1,1 +1,0 @@
-export { AdminMasterManagementPage } from "./AdminMasterManagementPage";

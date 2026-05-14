@@ -3,8 +3,6 @@ import { Navigate, useNavigate, useParams } from "react-router";
 import { Settings2 } from "lucide-react";
 import { MASTER_CATEGORIES, getMasterConfig } from "../../../modules/masters/config";
 import { MasterTable } from "./MasterTable";
-import { LeaveSettingsCenter } from "../leave/sections/LeaveSettingsCenter";
-import type { LeaveSettingsSectionKey } from "../../../modules/adminLeave/settings";
 import { cn } from "../../../components/ui/utils";
 
 export function MasterLayout() {
@@ -58,45 +56,34 @@ export function MasterLayout() {
         <div className="flex flex-wrap gap-2">{categoryButtons}</div>
       </div>
 
-      <div
-        className={cn(
-          "grid gap-4",
-          currentCategory.key === "attendance-leave" ? "lg:grid-cols-1" : "lg:grid-cols-[280px_minmax(0,1fr)]",
-        )}
-      >
-        {currentCategory.key !== "attendance-leave" ? (
-          <aside className="flat-card bg-card p-3">
-            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {currentCategory.label}
-            </p>
-            <nav className="space-y-1">
-              {currentCategory.masters.map((m) => {
-                const active = m.key === masterName;
-                return (
-                  <button
-                    key={m.key}
-                    type="button"
-                    className={cn(
-                      "w-full rounded-lg border px-2.5 py-2 text-left text-xs font-medium transition-colors",
-                      active
-                        ? "border-border bg-secondary text-foreground"
-                        : "border-transparent text-muted-foreground hover:border-border hover:bg-secondary/50 hover:text-foreground",
-                    )}
-                    onClick={() => navigate(`/superadmin/masters/${currentCategory.key}/${m.key}`)}
-                  >
-                    {m.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </aside>
-        ) : null}
+      <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="flat-card bg-card p-3">
+          <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {currentCategory.label}
+          </p>
+          <nav className="space-y-1">
+            {currentCategory.masters.map((m) => {
+              const active = m.key === masterName;
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  className={cn(
+                    "w-full rounded-lg border px-2.5 py-2 text-left text-xs font-medium transition-colors",
+                    active
+                      ? "border-border bg-secondary text-foreground"
+                      : "border-transparent text-muted-foreground hover:border-border hover:bg-secondary/50 hover:text-foreground",
+                  )}
+                  onClick={() => navigate(`/superadmin/masters/${currentCategory.key}/${m.key}`)}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-        {currentCategory.key === "attendance-leave" ? (
-          <LeaveSettingsCenter targetSection={masterName as LeaveSettingsSectionKey} mastersIntegration />
-        ) : (
-          <MasterTable config={selectedConfig} />
-        )}
+        <MasterTable config={selectedConfig} />
       </div>
     </div>
   );
