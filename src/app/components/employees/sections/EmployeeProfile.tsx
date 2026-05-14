@@ -273,8 +273,9 @@ export function EmployeeProfile({ employee }: Props) {
             Ext: {employee.extensionNumber}
           </div>
         )}
-      </          {/* ── Personal Information ──────────────────────────── */}
-          <SectionCard title="Personal Information" icon={User}>
+      </div>
+      {/* ── Personal Information ──────────────────────────── */}
+      <SectionCard title="Personal Information" icon={User}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <InfoCell label="First Name" value={editedData.firstName} isEditing={isEditing} onChange={(val) => handleUpdate('firstName', val)} />
               <InfoCell label="Middle Name" value={editedData.middleName} isEditing={isEditing} onChange={(val) => handleUpdate('middleName', val)} />
@@ -295,9 +296,6 @@ export function EmployeeProfile({ employee }: Props) {
               <InfoCell label="Physically Challenged" value={editedData.isPhysicallyChallenged} isEditing={isEditing} onChange={(val) => handleUpdate('isPhysicallyChallenged', val === 'true')} />
               <InfoCell label="International Employee" value={editedData.isInternationalEmployee} isEditing={isEditing} onChange={(val) => handleUpdate('isInternationalEmployee', val === 'true')} />
               <InfoCell label="Joining Date" value={editedData.joiningDate} isDate isEditing={isEditing} onChange={(val) => handleUpdate('joiningDate', val)} />
-            </div>
-          </SectionCard>
-             <InfoCell label="Joining Date" value={formatDate(employee.joiningDate)} isDate />
             </div>
           </SectionCard>
 
@@ -572,8 +570,6 @@ export function EmployeeProfile({ employee }: Props) {
               ))}
             </div>
           </SectionCard>
-        </div>
-      </div>
     </div>
   );
 }
