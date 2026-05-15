@@ -16,11 +16,11 @@ export function EmployeeLeaveHolidaysPage() {
   const [view, setView] = useState<(typeof VIEWS)[number]["id"]>("list");
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-6">
+      <header className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">Holiday calendar</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Holiday calendar</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             List, monthly grid, and yearly overview with optional holiday styling.
           </p>
         </div>

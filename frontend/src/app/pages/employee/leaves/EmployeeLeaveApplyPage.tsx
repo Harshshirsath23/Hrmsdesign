@@ -16,12 +16,12 @@ export function EmployeeLeaveApplyPage() {
   ];
 
   return (
-    <div className="space-y-4">
-      <header className="rounded-3xl border border-border bg-card p-4 sm:p-5">
+    <div className="space-y-6">
+      <header className="rounded-3xl border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-lg font-semibold tracking-tight text-foreground">Apply for leave</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Apply for leave</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
               Structured request with live balance preview and approval routing context.
             </p>
           </div>

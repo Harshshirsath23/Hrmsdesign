@@ -76,7 +76,6 @@ import { EmployeeLayout } from "./pages/employee/EmployeeLayout";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeAttendancePage } from "./pages/employee/EmployeeAttendancePage";
 import { EmployeeLeavesLayout } from "./pages/employee/leaves/EmployeeLeavesLayout";
-import { EmployeeLeaveDashboardPage } from "./pages/employee/leaves/EmployeeLeaveDashboardPage";
 import { EmployeeLeaveApplyPage } from "./pages/employee/leaves/EmployeeLeaveApplyPage";
 import { EmployeeLeaveApplicationsPage } from "./pages/employee/leaves/EmployeeLeaveApplicationsPage";
 import { EmployeeLeaveBalancePage } from "./pages/employee/leaves/EmployeeLeaveBalancePage";
@@ -225,8 +224,8 @@ export const router = createBrowserRouter([
         path: "leaves",
         Component: EmployeeLeavesLayout,
         children: [
-          { index: true, element: <Navigate to="dashboard" replace /> },
-          { path: "dashboard", Component: EmployeeLeaveDashboardPage },
+          { index: true, element: <Navigate to="apply" replace /> },
+          { path: "dashboard", element: <Navigate to="/employee/leaves/apply" replace /> },
           { path: "apply", Component: EmployeeLeaveApplyPage },
           { path: "applications", Component: EmployeeLeaveApplicationsPage },
           { path: "balance", Component: EmployeeLeaveBalancePage },

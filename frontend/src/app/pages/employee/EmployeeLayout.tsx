@@ -11,16 +11,10 @@ import {
   LogOut,
   Building2,
   ChevronRight,
-  ChevronDown,
   Menu,
   UserRoundCog,
   Sun,
   Moon,
-  PenLine,
-  FileStack,
-  Scale,
-  Palmtree,
-  ScrollText,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -35,14 +29,7 @@ const NAV_ITEMS = [
   { icon: FileText, label: "Documents", path: "/employee/documents" },
 ];
 
-const LEAVE_ITEMS = [
-  { icon: PenLine, label: "Apply Leave", path: "/employee/leaves/apply" },
-  { icon: FileStack, label: "My Applications", path: "/employee/leaves/applications" },
-  { icon: Scale, label: "Leave Balance", path: "/employee/leaves/balance" },
-  { icon: Palmtree, label: "Holiday Calendar", path: "/employee/leaves/holidays" },
-  { icon: ScrollText, label: "Leave Policy", path: "/employee/leaves/policy" },
-  { icon: Bell, label: "Notifications", path: "/employee/leaves/notifications" },
-];
+
 
 export function EmployeeLayout() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -52,9 +39,6 @@ export function EmployeeLayout() {
   const location = useLocation();
 
   const [collapsed, setCollapsed] = useState(false);
-  const [leaveOpen, setLeaveOpen] = useState(
-    location.pathname.startsWith("/employee/leaves")
-  );
 
   if (!isAuthenticated || user?.role !== "employee") {
     return <Navigate to="/login" replace />;
@@ -136,64 +120,6 @@ export function EmployeeLayout() {
         >
           {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
             const active = isActive(path);
-
-            if (path === "/employee/leaves") {
-              return (
-                <div key={path}>
-                  <button
-                    onClick={() => setLeaveOpen((p) => !p)}
-                    title={collapsed ? label : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                      transition-all duration-150 relative
-                      ${active
-                        ? "bg-secondary text-foreground font-semibold"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      }
-                      ${collapsed ? "justify-center" : ""}`}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
-                    )}
-
-                    <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-
-                    {!collapsed && (
-                      <>
-                        <span>My Leaves</span>
-
-                        <ChevronDown
-                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${leaveOpen ? "rotate-180" : ""
-                            }`}
-                        />
-                      </>
-                    )}
-                  </button>
-
-                  {!collapsed && leaveOpen && (
-                    <div className="mt-1 ml-4 space-y-1 border-l border-border pl-3">
-                      {LEAVE_ITEMS.map(({ icon: SubIcon, label, path }) => {
-                        const subActive = location.pathname === path;
-
-                        return (
-                          <button
-                            key={path}
-                            onClick={() => navigate(path)}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all
-                              ${subActive
-                                ? "bg-secondary text-foreground font-semibold"
-                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                              }`}
-                          >
-                            <SubIcon className="w-4 h-4 flex-shrink-0" />
-                            <span>{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
 
             return (
               <button

@@ -6,10 +6,10 @@ export function EmployeeLeavePolicyPage() {
   const { leaveTypes } = useEmployeeLeaveData();
 
   return (
-    <div className="space-y-4">
-      <header>
-        <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">Leave policy</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="space-y-6">
+      <header className="mb-2">
+        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Leave policy</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           Canonical leave classes enabled for your organization. Detailed legal policy PDFs typically live in Documents.
         </p>
       </header>
