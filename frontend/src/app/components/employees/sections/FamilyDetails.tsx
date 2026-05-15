@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Employee } from "../mockData";
-import { Users, User, CheckCircle2, AlertCircle, Phone, Heart, ShieldCheck } from "lucide-react";
+import { Users, User, CheckCircle2, AlertCircle, Phone, Heart, ShieldCheck, Edit2, Save, X } from "lucide-react";
+import { useAdminSync } from "../../admin/useAdminSync";
 
 interface Props {
   employee: Employee;
@@ -23,19 +25,35 @@ function StatusBadge({ icon: Icon, label, active }: { icon: any, label: string, 
   );
 }
 
-function InfoItem({ label, value, icon: Icon }: { label: string; value: string; icon?: any }) {
+function EditableField({ label, value, onChange, isEditing }: { label: string; value: string; onChange?: (v: string) => void; isEditing: boolean }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</span>
-      <div className="flex items-center gap-1.5">
-        {Icon && <Icon size={12} className="text-muted-foreground/60" />}
+      {isEditing ? (
+        <input type="text" value={value} onChange={e => onChange?.(e.target.value)}
+          className="text-xs font-bold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+      ) : (
         <span className="text-xs font-bold text-foreground truncate">{value || "—"}</span>
-      </div>
+      )}
     </div>
   );
 }
 
 export function FamilyDetails({ employee }: Props) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedFamily, setEditedFamily] = useState(employee.family || []);
+  const { handleAdminSave } = useAdminSync();
+
+  const updateMember = (idx: number, field: string, value: any) => {
+    setEditedFamily(prev => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  };
+
+  const handleSave = async () => {
+    const updatedEmployee = { ...employee, family: editedFamily };
+    const success = await handleAdminSave('Family Details', employee, updatedEmployee);
+    if (success) setIsEditing(false);
+  };
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
@@ -45,19 +63,35 @@ export function FamilyDetails({ employee }: Props) {
             Family & Dependents
           </h2>
           <p className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-widest">
-            {employee.family.length} Registered Members
+            {editedFamily.length} Registered Members
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90">
+                <Save size={12} /> Save Changes
+              </button>
+              <button onClick={() => { setEditedFamily(employee.family || []); setIsEditing(false); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                <X size={12} /> Cancel
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+              <Edit2 size={12} /> Edit Section
+            </button>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {employee.family.map((member, index) => {
+        {editedFamily.map((member, index) => {
           const badgeStyle = RELATIONSHIP_SHADES[member.relationship] || "bg-secondary text-muted-foreground border-border";
           const age = member.dob ? new Date().getFullYear() - new Date(member.dob).getFullYear() : "—";
           
           return (
             <div key={index} className="group relative bg-card border border-border rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-foreground/5 hover:-translate-y-1 overflow-hidden">
-              {/* Decorative side accent */}
               <div className={`absolute top-0 left-0 w-1.5 h-full ${badgeStyle.split(' ')[0]}`} />
               
               <div className="flex flex-col sm:flex-row gap-6">
@@ -73,7 +107,12 @@ export function FamilyDetails({ employee }: Props) {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-6">
                     <div>
-                      <h4 className="text-base font-black text-foreground">{member.name}</h4>
+                      {isEditing ? (
+                        <input type="text" value={member.name} onChange={e => updateMember(index, 'name', e.target.value)}
+                          className="text-base font-black text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 mb-2" />
+                      ) : (
+                        <h4 className="text-base font-black text-foreground">{member.name}</h4>
+                      )}
                       <div className="flex flex-wrap gap-2 mt-2">
                         <StatusBadge icon={ShieldCheck} label="Dependent" active={member.isDependent} />
                         <StatusBadge icon={AlertCircle} label="Emergency Contact" active={member.isEmergencyContact} />
@@ -82,12 +121,14 @@ export function FamilyDetails({ employee }: Props) {
                   </div>
 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8">
-                    <InfoItem label="Date of Birth" value={member.dob ? new Date(member.dob).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"} />
-                    <InfoItem label="Gender" value={member.gender} />
-                    <InfoItem label="Age" value={age !== "—" ? `${age} Years` : "—"} />
-                    <InfoItem label="Blood Group" value={member.bloodGroup} icon={Heart} />
-                    <InfoItem label="Phone" value={member.phone} icon={Phone} />
-                    <InfoItem label="Occupation" value={member.occupation} />
+                    <EditableField label="Date of Birth" isEditing={isEditing}
+                      value={member.dob ? member.dob : "—"}
+                      onChange={v => updateMember(index, 'dob', v)} />
+                    <EditableField label="Gender" isEditing={isEditing} value={member.gender} onChange={v => updateMember(index, 'gender', v)} />
+                    <EditableField label="Age" isEditing={false} value={age !== "—" ? `${age} Years` : "—"} />
+                    <EditableField label="Blood Group" isEditing={isEditing} value={member.bloodGroup} onChange={v => updateMember(index, 'bloodGroup', v)} />
+                    <EditableField label="Phone" isEditing={isEditing} value={member.phone} onChange={v => updateMember(index, 'phone', v)} />
+                    <EditableField label="Occupation" isEditing={isEditing} value={member.occupation} onChange={v => updateMember(index, 'occupation', v)} />
                   </div>
                 </div>
               </div>
@@ -96,7 +137,7 @@ export function FamilyDetails({ employee }: Props) {
         })}
       </div>
 
-      {employee.family.length === 0 && (
+      {editedFamily.length === 0 && (
         <div className="flex flex-col items-center justify-center p-16 border-2 border-dashed border-border rounded-[2rem] bg-secondary/5 text-center animate-in zoom-in-95 duration-500">
           <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mb-4">
             <Users size={32} className="text-muted-foreground/30" />
