@@ -8,11 +8,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Switch } from "../../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table";
 import { useMasterCreate, useMasterList, useMasterToggleActive, useMasterUpdate } from "../../../modules/masters/hooks";
-import type { MasterConfig, MasterListQuery, MasterRecord } from "../../../modules/masters/types";
+import { formatDateTime, getCellValue, normalizeTableColumns, sortRecords } from "../../../modules/masters/tableUtils";
+import type { MasterConfig, MasterListQuery, MasterRecord, MasterTableColumnConfig } from "../../../modules/masters/types";
 import { MasterForm } from "./MasterForm";
 
 function displayLabel(rec: MasterRecord) {
   return String(rec.label ?? rec.name ?? "");
+}
+
+function renderCell(record: MasterRecord, column: MasterTableColumnConfig) {
+  if (column.render === "status" || column.key === "is_active") {
+    return (
+      <Badge variant={record.is_active ? "secondary" : "outline"}>
+        {record.is_active ? "Active" : "Inactive"}
+      </Badge>
+    );
+  }
+  if (column.render === "datetime") {
+    return formatDateTime(record[column.key]);
+  }
+  return getCellValue(record, column);
 }
 
 export function MasterTable({ config }: { config: MasterConfig }) {
@@ -21,6 +36,10 @@ export function MasterTable({ config }: { config: MasterConfig }) {
   const [activeOnly, setActiveOnly] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<MasterRecord | null>(null);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const columns = useMemo(() => normalizeTableColumns(config.listColumns), [config.listColumns]);
 
   const query = useMemo<MasterListQuery>(
     () => ({
@@ -38,8 +57,36 @@ export function MasterTable({ config }: { config: MasterConfig }) {
   const updateMut = useMasterUpdate(config.apiName, query);
   const toggleMut = useMasterToggleActive(config.apiName, query);
 
-  const rows = listQ.data?.results ?? [];
+  const rows = useMemo(() => {
+    const base = listQ.data?.results ?? [];
+    if (!sortColumn) return base;
+    const column = columns.find((c) => c.key === sortColumn);
+    if (!column) return base;
+    return sortRecords(base, column, sortDirection);
+  }, [listQ.data?.results, sortColumn, sortDirection, columns]);
+
   const isBusy = createMut.isPending || updateMut.isPending;
+  const extraColumns = (config.parentFieldKey ? 1 : 0) + (config.companyScoped ? 1 : 0);
+  const colSpan = columns.length + 1 + extraColumns;
+
+  const handleSort = (column: MasterTableColumnConfig) => {
+    if (!column.sortable) return;
+    if (sortColumn === column.key) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortColumn(column.key);
+    setSortDirection("asc");
+  };
+
+  const buildPayload = (values: Record<string, unknown>) => {
+    const labelValue = String(values.label ?? values.name ?? "");
+    return {
+      ...values,
+      label: labelValue,
+      name: String(values.name ?? labelValue),
+    };
+  };
 
   return (
     <div className="space-y-4">
@@ -72,7 +119,7 @@ export function MasterTable({ config }: { config: MasterConfig }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
-              placeholder="Search by code or name"
+              placeholder={config.searchPlaceholder ?? "Search by code or name"}
             />
           </div>
 
@@ -112,29 +159,36 @@ export function MasterTable({ config }: { config: MasterConfig }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Label / Name</TableHead>
+              {columns.map((column) => (
+                <TableHead
+                  key={column.key}
+                  className={column.sortable ? "cursor-pointer select-none" : undefined}
+                  onClick={() => handleSort(column)}
+                >
+                  {column.label}
+                  {sortColumn === column.key ? (sortDirection === "asc" ? " ↑" : " ↓") : null}
+                </TableHead>
+              ))}
               {config.parentFieldKey && <TableHead>{config.parentFieldKey.replaceAll("_", " ")}</TableHead>}
               {config.companyScoped && <TableHead>Company</TableHead>}
-              <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {listQ.isLoading ? (
-              <TableRow><TableCell colSpan={6}>Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={colSpan}>Loading...</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={6}>No records found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={colSpan}>No records found.</TableCell></TableRow>
             ) : (
               rows.map((r) => (
                 <TableRow key={String(r.id)}>
-                  <TableCell className="font-medium">{r.code}</TableCell>
-                  <TableCell>{displayLabel(r)}</TableCell>
+                  {columns.map((column) => (
+                    <TableCell key={column.key} className={column.key === "code" ? "font-medium" : undefined}>
+                      {renderCell(r, column)}
+                    </TableCell>
+                  ))}
                   {config.parentFieldKey && <TableCell>{String(r[config.parentFieldKey] ?? "-")}</TableCell>}
                   {config.companyScoped && <TableCell>{String(r.company_name ?? r.company ?? "-")}</TableCell>}
-                  <TableCell>
-                    <Badge variant={r.is_active ? "secondary" : "outline"}>{r.is_active ? "Active" : "Inactive"}</Badge>
-                  </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1.5">
                       {!config.constant && (
@@ -172,7 +226,7 @@ export function MasterTable({ config }: { config: MasterConfig }) {
       </div>
 
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? `Edit ${config.label}` : `Add ${config.label}`}</DialogTitle>
           </DialogHeader>
@@ -183,11 +237,7 @@ export function MasterTable({ config }: { config: MasterConfig }) {
             isSubmitting={isBusy}
             onCancel={() => setEditorOpen(false)}
             onSubmit={(values) => {
-              const payload = {
-                ...values,
-                label: String(values.label ?? values.name ?? ""),
-                name: String(values.label ?? values.name ?? ""),
-              };
+              const payload = buildPayload(values);
               if (editing) {
                 updateMut.mutate(
                   { id: editing.id, payload },
@@ -203,4 +253,3 @@ export function MasterTable({ config }: { config: MasterConfig }) {
     </div>
   );
 }
-

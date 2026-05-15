@@ -1,0 +1,32 @@
+export const LEAVE_TYPE_DEFAULTS = {
+  carry_forward_enabled: false,
+  encashable: false,
+  requires_attachment: false,
+  has_expiry: false,
+  is_paid: true,
+  allow_half_day: false,
+  allow_hourly: false,
+  is_clubbing_allowed: false,
+  clubbing_restricted_with: [] as string[],
+  applicable_gender: "ALL",
+  leave_year_type: "CALENDAR",
+  is_active: true,
+};
+
+export const LEAVE_POLICY_DEFAULTS = {
+  is_active: true,
+};
+
+export const LEAVE_POLICY_RULE_DEFAULTS = {
+  probation_restricted: false,
+  notice_period_restricted: false,
+};
+
+export const LEAVE_ENCASHMENT_POLICY_DEFAULTS = {
+  working_days_divisor: 26,
+  is_active: true,
+};
+
+export const LEAVE_REASON_DEFAULTS = {
+  is_active: true,
+};

@@ -1,3 +1,4 @@
+import { LEAVE_MASTER_CATEGORY } from "../leave";
 import { BASE_FIELDS, COMPANY_FIELDS, makeCategory } from "./helpers";
 import { BRANCH_FIELDS, COMPANY_EXTRA_FIELDS } from "./fieldPresets";
 import type { MasterCategoryConfig } from "../types";
@@ -132,36 +133,7 @@ export const MASTER_CATEGORIES: MasterCategoryConfig[] = [
       HolidayGroup: companyScoped,
     },
   ),
-  makeCategory(
-    "leave",
-    "Leave Masters",
-    [
-      "LeaveType",
-      "LeavePolicy",
-      "LeaveAccrualRule",
-      "LeaveEncashmentRule",
-      "LeaveCarryForwardRule",
-      "LeaveApprovalMatrix",
-      "LeaveEscalationMatrix",
-      "HolidayCalendar",
-      "Holiday",
-      "RestrictedHoliday",
-      "LeaveBalanceSetting",
-      "SandwichLeaveRule",
-      "ProbationLeaveRule",
-      "MaternityPaternityRule",
-      "CompensatoryLeaveRule",
-      "LeaveDocumentRule",
-      "LeaveCancellationRule",
-      "LeaveReasonMaster",
-      "LeaveBlackoutDate",
-    ],
-    {
-      LeaveApprovalMatrix: { label: "Leave Approval Workflow" },
-      HolidayCalendar: companyScoped,
-      Holiday: companyScoped,
-    },
-  ),
+  LEAVE_MASTER_CATEGORY,
   makeCategory(
     "payroll",
     "Payroll Masters",

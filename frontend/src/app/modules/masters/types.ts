@@ -1,4 +1,9 @@
-export type MasterFieldType = "text" | "textarea" | "number" | "select" | "boolean";
+export type MasterFieldType = "text" | "textarea" | "number" | "select" | "boolean" | "date" | "multiselect";
+
+export interface MasterFieldDisabledWhen {
+  field: string;
+  equals?: boolean | string | number;
+}
 
 export interface MasterFieldConfig {
   key: string;
@@ -10,6 +15,21 @@ export interface MasterFieldConfig {
   relationMaster?: string;
   relationLabelKey?: string;
   relationValueKey?: string;
+  defaultValue?: unknown;
+  disabledWhen?: MasterFieldDisabledWhen;
+  section?: string;
+  readOnly?: boolean;
+  min?: number;
+}
+
+export type MasterTableColumnRender = "code" | "label" | "status" | "datetime" | "default";
+
+export interface MasterTableColumnConfig {
+  key: string;
+  label: string;
+  sortable?: boolean;
+  render?: MasterTableColumnRender;
+  altKeys?: string[];
 }
 
 export interface MasterGroupConfig {
@@ -29,7 +49,10 @@ export interface MasterConfig {
   companyScoped?: boolean;
   parentFieldKey?: string;
   formFields?: MasterFieldConfig[];
-  listColumns?: string[];
+  listColumns?: Array<string | MasterTableColumnConfig>;
+  defaultValues?: Record<string, unknown>;
+  validationSchema?: import("zod").ZodTypeAny;
+  searchPlaceholder?: string;
 }
 
 export interface MasterCategoryConfig {

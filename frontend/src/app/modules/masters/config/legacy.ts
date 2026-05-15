@@ -1,3 +1,4 @@
+import { LEGACY_LEAVE_MASTER_KEY_ALIASES } from "../leave";
 import type { MasterSectionRoute } from "../types";
 import { MASTER_CATEGORIES } from "./categories";
 import { toKebabCase } from "./helpers";
@@ -19,37 +20,23 @@ export const LEGACY_CATEGORY_ALIASES: Record<string, string> = {
 };
 
 /** Masters that lived under attendance-leave but belong to the leave domain. */
-const LEAVE_DOMAIN_MASTER_KEYS = new Set(
-  [
-    "LeaveType",
-    "LeavePolicy",
-    "LeaveApprovalMatrix",
-    "LeaveAccrualRule",
-    "LeaveEncashmentRule",
-    "LeaveCarryForwardRule",
-    "LeaveEscalationMatrix",
-    "HolidayCalendar",
-    "Holiday",
-    "RestrictedHoliday",
-    "LeaveBalanceSetting",
-    "SandwichLeaveRule",
-    "ProbationLeaveRule",
-    "MaternityPaternityRule",
-    "CompensatoryLeaveRule",
-    "LeaveDocumentRule",
-    "LeaveCancellationRule",
-    "LeaveReasonMaster",
-    "LeaveBlackoutDate",
-  ].map(toKebabCase),
-);
+const LEAVE_DOMAIN_MASTER_KEYS = new Set([
+  ...Object.keys(LEGACY_LEAVE_MASTER_KEY_ALIASES),
+  ...Object.values(LEGACY_LEAVE_MASTER_KEY_ALIASES),
+  "leave-type",
+  "leave-policy",
+  "leave-policy-rule",
+  "leave-encashment-policy",
+  "leave-reason",
+]);
 
 /** Masters that lived under core-hr-setup but belong to attendance. */
 const CORE_HR_ATTENDANCE_MASTER_KEYS = new Set(
   ["Shift", "ShiftType", "ShiftRotation", "WorkWeekPolicy", "HolidayGroup"].map(toKebabCase),
 );
 
-/** Masters that lived under core-hr-setup but belong to leave. */
-const CORE_HR_LEAVE_MASTER_KEYS = new Set(["HolidayCalendar", "Holiday"].map(toKebabCase));
+/** Masters that lived under core-hr-setup but belong to leave (retired → aliased). */
+const CORE_HR_LEAVE_MASTER_KEYS = new Set(["holiday-calendar", "holiday"]);
 
 /** Masters that lived under performance-training-asset but belong to training-asset. */
 const PERFORMANCE_TRAINING_ASSET_MASTER_KEYS = new Set(
@@ -67,8 +54,13 @@ const PERFORMANCE_TRAINING_ASSET_MASTER_KEYS = new Set(
   ].map(toKebabCase),
 );
 
+function resolveLeaveMasterKey(masterKey: string): string {
+  return LEGACY_LEAVE_MASTER_KEY_ALIASES[masterKey] ?? masterKey;
+}
+
 function findCategoryForMaster(masterKey: string): string | undefined {
-  return MASTER_CATEGORIES.find((category) => category.masters.some((master) => master.key === masterKey))?.key;
+  const resolvedKey = resolveLeaveMasterKey(masterKey);
+  return MASTER_CATEGORIES.find((category) => category.masters.some((master) => master.key === resolvedKey))?.key;
 }
 
 function resolveLegacyCategory(categoryKey: string, masterKey: string): string | undefined {
@@ -95,23 +87,26 @@ export function getCategory(categoryKey: string) {
 
 export function getMasterConfig(categoryKey: string, masterKey: string) {
   const category = getCategory(categoryKey);
-  return category?.masters.find((master) => master.key === masterKey);
+  const resolvedKey = resolveLeaveMasterKey(masterKey);
+  return category?.masters.find((master) => master.key === resolvedKey);
 }
 
 /** Resolves category/master URL params with backward compatibility for retired paths. */
 export function resolveMasterSection(categoryKey: string, masterKey: string): MasterSectionRoute | null {
-  if (getMasterConfig(categoryKey, masterKey)) {
-    return { categoryKey, masterKey };
+  const resolvedMasterKey = resolveLeaveMasterKey(masterKey);
+
+  if (getMasterConfig(categoryKey, resolvedMasterKey)) {
+    return { categoryKey, masterKey: resolvedMasterKey };
   }
 
-  const legacyCategory = resolveLegacyCategory(categoryKey, masterKey);
-  if (legacyCategory && getMasterConfig(legacyCategory, masterKey)) {
-    return { categoryKey: legacyCategory, masterKey };
+  const legacyCategory = resolveLegacyCategory(categoryKey, resolvedMasterKey);
+  if (legacyCategory && getMasterConfig(legacyCategory, resolvedMasterKey)) {
+    return { categoryKey: legacyCategory, masterKey: resolvedMasterKey };
   }
 
-  const discoveredCategory = findCategoryForMaster(masterKey);
+  const discoveredCategory = findCategoryForMaster(resolvedMasterKey);
   if (discoveredCategory) {
-    return { categoryKey: discoveredCategory, masterKey };
+    return { categoryKey: discoveredCategory, masterKey: resolvedMasterKey };
   }
 
   return null;
