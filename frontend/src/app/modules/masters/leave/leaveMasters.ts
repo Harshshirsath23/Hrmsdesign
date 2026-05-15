@@ -1,5 +1,7 @@
 import type { MasterCategoryConfig, MasterConfig } from "../types";
 import {
+  ACCRUAL_SCHEDULE_FIELDS,
+  CALENDAR_PERIOD_FIELDS,
   LEAVE_ENCASHMENT_POLICY_FIELDS,
   LEAVE_POLICY_FIELDS,
   LEAVE_POLICY_RULE_FIELDS,
@@ -7,13 +9,18 @@ import {
   LEAVE_TYPE_FIELDS,
 } from "./fieldSchemas";
 import {
+  ACCRUAL_SCHEDULE_DEFAULTS,
+  CALENDAR_PERIOD_DEFAULTS,
+  CALENDAR_PERIOD_FORM_BEHAVIORS,
   LEAVE_ENCASHMENT_POLICY_DEFAULTS,
   LEAVE_POLICY_DEFAULTS,
   LEAVE_POLICY_RULE_DEFAULTS,
-  LEAVE_REASON_DEFAULTS,
+  LEAVE_REASON_DEFAULTS, 
   LEAVE_TYPE_DEFAULTS,
 } from "./defaults";
 import {
+  accrualScheduleValidationSchema,
+  calendarPeriodValidationSchema,                     
   leaveEncashmentPolicyValidationSchema,
   leavePolicyRuleValidationSchema,
   leavePolicyValidationSchema,
@@ -21,6 +28,8 @@ import {
   leaveTypeValidationSchema,
 } from "./schemas";
 import {
+  ACCRUAL_SCHEDULE_COLUMNS,
+  CALENDAR_PERIOD_COLUMNS,
   LEAVE_ENCASHMENT_POLICY_COLUMNS,
   LEAVE_POLICY_COLUMNS,
   LEAVE_POLICY_RULE_COLUMNS,
@@ -88,6 +97,27 @@ export const LEAVE_MASTER_CONFIGS: MasterConfig[] = [
     validationSchema: leaveReasonValidationSchema,
     listColumns: STANDARD_LEAVE_COLUMNS,
     searchPlaceholder: "Search by code or label",
+  }),
+  leaveMaster({
+    key: "calendar-period",
+    apiName: "CalendarPeriod",
+    label: "Calendar Period",
+    formFields: CALENDAR_PERIOD_FIELDS,
+    defaultValues: CALENDAR_PERIOD_DEFAULTS,
+    validationSchema: calendarPeriodValidationSchema,
+    listColumns: CALENDAR_PERIOD_COLUMNS,
+    formBehaviors: [...CALENDAR_PERIOD_FORM_BEHAVIORS],
+    searchPlaceholder: "Search calendar periods",
+  }),
+  leaveMaster({
+    key: "accrual-schedule",
+    apiName: "AccrualSchedule",
+    label: "Accrual Schedule",
+    formFields: ACCRUAL_SCHEDULE_FIELDS,
+    defaultValues: ACCRUAL_SCHEDULE_DEFAULTS,
+    validationSchema: accrualScheduleValidationSchema,
+    listColumns: ACCRUAL_SCHEDULE_COLUMNS,
+    searchPlaceholder: "Search accrual schedules",
   }),
 ];
 

@@ -27,6 +27,10 @@ function renderCell(record: MasterRecord, column: MasterTableColumnConfig) {
   if (column.render === "datetime") {
     return formatDateTime(record[column.key]);
   }
+  if (column.render === "boolean") {
+    const value = record[column.key];
+    return value ? "Yes" : "No";
+  }
   return getCellValue(record, column);
 }
 

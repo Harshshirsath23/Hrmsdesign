@@ -95,3 +95,52 @@ export const leaveReasonValidationSchema = z.object({
   label: z.string().trim().min(1, "Label is required"),
   is_active: z.boolean().optional(),
 });
+
+export const calendarPeriodValidationSchema = z
+  .object({
+    period_type: z.string().trim().min(1, "Period type is required"),
+    year_start_month: z.string().trim().min(1, "Year start month is required"),
+    year_start_day: z.coerce.number().min(1).max(31),
+    cf_reset_date: z.string().optional(),
+    accrual_start_month: z.string().optional(),
+    encashment_cycle: z.string().optional(),
+    is_active: z.boolean().optional(),
+    version: z.string().optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const month = Number(data.year_start_month);
+    const day = Number(data.year_start_day);
+    const maxDays = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+    if (!month || month < 1 || month > 12) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid month", path: ["year_start_month"] });
+      return;
+    }
+    if (!maxDays || day > maxDays) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Day must be between 1 and ${maxDays} for selected month`,
+        path: ["year_start_day"],
+      });
+    }
+  });
+
+export const accrualScheduleValidationSchema = z
+  .object({
+    policy_rule: z.string().trim().min(1, "Policy rule is required"),
+    frequency: z.string().trim().min(1, "Frequency is required"),
+    run_day_of_month: z.coerce.number().min(1, "Run day must be at least 1").max(31, "Run day cannot exceed 31"),
+    run_month: z.string().optional(),
+    proration_on_join: z.boolean().optional(),
+    rounding_rule: z.string().trim().min(1, "Rounding rule is required"),
+    is_active: z.boolean().optional(),
+    version: z.string().optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if ((data.frequency === "QUARTERLY" || data.frequency === "ANNUAL") && !data.run_month?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Run month is required for this frequency", path: ["run_month"] });
+    }
+  });

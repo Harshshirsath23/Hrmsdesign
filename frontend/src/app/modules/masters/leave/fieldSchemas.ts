@@ -1,4 +1,11 @@
 import type { MasterFieldConfig } from "../types";
+import {
+  ACCRUAL_SCHEDULE_FREQUENCY_OPTIONS,
+  ACCRUAL_SCHEDULE_ROUNDING_OPTIONS,
+  ENCASHMENT_CYCLE_OPTIONS,
+  MONTH_OPTIONS,
+  PERIOD_TYPE_OPTIONS,
+} from "./constants";
 
 const GENDER_OPTIONS = [
   { value: "MALE", label: "Male" },
@@ -151,4 +158,54 @@ export const LEAVE_REASON_FIELDS: MasterFieldConfig[] = [
   { key: "code", label: "Code", type: "text", required: true, placeholder: "Enter code" },
   { key: "label", label: "Label", type: "text", required: true, placeholder: "Enter label" },
   { key: "is_active", label: "Active", type: "boolean", defaultValue: true },
+];
+
+export const CALENDAR_PERIOD_FIELDS: MasterFieldConfig[] = [
+  { key: "period_type", label: "Period Type", type: "select", options: PERIOD_TYPE_OPTIONS, required: true, section: "Basic Configuration" },
+  {
+    key: "year_start_month",
+    label: "Year Start Month",
+    type: "select",
+    options: MONTH_OPTIONS,
+    required: true,
+    section: "Basic Configuration",
+    disabledWhen: { field: "period_type", equals: "CALENDAR" },
+  },
+  {
+    key: "year_start_day",
+    label: "Year Start Day",
+    type: "number",
+    required: true,
+    min: 1,
+    max: 31,
+    section: "Basic Configuration",
+    disabledWhen: { field: "period_type", equals: "CALENDAR" },
+  },
+  { key: "cf_reset_date", label: "CF Reset Date", type: "date", section: "Carry Forward" },
+  { key: "accrual_start_month", label: "Accrual Start Month", type: "select", options: MONTH_OPTIONS, section: "Accrual" },
+  { key: "encashment_cycle", label: "Encashment Cycle", type: "select", options: ENCASHMENT_CYCLE_OPTIONS, section: "Encashment" },
+  { key: "is_active", label: "Active", type: "boolean", defaultValue: true, section: "System" },
+  { key: "version", label: "Version", type: "text", section: "Metadata" },
+  { key: "created_at", label: "Created At", type: "text", readOnly: true, section: "Metadata" },
+  { key: "updated_at", label: "Updated At", type: "text", readOnly: true, section: "Metadata" },
+];
+
+export const ACCRUAL_SCHEDULE_FIELDS: MasterFieldConfig[] = [
+  { key: "policy_rule", label: "Policy Rule", type: "select", relationMaster: "LeavePolicyRule", required: true, section: "Policy Mapping" },
+  { key: "frequency", label: "Frequency", type: "select", options: ACCRUAL_SCHEDULE_FREQUENCY_OPTIONS, required: true, section: "Schedule Configuration" },
+  { key: "run_day_of_month", label: "Run Day Of Month", type: "number", required: true, min: 1, max: 31, section: "Schedule Configuration" },
+  {
+    key: "run_month",
+    label: "Run Month",
+    type: "select",
+    options: MONTH_OPTIONS,
+    section: "Schedule Configuration",
+    disabledWhen: { field: "frequency", equals: "MONTHLY" },
+  },
+  { key: "proration_on_join", label: "Proration On Join", type: "boolean", defaultValue: false, section: "Proration" },
+  { key: "rounding_rule", label: "Rounding Rule", type: "select", options: ACCRUAL_SCHEDULE_ROUNDING_OPTIONS, required: true, section: "Rounding" },
+  { key: "is_active", label: "Active", type: "boolean", defaultValue: true, section: "System" },
+  { key: "version", label: "Version", type: "text", section: "Metadata" },
+  { key: "created_at", label: "Created At", type: "text", readOnly: true, section: "Metadata" },
+  { key: "updated_at", label: "Updated At", type: "text", readOnly: true, section: "Metadata" },
 ];

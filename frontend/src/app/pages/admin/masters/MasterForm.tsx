@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -30,6 +30,7 @@ function schemaForFields(fields: MasterFieldConfig[]) {
     if (field.type === "number") {
       let base = z.coerce.number();
       if (field.min !== undefined) base = base.min(field.min);
+      if (field.max !== undefined) base = base.max(field.max);
       shape[field.key] = field.required ? base : base.optional();
       continue;
     }
@@ -46,7 +47,9 @@ function getLabel(rec: MasterRecord) {
 function isFieldDisabled(field: MasterFieldConfig, values: FormValues) {
   if (!field.disabledWhen) return false;
   const current = values[field.disabledWhen.field];
-  return current === field.disabledWhen.equals;
+  if (field.disabledWhen.equals !== undefined) return current === field.disabledWhen.equals;
+  if (field.disabledWhen.notEquals !== undefined) return current !== field.disabledWhen.notEquals;
+  return false;
 }
 
 function buildDefaultValues(
@@ -119,6 +122,18 @@ export function MasterForm({
   });
 
   const watchedValues = useWatch({ control: form.control }) as FormValues;
+
+  useEffect(() => {
+    if (!config.formBehaviors?.length) return;
+    for (const rule of config.formBehaviors) {
+      if (watchedValues?.[rule.when.field] !== rule.when.equals || !rule.set) continue;
+      Object.entries(rule.set).forEach(([key, value]) => {
+        if (form.getValues(key) !== value) {
+          form.setValue(key, value, { shouldValidate: true });
+        }
+      });
+    }
+  }, [config.formBehaviors, form, watchedValues]);
 
   const relationFields = fields.filter((f) => f.relationMaster && f.type !== "multiselect");
   const multiselectRelationFields = fields.filter((f) => f.relationMaster && f.type === "multiselect");

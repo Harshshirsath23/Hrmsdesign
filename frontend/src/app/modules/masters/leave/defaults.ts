@@ -30,3 +30,25 @@ export const LEAVE_ENCASHMENT_POLICY_DEFAULTS = {
 export const LEAVE_REASON_DEFAULTS = {
   is_active: true,
 };
+
+export const CALENDAR_PERIOD_DEFAULTS = {
+  period_type: "CALENDAR",
+  year_start_month: "1",
+  year_start_day: 1,
+  is_active: true,
+};
+
+export const ACCRUAL_SCHEDULE_DEFAULTS = {
+  frequency: "MONTHLY",
+  run_day_of_month: 1,
+  proration_on_join: false,
+  rounding_rule: "ROUND_HALF",
+  is_active: true,
+};
+
+export const CALENDAR_PERIOD_FORM_BEHAVIORS = [
+  {
+    when: { field: "period_type", equals: "CALENDAR" },
+    set: { year_start_month: "1", year_start_day: 1 },
+  },
+] as const;

@@ -28,6 +28,8 @@ const LEAVE_DOMAIN_MASTER_KEYS = new Set([
   "leave-policy-rule",
   "leave-encashment-policy",
   "leave-reason",
+  "calendar-period",
+  "accrual-schedule",
 ]);
 
 /** Masters that lived under core-hr-setup but belong to attendance. */
@@ -36,7 +38,7 @@ const CORE_HR_ATTENDANCE_MASTER_KEYS = new Set(
 );
 
 /** Masters that lived under core-hr-setup but belong to leave (retired → aliased). */
-const CORE_HR_LEAVE_MASTER_KEYS = new Set(["holiday-calendar", "holiday"]);
+const CORE_HR_LEAVE_MASTER_KEYS = new Set(["holiday-calendar", "holiday", "calendar-period"]);
 
 /** Masters that lived under performance-training-asset but belong to training-asset. */
 const PERFORMANCE_TRAINING_ASSET_MASTER_KEYS = new Set(

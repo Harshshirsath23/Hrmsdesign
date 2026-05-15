@@ -3,6 +3,12 @@ export type MasterFieldType = "text" | "textarea" | "number" | "select" | "boole
 export interface MasterFieldDisabledWhen {
   field: string;
   equals?: boolean | string | number;
+  notEquals?: boolean | string | number;
+}
+
+export interface MasterFormBehaviorRule {
+  when: { field: string; equals: string | boolean | number };
+  set?: Record<string, unknown>;
 }
 
 export interface MasterFieldConfig {
@@ -20,9 +26,10 @@ export interface MasterFieldConfig {
   section?: string;
   readOnly?: boolean;
   min?: number;
+  max?: number;
 }
 
-export type MasterTableColumnRender = "code" | "label" | "status" | "datetime" | "default";
+export type MasterTableColumnRender = "code" | "label" | "status" | "datetime" | "boolean" | "default";
 
 export interface MasterTableColumnConfig {
   key: string;
@@ -53,6 +60,7 @@ export interface MasterConfig {
   defaultValues?: Record<string, unknown>;
   validationSchema?: import("zod").ZodTypeAny;
   searchPlaceholder?: string;
+  formBehaviors?: MasterFormBehaviorRule[];
 }
 
 export interface MasterCategoryConfig {

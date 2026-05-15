@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   BarChart3,
   CalendarDays,
@@ -128,6 +129,8 @@ export function AdminLeaveModule() {
     return s;
   }, [active]);
 
+  const navigate = useNavigate();
+
   const navGroups = useMemo<AdminNavGroupSchema<SectionId>[]>(() => {
     const byId = new Map(SECTIONS.map((s) => [s.id, s]));
     const item = (id: SectionId) => {
@@ -159,13 +162,6 @@ export function AdminLeaveModule() {
     ];
   }, []);
 
-  const openSettingsCreate = (_section: LeaveSettingsSectionKey) => {
-    // Leave Settings section removed as per user request
-    // setSettingsTargetSection(section);
-    // setActive("settings");
-    // setSettingsCreateSignal((x) => x + 1);
-  };
-
   return (
     <div className="p-8 space-y-8 bg-slate-50/50 dark:bg-slate-950 min-h-full">
       {/* Header */}
@@ -184,14 +180,14 @@ export function AdminLeaveModule() {
         {active === "dashboard" && <SuperadminLeaveDashboard />}
         {active === "applications" && <SuperadminLeaveRequests title="Leave Applications" />}
         {active === "policies" && (
-          <AdminLeavePolicies onAddNewPolicy={() => openSettingsCreate("leave-policies")} />
+          <AdminLeavePolicies onAddNewPolicy={() => navigate("/superadmin/masters/attendance-leave/leave-policy")} />
         )}
         {active === "types" && (
-          <AdminLeaveTypeMaster onAddNewLeaveType={() => openSettingsCreate("leave-types")} />
+          <AdminLeaveTypeMaster onAddNewLeaveType={() => navigate("/superadmin/masters/attendance-leave/leave-type")} />
         )}
         {active === "allocation" && <AdminPlaceholderSection title="Leave Allocation Management" />}
         {active === "holidays" && (
-          <AdminHolidayCalendarManagement onAddHoliday={() => openSettingsCreate("holidays")} />
+          <AdminHolidayCalendarManagement onAddHoliday={() => navigate("/superadmin/masters/core-hr-setup/holiday")} />
         )}
         {active === "audit" && <SuperadminAuditLogs />}
         {active === "reports" && <SuperadminReportsAnalytics />}
