@@ -23,6 +23,9 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
     personalMobile: "+91 9876543210",
     personalEmail: "arjun.sharma@gmail.com",
     workMobile: "+91 9988776655",
+    officialEmail: "arjun.sharma@company.com",
+    alternateMobileNumber: "",
+    extensionNumber: "",
     emergencyContactName: "Priya Sharma",
     emergencyContactNumber: "+91 9123456780",
   },
@@ -57,6 +60,7 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
     reportingManager: "Vikram Nair",
     functionalManager: "Karthik Menon",
     hrPartner: "Priya Nair",
+    employeeStatus: "Active",
   },
   addresses: {
     current: {
@@ -132,7 +136,15 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
     passportNumber: "J7654321",
   },
   nomineeDetails: [
-    { id: "nom-1", name: "Priya Sharma", relation: "Spouse", sharePercentage: "100", phone: "+91 9876001111" },
+    {
+      id: "nom-1",
+      name: "Priya Sharma",
+      relation: "Spouse",
+      dateOfBirth: "1994-03-10",
+      sharePercentage: "100",
+      phone: "+91 9876001111",
+      address: "",
+    },
   ],
   insuranceDetails: {
     policyNumber: "PLCY-2026-8821",
@@ -146,6 +158,17 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
     { id: "lng-1", language: "English", proficiencyLevel: "Advanced", canRead: true, canWrite: true, canSpeak: true },
     { id: "lng-2", language: "Hindi", proficiencyLevel: "Native", canRead: true, canWrite: true, canSpeak: true },
   ],
+  emergencyAndMedical: {
+    emergencyContactName: "Priya Sharma",
+    emergencyContactNumber: "+91 9123456780",
+    relationship: "Spouse",
+    medicalConditions: "",
+    allergies: "",
+    bloodGroup: "",
+    doctorName: "",
+    insuranceProvider: "",
+    insurancePolicyNumber: "",
+  },
   assets: [
     {
       id: "asset-1",
@@ -158,4 +181,5 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
       remarks: "Issued by IT",
     },
   ],
+  employeeDocuments: {},
 });

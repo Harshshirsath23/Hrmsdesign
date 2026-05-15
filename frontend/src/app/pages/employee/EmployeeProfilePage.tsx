@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ESS_SECTIONS } from "../../modules/ess/data";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../../store";
+import { fetchEmployeeData, saveEssProfileWithAdminSync } from "../../../store/slices/employeeSlice";
+import { addNotification } from "../../../store/slices/notificationSlice";
+import { fetchRequests, createRequest } from "../../../store/slices/requestSlice";
+import { MyRequestsTable } from "../../components/employee/MyRequestsTable";
+import { EmployeeNotificationPanel } from "../../components/ui/EmployeeNotificationPanel";
+import { EssProfileHeaderCard } from "../../components/employee/EssProfileHeaderCard";
 import {
-  getChangeRequests,
-  getPendingSections,
-  getProfile,
-  submitSectionChangeRequest,
-} from "../../modules/ess/storage";
+  EMPLOYEE_DOCUMENT_KEYS,
+  EmployeeDocumentKey,
+  EmployeeDocumentMeta,
+} from "../../components/employees/mockData";
+import { Download, Eye, FileText, Trash2 } from "lucide-react";
 import { EmployeeProfile, SectionKey } from "../../modules/ess/types";
 import {
   detectDuplicateValues,
@@ -492,33 +500,168 @@ function SkillsCertificationsSection({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Documents Repository section renderer
-// ---------------------------------------------------------------------------
-const DOCUMENT_CATEGORIES = [
-  "PAN Card",
-  "Aadhaar Card",
-  "Resume",
-  "Offer Letter",
-  "Joining Documents",
-  "Educational Certificates",
-  "Salary Slips",
-  "Experience Letters",
-  "Passport",
-  "Visa",
-  "Tax Documents",
-  "Insurance Documents",
-  "Relieving Letter",
-  "Appraisal Letters",
-  "Increment Letters",
-];
+const DOC_LABELS: Record<EmployeeDocumentKey, string> = {
+  panCard: "PAN Card",
+  aadhaarCard: "Aadhaar Card",
+  resume: "Resume",
+  offerLetter: "Offer Letter",
+  joiningDocuments: "Joining Documents",
+  educationalCertificates: "Educational Certificates",
+  salarySlips: "Salary Slips",
+  experienceLetters: "Experience Letters",
+  passport: "Passport",
+  visa: "Visa",
+  taxDocuments: "Tax Documents",
+  insuranceDocuments: "Insurance Documents",
+  relievingLetter: "Relieving Letter",
+  appraisalLetters: "Appraisal Letters",
+  incrementLetters: "Increment Letters",
+};
 
-function DocumentsRepositorySection({ readOnly }: { readOnly: boolean }) {
+const DOC_MAX_BYTES = 8 * 1024 * 1024;
+const DOC_ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
+
+function validateEmployeeDocFile(file: File): string | null {
+  const okExt = /\.(pdf|doc|docx|jpg|jpeg|png)$/i.test(file.name);
+  if (!okExt) return "Only PDF, DOC, DOCX, JPG, or PNG files are allowed.";
+  if (file.size > DOC_MAX_BYTES) return "File must be 8 MB or smaller.";
+  return null;
+}
+
+function DocumentsRepositorySection({
+  docs,
+  readOnly,
+  onChange,
+}: {
+  docs: Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>;
+  readOnly: boolean;
+  onChange: (next: Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>) => void;
+}) {
+  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [err, setErr] = useState<string | null>(null);
+
+  const readFile = (file: File, key: EmployeeDocumentKey) => {
+    const e = validateEmployeeDocFile(file);
+    if (e) {
+      setErr(e);
+      return;
+    }
+    setErr(null);
+    setProgress((p) => ({ ...p, [key]: 10 }));
+    const reader = new FileReader();
+    reader.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        setProgress((p) => ({ ...p, [key]: Math.round((ev.loaded / ev.total) * 90) + 10 }));
+      }
+    };
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      onChange({
+        ...docs,
+        [key]: {
+          fileName: file.name,
+          dataUrl,
+          uploadedAt: new Date().toISOString(),
+          sizeBytes: file.size,
+        },
+      });
+      setProgress((p) => ({ ...p, [key]: 100 }));
+      setTimeout(() => setProgress((p) => ({ ...p, [key]: 0 })), 600);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const download = (key: EmployeeDocumentKey) => {
+    const m = docs[key];
+    if (!m?.dataUrl || !m.fileName) return;
+    const a = document.createElement("a");
+    a.href = m.dataUrl;
+    a.download = m.fileName;
+    a.click();
+  };
+
+  const remove = (key: EmployeeDocumentKey) => {
+    const n = { ...docs };
+    delete n[key];
+    onChange(n);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {DOCUMENT_CATEGORIES.map((cat) => (
-        <FileUploadField key={cat} label={cat} readOnly={readOnly} />
-      ))}
+    <div className="space-y-3">
+      {err ? <p className="text-sm text-destructive">{err}</p> : null}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {EMPLOYEE_DOCUMENT_KEYS.map((key) => {
+          const meta = docs[key];
+          const pct = progress[key] || 0;
+          return (
+            <div key={key} className="rounded-lg border border-border bg-background p-3 flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  {DOC_LABELS[key]}
+                </p>
+                {meta?.dataUrl ? (
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-md border border-border hover:bg-secondary"
+                      title="Preview"
+                      onClick={() => window.open(meta.dataUrl, "_blank")}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-md border border-border hover:bg-secondary"
+                      title="Download"
+                      onClick={() => download(key)}
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-md border border-border text-destructive hover:bg-destructive/10"
+                        title="Delete"
+                        onClick={() => remove(key)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              {meta?.fileName ? (
+                <p className="text-xs text-muted-foreground truncate">{meta.fileName}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">No file uploaded</p>
+              )}
+              {pct > 0 && pct < 100 ? (
+                <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                </div>
+              ) : null}
+              {!readOnly ? (
+                <label className="mt-auto">
+                  <span className="inline-flex items-center justify-center w-full py-2 rounded-lg border border-dashed border-border text-xs font-semibold cursor-pointer hover:bg-secondary/50">
+                    {meta ? "Replace file" : "Upload"}
+                  </span>
+                  <input
+                    type="file"
+                    accept={DOC_ACCEPT}
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) readFile(f, key);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -605,6 +748,13 @@ function AddressesSection({
           ))}
         </div>
       </div>
+      
+      <div className="mt-8">
+        <h2 className="text-lg font-bold text-foreground mb-4">My Requests</h2>
+        <MyRequestsTable />
+      </div>
+      
+      <EmployeeNotificationPanel />
     </div>
   );
 }
@@ -653,10 +803,9 @@ function ProfileSection({
         ))}
       </div>
       {!readOnly && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <FileUploadField label="Profile Photo" readOnly={readOnly} />
-          <FileUploadField label="Signature Upload" readOnly={readOnly} />
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Profile photo is updated from the summary card at the top of this page.
+        </p>
       )}
     </div>
   );
@@ -710,37 +859,57 @@ const EMPLOYMENT_FIELDS = [
 // ---------------------------------------------------------------------------
 // Main Page
 // ---------------------------------------------------------------------------
+
+function getDifferences(oldObj: any, newObj: any, prefix = ''): any[] {
+  let diffs: any[] = [];
+  if (!oldObj || !newObj) return diffs;
+  for (let key in newObj) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    if (typeof newObj[key] === 'object' && newObj[key] !== null && !Array.isArray(newObj[key])) {
+      diffs = diffs.concat(getDifferences(oldObj[key] || {}, newObj[key], fullKey));
+    } else if (Array.isArray(newObj[key])) {
+      if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
+        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: 'List Changed', newValue: 'List Changed' });
+      }
+    } else {
+      if (oldObj[key] !== newObj[key]) {
+        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: oldObj[key], newValue: newObj[key] });
+      }
+    }
+  }
+  return diffs;
+}
+
 export function EmployeeProfilePage() {
   const { user } = useAuth();
   const employeeId = user?.employeeId ?? "1";
-  const [profile, setProfile] = useState<EmployeeProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch<AppDispatch>();
+  const profile = useSelector((state: RootState) => state.employee.profile);
+  const status = useSelector((state: RootState) => state.employee.status);
+  const requests = useSelector((state: RootState) => state.requests.requests);
+
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
   const [draft, setDraft] = useState<any>(null);
-  const [pendingSections, setPendingSections] = useState<SectionKey[]>([]);
   const [banner, setBanner] = useState<BannerState>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const changeHistory = useMemo(
-    () => getChangeRequests(employeeId),
-    [employeeId, profile, pendingSections]
-  );
-
-  const refresh = () => {
-    setLoading(true);
-    setProfile(getProfile(employeeId));
-    setPendingSections(getPendingSections(employeeId));
-    setLoading(false);
-  };
+  const pendingSections = useMemo(() => {
+    return Array.from(new Set(requests.filter(r => r.status === 'pending').map(r => r.section)));
+  }, [requests]);
 
   useEffect(() => {
-    refresh();
-  }, []);
+    dispatch(fetchEmployeeData(employeeId));
+    dispatch(fetchRequests(employeeId));
+  }, [dispatch, employeeId]);
 
   const beginEdit = (section: SectionKey) => {
     if (!profile) return;
     setEditingSection(section);
-    setDraft(JSON.parse(JSON.stringify((profile as any)[section] ?? {})));
+    const base =
+      section === "documentsRepository"
+        ? (profile as any).employeeDocuments ?? {}
+        : (profile as any)[section] ?? {};
+    setDraft(JSON.parse(JSON.stringify(base)));
     setBanner(null);
   };
 
@@ -749,9 +918,12 @@ export function EmployeeProfilePage() {
     setDraft(null);
   };
 
-  const submitChange = (section: SectionKey) => {
+  const submitChange = async (section: SectionKey) => {
     if (!profile) return;
-    const current = (profile as any)[section];
+    const current =
+      section === "documentsRepository"
+        ? (profile as any).employeeDocuments ?? {}
+        : (profile as any)[section];
 
     if (isEqualPayload(current, draft)) {
       setBanner({
@@ -825,15 +997,60 @@ export function EmployeeProfilePage() {
       }
     }
 
+    if (section === "documentsRepository") {
+      const names = Object.values(draft as Record<string, EmployeeDocumentMeta>)
+        .map((m) => m?.fileName)
+        .filter(Boolean) as string[];
+      const dup = names.find((n, i) => names.indexOf(n) !== i);
+      if (dup) {
+        setBanner({ type: "error", message: `Duplicate file name not allowed: ${dup}` });
+        return;
+      }
+    }
+
+    const DIRECT_SYNC_SECTIONS = new Set<SectionKey>([
+      "profile",
+      "personalDetails",
+      "addresses",
+      "languageDetails",
+      "emergencyAndMedical",
+      "nomineeDetails",
+      "documentsRepository",
+    ]);
+
+    if (DIRECT_SYNC_SECTIONS.has(section)) {
+      setSubmitting(true);
+      try {
+        const payloadKey = section === "documentsRepository" ? "employeeDocuments" : section;
+        const nextProfile = {
+          ...profile,
+          [payloadKey]: draft,
+        } as EmployeeProfile;
+        await dispatch(saveEssProfileWithAdminSync({ employeeId, profile: nextProfile })).unwrap();
+        dispatch(addNotification({ type: "success", message: "Saved and synced with HR records." }));
+        setBanner({ type: "success", message: "Your updates were saved successfully." });
+        cancelEdit();
+      } catch {
+        setBanner({ type: "error", message: "Could not save changes. Try again." });
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       setSubmitting(true);
-      submitSectionChangeRequest({ employeeId, section, newValue: draft });
-      setBanner({
-        type: "success",
-        message: "Change request submitted and awaiting admin approval.",
-      });
+      const changes = getDifferences(current, draft);
+      const sectionLabel = ESS_SECTIONS.find((s) => s.key === section)?.label || String(section);
+      
+      dispatch(createRequest({
+        employeeId,
+        section,
+        sectionLabel,
+        changes
+      }));
+      setBanner(null);
       cancelEdit();
-      refresh();
     } catch (err) {
       setBanner({
         type: "error",
@@ -844,7 +1061,7 @@ export function EmployeeProfilePage() {
     }
   };
 
-  if (loading || !profile) {
+  if (status === 'loading' || !profile) {
     return <div className="p-6 text-sm text-muted-foreground">Loading profile...</div>;
   }
 
@@ -896,7 +1113,7 @@ export function EmployeeProfilePage() {
     }
 
     // ---- Employment ----
-    if (sectionKey === "employmentInformation") {
+    if (sectionKey === "employmentDetails") {
       const data = sectionData as Record<string, unknown>;
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1058,7 +1275,13 @@ export function EmployeeProfilePage() {
 
     // ---- Documents Repository ----
     if (sectionKey === "documentsRepository") {
-      return <DocumentsRepositorySection readOnly={isReadOnly} />;
+      return (
+        <DocumentsRepositorySection
+          docs={(sectionData as Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>) || {}}
+          readOnly={isReadOnly}
+          onChange={(d) => setDraft(d)}
+        />
+      );
     }
 
     // ---- Family Details ----
@@ -1218,6 +1441,8 @@ export function EmployeeProfilePage() {
 
       {/* Main content */}
       <div className="flex-1 space-y-4">
+        <EssProfileHeaderCard employeeId={employeeId} profile={profile} />
+
         {banner && (
           <div
             className={`rounded-lg px-4 py-3 text-sm border ${
@@ -1233,7 +1458,10 @@ export function EmployeeProfilePage() {
         {allSections.map((section) => {
           const isPending = pendingSections.includes(section.key as SectionKey);
           const isEditing = editingSection === section.key;
-          const rawData = (profile as any)[section.key];
+          const rawData =
+            section.key === "documentsRepository"
+              ? (profile as any).employeeDocuments
+              : (profile as any)[section.key];
           const sectionData = isEditing ? draft : rawData;
           const isReadOnly = !isEditing || !section.editable;
 
@@ -1316,31 +1544,13 @@ export function EmployeeProfilePage() {
           );
         })}
 
-        {/* Change Request History */}
-        <section className="rounded-xl border border-border bg-card p-5">
-          <h2 className="text-base font-semibold text-foreground mb-3">Change Request History</h2>
-          <div className="space-y-2">
-            {changeHistory.length === 0 && (
-              <p className="text-sm text-muted-foreground">No change requests submitted yet.</p>
-            )}
-            {changeHistory.map((request) => (
-              <div
-                key={request.id}
-                className="rounded-lg border border-border px-3 py-2 flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">{request.section_label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(request.created_at).toLocaleString("en-IN")}
-                  </p>
-                </div>
-                <span className="text-xs rounded-full border border-border px-2 py-0.5 capitalize">
-                  {request.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Change Request History replaced by MyRequestsTable */}
+        <div className="mt-8">
+          <h2 className="text-lg font-bold text-foreground mb-4">My Requests</h2>
+          <MyRequestsTable />
+        </div>
+        
+        <EmployeeNotificationPanel />
       </div>
     </div>
   );

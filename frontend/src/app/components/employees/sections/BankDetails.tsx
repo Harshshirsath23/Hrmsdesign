@@ -1,36 +1,157 @@
-import { Employee } from "../mockData";
-import { CreditCard, Shield, Building2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { Employee, EsiDetails, PfDetails } from "../mockData";
+import { CreditCard, Shield, Building2, Edit2, Save, X } from "lucide-react";
+import { useAdminSync } from "../../admin/useAdminSync";
+import { addNotification } from "../../../../store/slices/notificationSlice";
+import { AppDispatch } from "../../../../store";
+import { validateAccountNumber, validateIfsc } from "../employee-details";
+import { EditableSectionCard } from "../employee-details/EditableSectionCard";
+import { ProfileInfoField } from "../employee-details/ProfileInfoField";
 
 interface Props {
   employee: Employee;
 }
 
-function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+function StatSectionCard({
+  title,
+  icon: Icon,
+  children,
+  isEditing,
+  onEdit,
+  onSave,
+  onCancel,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  isEditing?: boolean;
+  onEdit?: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
+}) {
   return (
     <div className="flat-card bg-card p-6">
-      <h3 className="text-sm font-bold text-foreground mb-5 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
-          <Icon className="w-4 h-4 text-foreground" />
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-sm font-bold text-foreground flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
+            <Icon className="w-4 h-4 text-foreground" />
+          </div>
+          {title}
+        </h3>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <button
+                type="button"
+                onClick={onSave}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90"
+              >
+                <Save size={12} /> Save
+              </button>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
+              >
+                <X size={12} /> Cancel
+              </button>
+            </>
+          ) : (
+            onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
+              >
+                <Edit2 size={12} /> Edit
+              </button>
+            )
+          )}
         </div>
-        {title}
-      </h3>
+      </div>
       {children}
     </div>
   );
 }
 
-function InfoRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+function InfoRow({
+  label,
+  value,
+  mono = false,
+  isEditing,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  isEditing?: boolean;
+  onChange?: (v: string) => void;
+}) {
   return (
     <div className="flex justify-between items-center py-3 border-b border-border last:border-0">
       <span className="text-sm text-muted-foreground font-medium">{label}</span>
-      <span className={`text-sm font-semibold text-foreground ${mono ? "font-mono" : ""}`}>
-        {value || "—"}
-      </span>
+      {isEditing ? (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className={`text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 w-48 focus:outline-none focus:ring-2 focus:ring-primary/30 ${mono ? "font-mono" : ""}`}
+        />
+      ) : (
+        <span className={`text-sm font-semibold text-foreground ${mono ? "font-mono" : ""}`}>{value || "—"}</span>
+      )}
     </div>
   );
 }
 
 export function BankDetails({ employee }: Props) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState(employee);
+  const [pfEdit, setPfEdit] = useState(false);
+  const [pfDraft, setPfDraft] = useState<PfDetails>(employee.pfDetails!);
+  const [esiEdit, setEsiEdit] = useState(false);
+  const [esiDraft, setEsiDraft] = useState<EsiDetails>(employee.esiDetails!);
+  const { handleAdminSave } = useAdminSync();
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    setEditedData(employee);
+    setPfDraft(employee.pfDetails!);
+    setEsiDraft(employee.esiDetails!);
+  }, [employee]);
+
+  const handleUpdate = (field: keyof Employee, value: string) => {
+    setEditedData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveBank = async () => {
+    const acctErr = validateAccountNumber(editedData.accountNumber || "");
+    if (acctErr) {
+      dispatch(addNotification({ type: "warning", message: acctErr }));
+      return;
+    }
+    const ifscErr = validateIfsc(editedData.ifscCode || "");
+    if (ifscErr) {
+      dispatch(addNotification({ type: "warning", message: ifscErr }));
+      return;
+    }
+    const ok = await handleAdminSave("Bank / PF / ESI Details", employee, editedData);
+    if (ok) setIsEditing(false);
+  };
+
+  const savePf = async () => {
+    const next = { ...employee, pfDetails: pfDraft };
+    const ok = await handleAdminSave("PF Details", employee, next);
+    if (ok) setPfEdit(false);
+  };
+
+  const saveEsi = async () => {
+    const next = { ...employee, esiDetails: esiDraft };
+    const ok = await handleAdminSave("ESI Details", employee, next);
+    if (ok) setEsiEdit(false);
+  };
+
   return (
     <div className="space-y-5">
       <div>
@@ -38,8 +159,17 @@ export function BankDetails({ employee }: Props) {
         <p className="text-sm text-muted-foreground mt-1">Financial and statutory details for {employee.name}</p>
       </div>
 
-      {/* Bank Account Card */}
-      <SectionCard title="Bank Account Information" icon={CreditCard}>
+      <EditableSectionCard
+        title="Bank Account Information"
+        icon={CreditCard}
+        isEditing={isEditing}
+        onEdit={() => setIsEditing(true)}
+        onSave={handleSaveBank}
+        onCancel={() => {
+          setEditedData(employee);
+          setIsEditing(false);
+        }}
+      >
         <div className="bg-foreground text-primary-foreground rounded-lg p-6 mb-5">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -50,49 +180,124 @@ export function BankDetails({ employee }: Props) {
           </div>
           <div className="mb-4">
             <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Account Number</p>
-            <p className="text-xl tracking-widest mt-1 font-mono font-bold">{employee.accountNumber}</p>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editedData.accountNumber || ""}
+                onChange={(e) => handleUpdate("accountNumber", e.target.value)}
+                className="text-xl tracking-widest mt-1 font-mono font-bold bg-white/10 border border-white/20 rounded px-2 py-1 text-white w-full focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
+            ) : (
+              <p className="text-xl tracking-widest mt-1 font-mono font-bold">{employee.accountNumber}</p>
+            )}
           </div>
           <div className="flex gap-8 pt-4 border-t border-primary-foreground/20">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Bank Name</p>
-              <p className="text-sm font-medium mt-0.5">{employee.bankName}</p>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedData.bankName || ""}
+                  onChange={(e) => handleUpdate("bankName", e.target.value)}
+                  className="text-sm font-medium mt-0.5 bg-white/10 border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                />
+              ) : (
+                <p className="text-sm font-medium mt-0.5">{employee.bankName}</p>
+              )}
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">IFSC Code</p>
-              <p className="text-sm font-mono font-bold mt-0.5">{employee.ifscCode}</p>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedData.ifscCode || ""}
+                  onChange={(e) => handleUpdate("ifscCode", e.target.value)}
+                  className="text-sm font-mono font-bold mt-0.5 bg-white/10 border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                />
+              ) : (
+                <p className="text-sm font-mono font-bold mt-0.5">{employee.ifscCode}</p>
+              )}
             </div>
           </div>
         </div>
-      </SectionCard>
+      </EditableSectionCard>
 
-      {/* Statutory Documents Card */}
-      <SectionCard title="Statutory Documents" icon={Shield}>
+      <EditableSectionCard
+        title="Statutory Documents"
+        icon={Shield}
+        isEditing={isEditing}
+        onEdit={() => setIsEditing(true)}
+        onSave={handleSaveBank}
+        onCancel={() => {
+          setEditedData(employee);
+          setIsEditing(false);
+        }}
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-          <InfoRow label="PAN Number" value={employee.panNumber || "—"} mono />
-          <InfoRow label="Aadhaar Number" value={employee.aadhaarNumber || "—"} mono />
-          <InfoRow label="UAN Number" value={employee.uanNumber || "—"} mono />
-          <InfoRow label="Tax Regime" value={employee.taxRegime || "—"} />
+          <InfoRow label="PAN Number" value={editedData.panNumber || "—"} mono isEditing={isEditing} onChange={(v) => handleUpdate("panNumber", v)} />
+          <InfoRow label="Aadhaar Number" value={editedData.aadhaarNumber || "—"} mono isEditing={isEditing} onChange={(v) => handleUpdate("aadhaarNumber", v)} />
+          <InfoRow label="UAN Number" value={editedData.uanNumber || "—"} mono isEditing={isEditing} onChange={(v) => handleUpdate("uanNumber", v)} />
+          <InfoRow label="Tax Regime" value={editedData.taxRegime || "—"} isEditing={isEditing} onChange={(v) => handleUpdate("taxRegime", v)} />
         </div>
-      </SectionCard>
+      </EditableSectionCard>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <SectionCard title="Provident Fund (PF)" icon={Shield}>
-          <InfoRow label="PF Number"             value={employee.pfNumber}                              mono />
-          <InfoRow label="PF Type"               value="EPF (Employee Provident Fund)"                      />
-          <InfoRow label="Monthly Contribution"  value={`₹${employee.pf.toLocaleString("en-IN")}`}         />
-          <InfoRow label="Employee Share"        value="12% of Basic"                                       />
-          <InfoRow label="Employer Share"        value="12% of Basic"                                       />
-          <InfoRow label="Status"                value="Active"                                             />
-        </SectionCard>
+        <StatSectionCard
+          title="Provident Fund (PF)"
+          icon={Shield}
+          isEditing={pfEdit}
+          onEdit={() => setPfEdit(true)}
+          onSave={savePf}
+          onCancel={() => {
+            setPfDraft(employee.pfDetails!);
+            setPfEdit(false);
+          }}
+        >
+          <div className="grid grid-cols-1 gap-3">
+            <ProfileInfoField label="PF Number" value={pfDraft.pfNumber} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfNumber: v }))} />
+            <ProfileInfoField label="PF Type" value={pfDraft.pfType} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfType: v }))} />
+            <ProfileInfoField
+              label="Monthly Contribution"
+              value={pfDraft.monthlyContribution}
+              editing={pfEdit}
+              onChange={(v) => setPfDraft((d) => ({ ...d, monthlyContribution: v }))}
+            />
+            <ProfileInfoField label="Employee Share" value={pfDraft.employeeShare} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, employeeShare: v }))} />
+            <ProfileInfoField label="Employer Share" value={pfDraft.employerShare} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, employerShare: v }))} />
+            <ProfileInfoField label="Status" value={pfDraft.status} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, status: v }))} />
+          </div>
+        </StatSectionCard>
 
-        <SectionCard title="Employee State Insurance (ESI)" icon={Building2}>
-          <InfoRow label="ESI Number"             value={employee.esiNumber}  mono />
-          <InfoRow label="ESI Type"               value="Employee State Insurance"   />
-          <InfoRow label="Employee Contribution"  value="0.75%"                     />
-          <InfoRow label="Employer Contribution"  value="3.25%"                     />
-          <InfoRow label="Dispensary"             value="ESI Hospital"              />
-          <InfoRow label="Status"                 value="Active"                    />
-        </SectionCard>
+        <StatSectionCard
+          title="Employee State Insurance (ESI)"
+          icon={Building2}
+          isEditing={esiEdit}
+          onEdit={() => setEsiEdit(true)}
+          onSave={saveEsi}
+          onCancel={() => {
+            setEsiDraft(employee.esiDetails!);
+            setEsiEdit(false);
+          }}
+        >
+          <div className="grid grid-cols-1 gap-3">
+            <ProfileInfoField label="ESI Number" value={esiDraft.esiNumber} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiNumber: v }))} />
+            <ProfileInfoField label="ESI Type" value={esiDraft.esiType} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiType: v }))} />
+            <ProfileInfoField
+              label="Employee Contribution"
+              value={esiDraft.employeeContribution}
+              editing={esiEdit}
+              onChange={(v) => setEsiDraft((d) => ({ ...d, employeeContribution: v }))}
+            />
+            <ProfileInfoField
+              label="Employer Contribution"
+              value={esiDraft.employerContribution}
+              editing={esiEdit}
+              onChange={(v) => setEsiDraft((d) => ({ ...d, employerContribution: v }))}
+            />
+            <ProfileInfoField label="Dispensary" value={esiDraft.dispensary} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, dispensary: v }))} />
+            <ProfileInfoField label="Status" value={esiDraft.status} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, status: v }))} />
+          </div>
+        </StatSectionCard>
       </div>
     </div>
   );

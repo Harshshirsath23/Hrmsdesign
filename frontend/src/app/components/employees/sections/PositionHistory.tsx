@@ -1,78 +1,165 @@
-import { Employee } from "../mockData";
-import { Briefcase, User } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Briefcase, Plus } from "lucide-react";
+import { Employee, PositionHistoryEntry } from "../mockData";
+import { useAdminSync } from "../../admin/useAdminSync";
+import {
+  EditableFormCard,
+  EditableSectionCard,
+  ProfileInfoField,
+  ConfirmationDialog,
+} from "../employee-details";
 
 interface Props {
   employee: Employee;
 }
 
-function DataCell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-background border border-border rounded-lg p-3">
-      <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{label}</p>
-      <div className="text-sm font-medium text-foreground mt-1">{children}</div>
-    </div>
-  );
-}
-
 export function PositionHistory({ employee }: Props) {
+  const { handleAdminSave } = useAdminSync();
+  const [isEditing, setIsEditing] = useState(false);
+  const [rows, setRows] = useState<PositionHistoryEntry[]>(employee.positionHistory || []);
+  const [delIdx, setDelIdx] = useState<number | null>(null);
+
+  const baseline = useMemo(() => employee.positionHistory || [], [employee.positionHistory]);
+
+  const update = (i: number, p: Partial<PositionHistoryEntry>) =>
+    setRows((list) => list.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
+
+  const addRow = () => {
+    setRows((list) => [
+      ...list,
+      {
+        id: `pos-${Date.now()}`,
+        title: "",
+        department: "",
+        from: "",
+        to: "",
+        reportingTo: "",
+        isCurrentPosition: false,
+      },
+    ]);
+  };
+
+  const handleSave = async () => {
+    const ok = await handleAdminSave("Position History", employee, { ...employee, positionHistory: rows });
+    if (ok) setIsEditing(false);
+  };
+
   return (
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-foreground">Position History</h2>
         <p className="text-sm text-muted-foreground mt-1">Career progression within the organization</p>
       </div>
-
-      <div className="relative">
-        {/* Timeline line */}
-        <div className="absolute left-6 top-6 bottom-6 w-px bg-border" />
-
-        <div className="space-y-5">
-          {employee.positionHistory.map((pos, index) => (
-            <div key={index} className="flex gap-5 relative">
-              {/* Timeline dot */}
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 z-10 border ${
-                index === 0
-                  ? "bg-foreground border-foreground"
-                  : "bg-card border-border"
-              }`}>
-                <Briefcase className={`w-5 h-5 ${index === 0 ? "text-primary-foreground" : "text-muted-foreground"}`} />
-              </div>
-
-              <div className={`flex-1 flat-card bg-card p-5 ${index === 0 ? "border-foreground/30" : ""}`}>
-                <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">{pos.title}</h4>
-                    <p className="text-xs font-semibold text-muted-foreground mt-0.5">{pos.department}</p>
-                  </div>
-                  {index === 0 && (
-                    <span className="text-[10px] uppercase tracking-wider bg-foreground text-primary-foreground px-2.5 py-1 rounded-md font-bold">
-                      Current
-                    </span>
-                  )}
+      <EditableSectionCard
+        title="Position History"
+        icon={Briefcase}
+        isEditing={isEditing}
+        onEdit={() => {
+          setRows(baseline.map((r, i) => ({ ...r, id: r.id || `pos-${employee.id}-${i}` })));
+          setIsEditing(true);
+        }}
+        onCancel={() => {
+          setRows(baseline);
+          setIsEditing(false);
+        }}
+        onSave={handleSave}
+        headerExtra={
+          isEditing ? (
+            <button
+              type="button"
+              onClick={addRow}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Position
+            </button>
+          ) : null
+        }
+      >
+        <div className="space-y-4">
+          {rows.map((pos, index) => (
+            <EditableFormCard
+              key={pos.id}
+              showDelete={isEditing}
+              onDelete={() => setDelIdx(index)}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ProfileInfoField
+                  label="Designation"
+                  value={pos.title}
+                  editing={isEditing}
+                  onChange={(v) => update(index, { title: v })}
+                />
+                <ProfileInfoField
+                  label="Department"
+                  value={pos.department}
+                  editing={isEditing}
+                  onChange={(v) => update(index, { department: v })}
+                />
+                <ProfileInfoField
+                  label="From Date"
+                  value={pos.from}
+                  editing={isEditing}
+                  onChange={(v) => update(index, { from: v })}
+                  type="date"
+                />
+                <ProfileInfoField
+                  label="To Date"
+                  value={pos.to === "Present" ? "" : pos.to}
+                  editing={isEditing}
+                  onChange={(v) => update(index, { to: v })}
+                  type="date"
+                />
+                <div className="md:col-span-2">
+                  <ProfileInfoField
+                    label="Reporting Manager"
+                    value={pos.reportingTo}
+                    editing={isEditing}
+                    onChange={(v) => update(index, { reportingTo: v })}
+                  />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <DataCell label="From">
-                    {new Date(pos.from).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                  </DataCell>
-                  <DataCell label="To">
-                    {pos.to === "Present" ? (
-                      <span className="font-semibold">Present</span>
-                    ) : (
-                      new Date(pos.to).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-                    )}
-                  </DataCell>
-                  <DataCell label="Reporting To">
-                    <span className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" />
-                      {pos.reportingTo}
-                    </span>
-                  </DataCell>
-                </div>
+                <label className="md:col-span-2 flex items-center gap-2 text-sm font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!pos.isCurrentPosition || pos.to === "Present"}
+                    disabled={!isEditing}
+                    onChange={() => {
+                      if (!isEditing) return;
+                      const cur = rows[index];
+                      const isCur = cur.isCurrentPosition || cur.to === "Present";
+                      if (isCur) {
+                        update(index, { isCurrentPosition: false, to: "" });
+                      } else {
+                        setRows((list) =>
+                          list.map((r, i) => ({
+                            ...r,
+                            isCurrentPosition: i === index,
+                            to: i === index ? "Present" : r.to === "Present" ? "" : r.to,
+                          }))
+                        );
+                      }
+                    }}
+                  />
+                  Current position
+                </label>
               </div>
-            </div>
+            </EditableFormCard>
           ))}
         </div>
-      </div>
+      </EditableSectionCard>
+      <ConfirmationDialog
+        open={delIdx !== null}
+        onOpenChange={(o) => !o && setDelIdx(null)}
+        title="Remove position?"
+        description="This row will be removed. Save the section to persist."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => {
+          if (delIdx === null) return;
+          setRows((list) => list.filter((_, i) => i !== delIdx));
+          setDelIdx(null);
+        }}
+      />
     </div>
   );
 }

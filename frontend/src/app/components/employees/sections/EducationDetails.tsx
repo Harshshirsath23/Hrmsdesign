@@ -1,165 +1,188 @@
-import { Employee } from "../mockData";
-import { 
-  GraduationCap, 
-  FileText, 
-  Download, 
-  Edit2, 
-  Plus, 
-  Trash2, 
-  Eye,
-  Calendar,
-  Award,
-  MapPin,
-  BookOpen,
-  Building2
-} from "lucide-react";
-import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import { GraduationCap, Plus } from "lucide-react";
+import { EducationEntry, Employee } from "../mockData";
+import { useAdminSync } from "../../admin/useAdminSync";
+import {
+  EditableFormCard,
+  EditableSectionCard,
+  ProfileInfoField,
+  EmptyStateCard,
+  ConfirmationDialog,
+  validateEducationYear,
+  validatePercentageCgpa,
+} from "../employee-details";
 
 interface Props {
   employee: Employee;
 }
 
-function SectionHeader({ title, icon: Icon, onAdd }: { title: string; icon: any; onAdd?: () => void }) {
-  return (
-    <div className="flex items-center justify-between mb-8">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
-          <Icon className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-black text-foreground tracking-tight uppercase">{title}</h2>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">Academic History & Certifications</p>
-        </div>
-      </div>
-      {onAdd && (
-        <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white hover:bg-primary/90 rounded-2xl text-xs font-black transition-all shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]">
-          <Plus size={16} />
-          ADD EDUCATION
-        </button>
-      )}
-    </div>
-  );
-}
+const emptyEdu = (): EducationEntry => ({
+  qualification: "",
+  specialization: "",
+  institutionName: "",
+  university: "",
+  yearOfPassing: "",
+  percentageCgpa: "",
+  grade: "",
+});
 
 export function EducationDetails({ employee }: Props) {
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "-";
-    try {
-      return format(new Date(dateStr), "MMM yyyy");
-    } catch {
-      return "-";
+  const { handleAdminSave } = useAdminSync();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState<EducationEntry[]>(employee.education || []);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const baseline = useMemo(() => employee.education || [], [employee.education]);
+
+  const updateRow = (index: number, patch: Partial<EducationEntry>) => {
+    setDraft((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  };
+
+  const addRow = () => {
+    setDraft((rows) => [...rows, emptyEdu()]);
+  };
+
+  const confirmDelete = () => {
+    if (deleteIndex === null) return;
+    setDraft((rows) => rows.filter((_, i) => i !== deleteIndex));
+    setDeleteIndex(null);
+  };
+
+  const handleSave = async () => {
+    for (let i = 0; i < draft.length; i++) {
+      const row = draft[i];
+      const hasAny = Object.values(row).some((v) => String(v).trim() !== "");
+      if (!hasAny) continue;
+      const yErr = validateEducationYear(row.yearOfPassing);
+      if (yErr) {
+        setFormError(`Education ${i + 1}: ${yErr}`);
+        return;
+      }
+      const pErr = validatePercentageCgpa(row.percentageCgpa);
+      if (pErr) {
+        setFormError(`Education ${i + 1}: ${pErr}`);
+        return;
+      }
     }
+    setFormError(null);
+    const updated = { ...employee, education: draft.filter((r) => Object.values(r).some((v) => String(v).trim() !== "")) };
+    const ok = await handleAdminSave("Education Details", employee, updated);
+    if (ok) setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setDraft(baseline);
+    setFormError(null);
+    setIsEditing(false);
   };
 
   return (
-    <div className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <SectionHeader title="Education Details" icon={GraduationCap} onAdd={() => {}} />
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold text-foreground">Education Details</h2>
+        <p className="text-sm text-muted-foreground mt-1">Academic qualifications for {employee.name}</p>
+      </div>
 
-      {!employee.education || employee.education.length === 0 ? (
-        <div className="py-24 text-center bg-card/30 rounded-[3rem] border-2 border-dashed border-border/50 backdrop-blur-sm">
-          <div className="w-20 h-20 bg-secondary/50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <GraduationCap className="w-10 h-10 text-muted-foreground/30" />
+      <EditableSectionCard
+        title="Education Details"
+        icon={GraduationCap}
+        isEditing={isEditing}
+        onEdit={() => {
+          setDraft(baseline.length ? baseline : [emptyEdu()]);
+          setIsEditing(true);
+        }}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        headerExtra={
+          isEditing ? (
+            <button
+              type="button"
+              onClick={addRow}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Education
+            </button>
+          ) : null
+        }
+      >
+        {formError ? <p className="text-sm text-destructive mb-3">{formError}</p> : null}
+        {!draft.length ? (
+          <EmptyStateCard
+            icon={GraduationCap}
+            title="No education records"
+            description="Use Edit, then Add Education to capture qualifications."
+          />
+        ) : (
+          <div className="space-y-4">
+            {draft.map((row, index) => (
+              <EditableFormCard
+                key={`edu-${index}-${row.institutionName}`}
+                showDelete={isEditing}
+                onDelete={() => setDeleteIndex(index)}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ProfileInfoField
+                    label="Qualification"
+                    value={row.qualification}
+                    editing={isEditing}
+                    onChange={(v) => updateRow(index, { qualification: v })}
+                  />
+                  <ProfileInfoField
+                    label="Specialization"
+                    value={row.specialization}
+                    editing={isEditing}
+                    onChange={(v) => updateRow(index, { specialization: v })}
+                  />
+                  <ProfileInfoField
+                    label="Institution Name"
+                    value={row.institutionName}
+                    editing={isEditing}
+                    onChange={(v) => updateRow(index, { institutionName: v })}
+                  />
+                  <ProfileInfoField
+                    label="University"
+                    value={row.university}
+                    editing={isEditing}
+                    onChange={(v) => updateRow(index, { university: v })}
+                  />
+                  <ProfileInfoField
+                    label="Year Of Passing"
+                    value={row.yearOfPassing}
+                    editing={isEditing}
+                    onChange={(v) => updateRow(index, { yearOfPassing: v })}
+                  />
+                  <ProfileInfoField
+                    label="Percentage / CGPA"
+                    value={row.percentageCgpa}
+                    editing={isEditing}
+                    onChange={(v) => updateRow(index, { percentageCgpa: v })}
+                  />
+                  <div className="md:col-span-2 max-w-md">
+                    <ProfileInfoField
+                      label="Grade"
+                      value={row.grade}
+                      editing={isEditing}
+                      onChange={(v) => updateRow(index, { grade: v })}
+                    />
+                  </div>
+                </div>
+              </EditableFormCard>
+            ))}
           </div>
-          <h3 className="text-xl font-black text-foreground mb-2">No education details available</h3>
-          <p className="text-sm font-medium text-muted-foreground max-w-xs mx-auto">This employee hasn't added any academic qualifications yet.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {employee.education.map((edu, idx) => (
-            <div key={idx} className="group relative bg-card hover:bg-secondary/20 border border-border rounded-[2.5rem] p-8 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/5">
-              <div className="absolute right-8 top-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                <button className="p-2.5 bg-background border border-border text-foreground hover:bg-primary hover:text-white hover:border-primary rounded-xl transition-all shadow-sm">
-                  <Edit2 size={14} />
-                </button>
-                <button className="p-2.5 bg-background border border-border text-rose-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 rounded-xl transition-all shadow-sm">
-                  <Trash2 size={14} />
-                </button>
-              </div>
+        )}
+      </EditableSectionCard>
 
-              <div className="flex flex-col gap-6">
-                <div className="flex items-start gap-6">
-                  <div className="w-20 h-20 rounded-3xl bg-primary/5 border border-primary/10 flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                    <GraduationCap className="w-10 h-10 text-primary" />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h4 className="text-xl font-black text-foreground leading-tight">{edu.qualification}</h4>
-                      <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/10">
-                        {edu.educationLevel}
-                      </span>
-                    </div>
-                    <p className="text-base font-bold text-muted-foreground flex items-center gap-2">
-                      <BookOpen size={16} className="opacity-40" />
-                      {edu.specialization}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-border/50">
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Institution / College</p>
-                      <p className="text-sm font-black flex items-center gap-2">
-                        <Building2 size={14} className="text-primary/60" />
-                        {edu.institutionName}
-                      </p>
-                      <p className="text-[11px] font-bold text-muted-foreground ml-5">{edu.university}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Location</p>
-                      <p className="text-sm font-black flex items-center gap-2">
-                        <MapPin size={14} className="text-primary/60" />
-                        {edu.country}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Duration & Results</p>
-                      <p className="text-sm font-black flex items-center gap-2">
-                        <Calendar size={14} className="text-primary/60" />
-                        {formatDate(edu.startDate)} — {formatDate(edu.endDate)}
-                      </p>
-                      <div className="flex gap-4 ml-5 mt-1">
-                        <div>
-                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Grade</p>
-                          <p className="text-[11px] font-bold">{edu.grade}</p>
-                        </div>
-                        {edu.percentageCgpa && (
-                          <div>
-                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Percentage/CGPA</p>
-                            <p className="text-[11px] font-bold">{edu.percentageCgpa}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {edu.certificateName && (
-                  <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-2xl border border-border group/doc cursor-pointer hover:bg-secondary/50 transition-colors mt-2">
-                    <div className="w-12 h-12 rounded-xl bg-background flex items-center justify-center shadow-sm group-hover/doc:scale-110 transition-transform">
-                      <FileText size={20} className="text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5 opacity-60">Marksheet / Certificate</p>
-                      <p className="text-xs font-black truncate">{edu.certificateName}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <button className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-all" title="View Document">
-                        <Eye size={16} />
-                      </button>
-                      <button className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-all" title="Download">
-                        <Download size={16} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ConfirmationDialog
+        open={deleteIndex !== null}
+        onOpenChange={(o) => !o && setDeleteIndex(null)}
+        title="Remove education entry?"
+        description="This qualification row will be removed. Save the section to persist."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

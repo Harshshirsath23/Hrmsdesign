@@ -1,3 +1,125 @@
+export interface EducationEntry {
+  qualification: string;
+  specialization: string;
+  institutionName: string;
+  university: string;
+  yearOfPassing: string;
+  percentageCgpa: string;
+  grade: string;
+}
+
+export interface WorkExperienceEntry {
+  id: string;
+  companyName: string;
+  jobTitle: string;
+  employmentType: string;
+  department: string;
+  responsibilities: string;
+  technologiesUsed: string;
+  location: string;
+  experienceLetterFileName?: string;
+  reasonForLeaving: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface NomineeEntry {
+  id: string;
+  nomineeName: string;
+  relationship: string;
+  dateOfBirth: string;
+  contactNumber: string;
+  address: string;
+  sharePercentage: string;
+  idProofFileName?: string;
+}
+
+export interface InsuranceEntry {
+  id: string;
+  insuranceProvider: string;
+  policyNumber: string;
+  coverageType: string;
+  coverageAmount: string;
+  validTill: string;
+  dependentsCovered: string;
+  documentFileName?: string;
+}
+
+export interface AssetEntry {
+  id: string;
+  assetName: string;
+  assetId: string;
+  assetCategory: string;
+  serialNumber: string;
+  assignedDate: string;
+  returnDate?: string;
+  assetCondition: string;
+  status: string;
+  remarks?: string;
+}
+
+export interface PfDetails {
+  pfNumber: string;
+  pfType: string;
+  monthlyContribution: string;
+  employeeShare: string;
+  employerShare: string;
+  status: string;
+}
+
+export interface EsiDetails {
+  esiNumber: string;
+  esiType: string;
+  employeeContribution: string;
+  employerContribution: string;
+  dispensary: string;
+  status: string;
+}
+
+export interface AccessCardEntry {
+  id: string;
+  cardNumber: string;
+  fromDate: string;
+  toDate: string;
+}
+
+export const EMPLOYEE_DOCUMENT_KEYS = [
+  "panCard",
+  "aadhaarCard",
+  "resume",
+  "offerLetter",
+  "joiningDocuments",
+  "educationalCertificates",
+  "salarySlips",
+  "experienceLetters",
+  "passport",
+  "visa",
+  "taxDocuments",
+  "insuranceDocuments",
+  "relievingLetter",
+  "appraisalLetters",
+  "incrementLetters",
+] as const;
+
+export type EmployeeDocumentKey = (typeof EMPLOYEE_DOCUMENT_KEYS)[number];
+
+export interface EmployeeDocumentMeta {
+  fileName?: string;
+  dataUrl?: string;
+  uploadedAt?: string;
+  sizeBytes?: number;
+}
+
+export interface PositionHistoryEntry {
+  id: string;
+  title: string;
+  department: string;
+  from: string;
+  to: string;
+  reportingTo: string;
+  isCurrentPosition?: boolean;
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -93,14 +215,7 @@ export interface Employee {
     isNominee?: boolean;
   }[];
 
-  // Nominees (if separate from family)
-  nominees?: {
-    name: string;
-    relationship: string;
-    dob: string;
-    sharePercentage: string;
-    phone: string;
-  }[];
+  nominees?: NomineeEntry[];
 
   // Passport & Visa
   passportNumber: string;
@@ -119,23 +234,15 @@ export interface Employee {
   visaIssueDate?: string;
   visaStatus?: string;
 
-  // Position History
-  positionHistory: {
-    title: string;
-    department: string;
-    from: string;
-    to: string;
-    reportingTo: string;
-  }[];
+  positionHistory: PositionHistoryEntry[];
 
-  // Previous Employment
-  previousEmployment: {
-    company: string;
-    designation: string;
-    from: string;
-    to: string;
-    reasonForLeaving: string;
-  }[];
+  /** Extended PF row for admin editing (separate from salary `pf` number) */
+  pfDetails?: PfDetails;
+  esiDetails?: EsiDetails;
+  accessCards?: AccessCardEntry[];
+  employeeDocuments?: Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>;
+
+  workExperience: WorkExperienceEntry[];
 
   // Salary
   basicSalary: number;
@@ -162,33 +269,9 @@ export interface Employee {
   referredBy?: string;
   reportingTo?: string;
 
-  // Education Details
-  education?: {
-    qualification: string;
-    specialization: string;
-    institutionName: string;
-    university: string;
-    startDate: string;
-    endDate: string;
-    grade: string;
-    percentageCgpa?: string;
-    educationLevel: string;
-    modeOfStudy: string;
-    country: string;
-    certificateUrl?: string;
-    certificateName?: string;
-  }[];
+  education?: EducationEntry[];
 
-  // Insurance
-  insurance?: {
-    policyType: string;
-    policyNumber: string;
-    provider: string;
-    coverageAmount: string;
-    startDate: string;
-    endDate: string;
-    nomineeName: string;
-  }[];
+  insurance?: InsuranceEntry[];
 
   // Languages
   languages?: {
@@ -199,16 +282,7 @@ export interface Employee {
     canSpeak: boolean;
   }[];
 
-  // Assets
-  assets?: {
-    name: string;
-    code: string;
-    type: string;
-    assignedDate: string;
-    returnDate?: string;
-    condition: string;
-    remarks?: string;
-  }[];
+  assets?: AssetEntry[];
 
   // Medical Information
   medicalInfo?: {
@@ -241,7 +315,7 @@ export interface Employee {
   };
 }
 
-export const employees: Employee[] = [
+const _legacyEmployees: Record<string, unknown>[] = [
   {
     id: "0",
     name: "Vikram Nair",
@@ -442,7 +516,43 @@ export const employees: Employee[] = [
       completedOn: "2021-04-10",
       agencyName: "TrustVerify Inc.",
       remarks: "All documents and previous employment verified successfully."
-    }
+    },
+    languages: [
+      { language: "English", proficiency: "Advanced", canRead: true, canWrite: true, canSpeak: true },
+      { language: "Hindi", proficiency: "Native", canRead: true, canWrite: true, canSpeak: true },
+    ],
+    nominees: [
+      {
+        name: "Priya Sharma",
+        relationship: "Spouse",
+        dob: "1994-03-10",
+        sharePercentage: "100",
+        phone: "+91 98765 00001",
+        address: "42, Koramangala, Bangalore",
+      },
+    ],
+    insurance: [
+      {
+        policyType: "Health",
+        policyNumber: "POL-H-99231",
+        provider: "Star Health",
+        coverageAmount: "₹ 10,00,000",
+        startDate: "2023-04-01",
+        endDate: "2026-03-31",
+        nomineeName: "Priya Sharma",
+      },
+    ],
+    assets: [
+      {
+        name: "MacBook Pro 16",
+        code: "AST-LAP-001",
+        type: "Laptop",
+        assignedDate: "2021-03-20",
+        condition: "Good",
+        status: "Assigned",
+        remarks: "Company issued",
+      },
+    ],
   },
   {
     id: "2",
@@ -940,6 +1050,222 @@ export const employees: Employee[] = [
     netSalary: 70040,
   },
 ];
+
+function yearFromDate(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : String(d.getFullYear());
+}
+
+/** Normalizes persisted or legacy seed rows into the current Employee shape. */
+export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee {
+  const e = { ...raw } as Record<string, unknown> & { id: string };
+  const prev = (e.previousEmployment ?? e.workExperience ?? []) as Record<string, unknown>[];
+  const workExperience: WorkExperienceEntry[] = prev.map((p, i) => {
+    if (p.companyName != null) {
+      return {
+        id: String(p.id ?? `we-${e.id}-${i}`),
+        companyName: String(p.companyName ?? ""),
+        jobTitle: String(p.jobTitle ?? ""),
+        employmentType: String(p.employmentType ?? ""),
+        department: String(p.department ?? ""),
+        responsibilities: String(p.responsibilities ?? ""),
+        technologiesUsed: String(p.technologiesUsed ?? ""),
+        location: String(p.location ?? ""),
+        experienceLetterFileName: p.experienceLetterFileName as string | undefined,
+        reasonForLeaving: String(p.reasonForLeaving ?? ""),
+        startDate: String(p.startDate ?? ""),
+        endDate: String(p.endDate ?? ""),
+      };
+    }
+    return {
+      id: String(p.id ?? `we-${e.id}-${i}`),
+      companyName: String(p.company ?? ""),
+      jobTitle: String(p.designation ?? ""),
+      employmentType: String(p.employmentType ?? ""),
+      department: String(p.department ?? ""),
+      responsibilities: String(p.responsibilities ?? ""),
+      technologiesUsed: String(p.technologiesUsed ?? ""),
+      location: String(p.location ?? ""),
+      experienceLetterFileName: p.experienceLetterFileName as string | undefined,
+      reasonForLeaving: String(p.reasonForLeaving ?? ""),
+      startDate: String(p.startDate ?? p.from ?? ""),
+      endDate: String(p.endDate ?? p.to ?? ""),
+    };
+  });
+
+  const eduRaw = (e.education ?? []) as Record<string, unknown>[];
+  const education: EducationEntry[] | undefined = eduRaw.length
+    ? eduRaw.map((ed) => {
+        const rawGrade = String(ed.grade ?? "");
+        const hasScoreInGrade = /%|CGPA|GPA/i.test(rawGrade);
+        const percentageCgpa = String(ed.percentageCgpa ?? (hasScoreInGrade ? rawGrade : ""));
+        const grade = hasScoreInGrade ? "" : rawGrade;
+        return {
+          qualification: String(ed.qualification ?? ""),
+          specialization: String(ed.specialization ?? ""),
+          institutionName: String(ed.institutionName ?? ""),
+          university: String(ed.university ?? ""),
+          yearOfPassing: String(ed.yearOfPassing ?? yearFromDate(ed.endDate as string | undefined)),
+          percentageCgpa,
+          grade,
+        };
+      })
+    : undefined;
+
+  const nomRaw = (e.nominees ?? []) as Record<string, unknown>[];
+  const nominees: NomineeEntry[] | undefined = nomRaw.length
+    ? nomRaw.map((n, i) => ({
+        id: String(n.id ?? `nom-${e.id}-${i}`),
+        nomineeName: String(n.nomineeName ?? n.name ?? ""),
+        relationship: String(n.relationship ?? ""),
+        dateOfBirth: String(n.dateOfBirth ?? n.dob ?? ""),
+        contactNumber: String(n.contactNumber ?? n.phone ?? ""),
+        address: String(n.address ?? ""),
+        sharePercentage: String(n.sharePercentage ?? ""),
+        idProofFileName: n.idProofFileName as string | undefined,
+      }))
+    : undefined;
+
+  const insRaw = (e.insurance ?? []) as Record<string, unknown>[];
+  const insurance: InsuranceEntry[] | undefined = insRaw.length
+    ? insRaw.map((n, i) => {
+        if (n.insuranceProvider != null) {
+          return {
+            id: String(n.id ?? `ins-${e.id}-${i}`),
+            insuranceProvider: String(n.insuranceProvider ?? ""),
+            policyNumber: String(n.policyNumber ?? ""),
+            coverageType: String(n.coverageType ?? ""),
+            coverageAmount: String(n.coverageAmount ?? ""),
+            validTill: String(n.validTill ?? ""),
+            dependentsCovered: String(n.dependentsCovered ?? ""),
+            documentFileName: n.documentFileName as string | undefined,
+          };
+        }
+        return {
+          id: String(n.id ?? `ins-${e.id}-${i}`),
+          insuranceProvider: String(n.provider ?? ""),
+          policyNumber: String(n.policyNumber ?? ""),
+          coverageType: String(n.policyType ?? ""),
+          coverageAmount: String(n.coverageAmount ?? ""),
+          validTill: String(n.validTill ?? n.endDate ?? ""),
+          dependentsCovered: String(n.dependentsCovered ?? n.nomineeName ?? ""),
+          documentFileName: n.documentFileName as string | undefined,
+        };
+      })
+    : undefined;
+
+  const astRaw = (e.assets ?? []) as Record<string, unknown>[];
+  const assets: AssetEntry[] | undefined = astRaw.length
+    ? astRaw.map((a, i) => {
+        if (a.assetName != null) {
+          return {
+            id: String(a.id ?? `ast-${e.id}-${i}`),
+            assetName: String(a.assetName ?? ""),
+            assetId: String(a.assetId ?? ""),
+            assetCategory: String(a.assetCategory ?? ""),
+            serialNumber: String(a.serialNumber ?? ""),
+            assignedDate: String(a.assignedDate ?? ""),
+            returnDate: a.returnDate as string | undefined,
+            assetCondition: String(a.assetCondition ?? ""),
+            status: String(a.status ?? ""),
+            remarks: a.remarks as string | undefined,
+          };
+        }
+        return {
+          id: String(a.id ?? `ast-${e.id}-${i}`),
+          assetName: String(a.name ?? ""),
+          assetId: String(a.code ?? ""),
+          assetCategory: String(a.type ?? ""),
+          serialNumber: String(a.serialNumber ?? ""),
+          assignedDate: String(a.assignedDate ?? ""),
+          returnDate: a.returnDate as string | undefined,
+          assetCondition: String(a.condition ?? ""),
+          status: String(a.status ?? "Assigned"),
+          remarks: a.remarks as string | undefined,
+        };
+      })
+    : undefined;
+
+  const posRaw = (e.positionHistory ?? []) as Record<string, unknown>[];
+  const positionHistory: PositionHistoryEntry[] = posRaw.map((p, i) => ({
+    id: String(p.id ?? `pos-${e.id}-${i}`),
+    title: String(p.title ?? ""),
+    department: String(p.department ?? ""),
+    from: String(p.from ?? ""),
+    to: String(p.to ?? ""),
+    reportingTo: String(p.reportingTo ?? ""),
+    isCurrentPosition: Boolean(p.isCurrentPosition ?? String(p.to) === "Present"),
+  }));
+
+  const pfNum = String(e.pfNumber ?? "");
+  const pfAmt = typeof e.pf === "number" ? e.pf : 0;
+  const pfDetails: PfDetails =
+    (e.pfDetails as PfDetails) ||
+    ({
+      pfNumber: pfNum,
+      pfType: "EPF (Employee Provident Fund)",
+      monthlyContribution: pfAmt ? `₹${pfAmt.toLocaleString("en-IN")}` : "",
+      employeeShare: "12% of Basic",
+      employerShare: "12% of Basic",
+      status: "Active",
+    } as PfDetails);
+
+  const esiNum = String(e.esiNumber ?? "");
+  const esiDetails: EsiDetails =
+    (e.esiDetails as EsiDetails) ||
+    ({
+      esiNumber: esiNum,
+      esiType: "Employee State Insurance",
+      employeeContribution: "0.75%",
+      employerContribution: "3.25%",
+      dispensary: "ESI Hospital",
+      status: "Active",
+    } as EsiDetails);
+
+  const acRaw = (e.accessCards ?? []) as Record<string, unknown>[];
+  const accessCards: AccessCardEntry[] = acRaw.map((c, i) => ({
+    id: String(c.id ?? `acc-${e.id}-${i}`),
+    cardNumber: String(c.cardNumber ?? ""),
+    fromDate: String(c.fromDate ?? ""),
+    toDate: String(c.toDate ?? ""),
+  }));
+
+  const employeeDocuments =
+    (e.employeeDocuments as Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>) || {};
+
+  const { previousEmployment: _pe, ...rest } = e as Record<string, unknown> & {
+    previousEmployment?: unknown;
+  };
+
+  return {
+    ...(rest as Omit<
+      Employee,
+      | "workExperience"
+      | "education"
+      | "nominees"
+      | "insurance"
+      | "assets"
+      | "positionHistory"
+      | "pfDetails"
+      | "esiDetails"
+      | "accessCards"
+      | "employeeDocuments"
+    >),
+    workExperience,
+    education,
+    nominees,
+    insurance,
+    assets,
+    positionHistory,
+    pfDetails,
+    esiDetails,
+    accessCards,
+    employeeDocuments,
+  } as Employee;
+}
+
+export const employees: Employee[] = _legacyEmployees.map(normalizeLegacyEmployee);
 
 export const departments = [
   "All Departments",

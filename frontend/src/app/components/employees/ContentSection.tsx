@@ -7,16 +7,13 @@ import { BankDetails } from "./sections/BankDetails";
 import { FamilyDetails } from "./sections/FamilyDetails";
 import { PassportVisa } from "./sections/PassportVisa";
 import { PositionHistory } from "./sections/PositionHistory";
-import { PreviousEmployment } from "./sections/PreviousEmployment";
+import { WorkExperience } from "./sections/WorkExperience";
 import { SalarySummary } from "./sections/SalarySummary";
 import { PlaceholderSection } from "./sections/PlaceholderSection";
-import {
-  LogOut,
-  Key,
-  Award,
-  FileText,
-  FilePen,
-} from "lucide-react";
+import { PendingRequestsPanel } from "../admin/PendingRequestsPanel";
+import { AccessCardDetails } from "./sections/AccessCardDetails";
+import { EmployeeDocumentsSection } from "./sections/EmployeeDocumentsSection";
+import { LogOut, Key } from "lucide-react";
 
 interface Props {
   employee: Employee;
@@ -35,8 +32,8 @@ export function ContentSection({ employee, activeSection }: Props) {
       return <PassportVisa employee={employee} />;
     case "position":
       return <PositionHistory employee={employee} />;
-    case "previous":
-      return <PreviousEmployment employee={employee} />;
+    case "work":
+      return <WorkExperience employee={employee} />;
     case "education":
       return <EducationDetails employee={employee} />;
     case "background":
@@ -50,39 +47,13 @@ export function ContentSection({ employee, activeSection }: Props) {
         />
       );
     case "access":
-      return (
-        <PlaceholderSection
-          title="Access Card Details"
-          description="Manage building access cards and security clearance"
-          icon={Key}
-        />
-      );
-    case "nomination":
-      return (
-        <PlaceholderSection
-          title="Nomination Details"
-          description="PF and gratuity nomination information"
-          icon={Award}
-        />
-      );
+      return <AccessCardDetails employee={employee} />;
     case "documents":
-      return (
-        <PlaceholderSection
-          title="Employee Documents"
-          description="ID proofs, certificates and other employee documents"
-          icon={FileText}
-        />
-      );
-    case "contracts":
-      return (
-        <PlaceholderSection
-          title="Employee Contracts"
-          description="Employment agreements, NDAs and offer letters"
-          icon={FilePen}
-        />
-      );
+      return <EmployeeDocumentsSection employee={employee} />;
     case "salary":
       return <SalarySummary employee={employee} />;
+    case "requests":
+      return <PendingRequestsPanel employeeId={employee.id} />;
     default:
       return <EmployeeProfile employee={employee} />;
   }

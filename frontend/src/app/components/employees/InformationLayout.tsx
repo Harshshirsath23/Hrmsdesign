@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { employees } from "./mockData";
 import { SidebarMenu, SidebarSection } from "./SidebarMenu";
 import { ContentSection } from "./ContentSection";
 import { useEmployee } from "../../context/EmployeeContext";
+
+import { useSelector } from "react-redux";
+import { RootState } from "../../../store";
 
 export function InformationLayout() {
   const { id } = useParams<{ id: string }>();
@@ -12,23 +14,23 @@ export function InformationLayout() {
   const { clearSelection } = useEmployee();
   const [activeSection, setActiveSection] = useState<SidebarSection>("profile");
 
+  const employees = useSelector((state: RootState) => state.admin.employees);
   const employee = employees.find((e) => e.id === id) || employees[0];
 
   const sectionLabels: Record<SidebarSection, string> = {
     profile: "Employee Profile",
-    bank: "Bank / PF / ESI",
-    family: "Family Details",
-    passport: "Passport & Visa",
-    position: "Position History",
-    previous: "Previous Employment",
-    separation: "Separation",
-    access: "Access Card Details",
-    nomination: "Nomination Details",
-    documents: "Employee Documents",
-    contracts: "Employee Contracts",
-    salary: "Employee Salary",
     education: "Education Details",
+    family: "Family Details",
+    work: "Work Experience",
+    position: "Position History",
+    bank: "Bank / PF / ESI",
+    passport: "Passport & Visa",
     background: "Background Check",
+    access: "Access Card Details",
+    separation: "Separation",
+    documents: "Employee Documents",
+    salary: "Employee Salary",
+    requests: "Profile Update Requests",
   };
 
   const statusStyle: Record<string, string> = {

@@ -1,3 +1,5 @@
+import type { EmployeeDocumentKey, EmployeeDocumentMeta } from "../../components/employees/mockData";
+
 export type RequestStatus = "pending" | "approved" | "rejected";
 
 export type AddressType = "current" | "permanent" | "temporary";
@@ -51,8 +53,11 @@ export interface NomineeDetail {
   id: string;
   name: string;
   relation: string;
+  dateOfBirth?: string;
   sharePercentage: string;
   phone: string;
+  address?: string;
+  idProofFileName?: string;
 }
 
 export interface InsuranceDetail {
@@ -93,6 +98,9 @@ export interface EmployeeProfile {
     personalMobile: string;
     personalEmail: string;
     workMobile: string;
+    officialEmail?: string;
+    alternateMobileNumber?: string;
+    extensionNumber?: string;
     emergencyContactName: string;
     emergencyContactNumber: string;
   };
@@ -127,6 +135,8 @@ export interface EmployeeProfile {
     reportingManager: string;
     functionalManager: string;
     hrPartner: string;
+    /** Mirrors admin `status` (Active / Inactive / On Leave) */
+    employeeStatus?: string;
   };
   addresses: Record<AddressType, Address>;
   familyDetails: FamilyMember[];
@@ -142,6 +152,21 @@ export interface EmployeeProfile {
   insuranceDetails: InsuranceDetail;
   languageDetails: LanguageDetail[];
   assets: AssetDetail[];
+  /** Data URL or remote URL for profile photo (synced with admin avatar) */
+  profilePhotoDataUrl?: string;
+  /** Synced with admin `employeeDocuments` */
+  employeeDocuments?: Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>;
+  emergencyAndMedical?: {
+    emergencyContactName: string;
+    emergencyContactNumber: string;
+    relationship: string;
+    medicalConditions: string;
+    allergies: string;
+    bloodGroup: string;
+    doctorName: string;
+    insuranceProvider: string;
+    insurancePolicyNumber: string;
+  };
 }
 
 export type SectionKey =
@@ -155,7 +180,13 @@ export type SectionKey =
   | "nomineeDetails"
   | "insuranceDetails"
   | "languageDetails"
-  | "assets";
+  | "assets"
+  | "passportAndVisa"
+  | "previousEmployment"
+  | "documentsRepository"
+  | "skillsAndCertifications"
+  | "emergencyAndMedical"
+  | "socialProfiles";
 
 export interface ProfileChangeRequest {
   id: string;

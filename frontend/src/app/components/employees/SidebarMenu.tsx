@@ -7,29 +7,27 @@ import {
   Building2,
   LogOut,
   Key,
-  Award,
   FileText,
-  FilePen,
   DollarSign,
   GraduationCap,
   ShieldCheck,
+  ClipboardList,
 } from "lucide-react";
 
 export type SidebarSection =
   | "profile"
-  | "bank"
-  | "family"
-  | "passport"
-  | "position"
-  | "previous"
   | "education"
+  | "family"
+  | "work"
+  | "position"
+  | "bank"
+  | "passport"
   | "background"
-  | "separation"
   | "access"
-  | "nomination"
+  | "separation"
   | "documents"
-  | "contracts"
-  | "salary";
+  | "salary"
+  | "requests";
 
 interface MenuItem {
   id: SidebarSection;
@@ -38,20 +36,19 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { id: "profile",    label: "Employee Profile",    icon: User       },
-  { id: "bank",       label: "Bank / PF / ESI",     icon: CreditCard },
-  { id: "family",     label: "Family Details",      icon: Users      },
-  { id: "passport",   label: "Passport & Visa",     icon: Globe      },
-  { id: "position",   label: "Position History",    icon: Briefcase  },
-  { id: "previous",   label: "Previous Employment", icon: Building2  },
-  { id: "education",  label: "Education Details",   icon: GraduationCap },
-  { id: "background", label: "Background Check",    icon: ShieldCheck },
-  { id: "separation", label: "Separation",          icon: LogOut     },
-  { id: "access",     label: "Access Card Details", icon: Key        },
-  { id: "nomination", label: "Nomination Details",  icon: Award      },
-  { id: "documents",  label: "Employee Documents",  icon: FileText   },
-  { id: "contracts",  label: "Employee Contracts",  icon: FilePen    },
-  { id: "salary",     label: "Employee Salary",     icon: DollarSign },
+  { id: "profile", label: "Employee Profile", icon: User },
+  { id: "education", label: "Education Details", icon: GraduationCap },
+  { id: "family", label: "Family Details", icon: Users },
+  { id: "work", label: "Work Experience", icon: Building2 },
+  { id: "position", label: "Position History", icon: Briefcase },
+  { id: "bank", label: "Bank / PF / ESI", icon: CreditCard },
+  { id: "passport", label: "Passport & Visa", icon: Globe },
+  { id: "background", label: "Background Check", icon: ShieldCheck },
+  { id: "access", label: "Access Card Details", icon: Key },
+  { id: "separation", label: "Separation", icon: LogOut },
+  { id: "documents", label: "Employee Documents", icon: FileText },
+  { id: "salary", label: "Employee Salary", icon: DollarSign },
+  { id: "requests", label: "Profile Update Requests", icon: ClipboardList },
 ];
 
 interface SidebarMenuProps {
@@ -76,9 +73,10 @@ export function SidebarMenu({ activeSection, onSectionChange }: SidebarMenuProps
                 onClick={() => onSectionChange(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg relative
                   transition-all duration-150 text-sm font-medium
-                  ${isActive
-                    ? "bg-secondary text-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  ${
+                    isActive
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
               >
                 {isActive && (
