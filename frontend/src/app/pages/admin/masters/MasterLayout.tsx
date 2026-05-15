@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { Settings2 } from "lucide-react";
-import { MASTER_CATEGORIES, getMasterConfig } from "../../../modules/masters/config";
+import { MASTER_CATEGORIES, resolveMasterSection } from "../../../modules/masters/config";
 import { MasterTable } from "./MasterTable";
 import { cn } from "../../../components/ui/utils";
 
@@ -9,16 +9,10 @@ export function MasterLayout() {
   const navigate = useNavigate();
   const { category = "", masterName = "" } = useParams();
 
-  const currentCategory = MASTER_CATEGORIES.find((c) => c.key === category);
+  const resolved = resolveMasterSection(category, masterName);
+  const activeCategoryKey = resolved?.categoryKey ?? category;
   const fallbackCategory = MASTER_CATEGORIES[0];
   const fallbackMaster = fallbackCategory?.masters[0];
-
-  if (!currentCategory || !getMasterConfig(category, masterName)) {
-    if (!fallbackCategory || !fallbackMaster) return <div className="p-6">No masters configured.</div>;
-    return <Navigate to={`/superadmin/masters/${fallbackCategory.key}/${fallbackMaster.key}`} replace />;
-  }
-
-  const selectedConfig = getMasterConfig(category, masterName)!;
 
   const categoryButtons = useMemo(
     () =>
@@ -28,7 +22,7 @@ export function MasterLayout() {
           type="button"
           className={cn(
             "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-            c.key === category
+            c.key === activeCategoryKey
               ? "border-border bg-secondary text-foreground"
               : "border-transparent text-muted-foreground hover:border-border hover:bg-secondary/60 hover:text-foreground",
           )}
@@ -37,8 +31,25 @@ export function MasterLayout() {
           {c.label}
         </button>
       )),
-    [category, navigate],
+    [activeCategoryKey, navigate],
   );
+
+  if (!resolved) {
+    if (!fallbackCategory || !fallbackMaster) return <div className="p-6">No masters configured.</div>;
+    return <Navigate to={`/superadmin/masters/${fallbackCategory.key}/${fallbackMaster.key}`} replace />;
+  }
+
+  if (resolved.categoryKey !== category || resolved.masterKey !== masterName) {
+    return <Navigate to={`/superadmin/masters/${resolved.categoryKey}/${resolved.masterKey}`} replace />;
+  }
+
+  const currentCategory = MASTER_CATEGORIES.find((c) => c.key === resolved.categoryKey);
+  const selectedConfig = currentCategory?.masters.find((m) => m.key === resolved.masterKey);
+
+  if (!currentCategory || !selectedConfig) {
+    if (!fallbackCategory || !fallbackMaster) return <div className="p-6">No masters configured.</div>;
+    return <Navigate to={`/superadmin/masters/${fallbackCategory.key}/${fallbackMaster.key}`} replace />;
+  }
 
   return (
     <div className="p-6 space-y-4">
@@ -63,7 +74,7 @@ export function MasterLayout() {
           </p>
           <nav className="space-y-1">
             {currentCategory.masters.map((m) => {
-              const active = m.key === masterName;
+              const active = m.key === resolved.masterKey;
               return (
                 <button
                   key={m.key}
@@ -88,4 +99,3 @@ export function MasterLayout() {
     </div>
   );
 }
-

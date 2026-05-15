@@ -12,11 +12,19 @@ export interface MasterFieldConfig {
   relationValueKey?: string;
 }
 
+export interface MasterGroupConfig {
+  key: string;
+  label: string;
+  masters: MasterConfig[];
+}
+
 export interface MasterConfig {
   key: string;
   apiName: string;
   label: string;
   category: string;
+  categoryKey?: string;
+  categoryLabel?: string;
   constant?: boolean;
   companyScoped?: boolean;
   parentFieldKey?: string;
@@ -27,7 +35,15 @@ export interface MasterConfig {
 export interface MasterCategoryConfig {
   key: string;
   label: string;
+  categoryKey?: string;
+  categoryLabel?: string;
+  masterGroups?: MasterGroupConfig[];
   masters: MasterConfig[];
+}
+
+export interface MasterSectionRoute {
+  categoryKey: string;
+  masterKey: string;
 }
 
 export interface MasterRecord {
