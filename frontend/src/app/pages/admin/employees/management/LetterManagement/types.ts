@@ -38,6 +38,10 @@ export interface LetterBatch {
   publishDate: string;
   attachmentUrls: string[];
   selectedEmployeeIds: string[];
+  authorisedSignatory?: string;
+  purpose?: string;
+  generationMode?: "Single" | "Multiple";
+  employeeType?: "All Employees" | "Current Employees" | "Resigned Employees";
   status: LetterStatus;
   createdBy: string;
   createdAt: string;

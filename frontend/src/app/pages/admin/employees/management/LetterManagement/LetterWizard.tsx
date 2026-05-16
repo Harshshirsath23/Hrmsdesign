@@ -23,8 +23,11 @@ import {
   Check,
   AlertCircle,
   File,
-  Loader2
+  Loader2,
+  User
 } from "lucide-react";
+import { MasterSelect } from "../../../../../components/ui/MasterSelect";
+import { SearchableSelect } from "../../../../../components/ui/SearchableSelect";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "../../../../../components/ui/button";
 import { Input } from "../../../../../components/ui/input";
@@ -69,7 +72,11 @@ export function LetterWizard({ onCancel, onComplete, onSaveDraft, initialData, i
     selectedEmployeeIds: [],
     attachmentUrls: [],
     status: "Draft",
-    remarks: ""
+    remarks: "",
+    authorisedSignatory: "",
+    purpose: "",
+    generationMode: "Multiple",
+    employeeType: "All Employees"
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -119,10 +126,17 @@ export function LetterWizard({ onCancel, onComplete, onSaveDraft, initialData, i
       const matchesDesig = filters.designation === "All" || emp.designation === filters.designation;
       const matchesLoc = filters.location === "All" || emp.location === filters.location;
       const matchesStatus = filters.status === "All" || emp.status === filters.status;
+
+      let matchesType = true;
+      if (formData.employeeType === "Current Employees") {
+        matchesType = emp.status === "Active" || emp.status === "On Leave";
+      } else if (formData.employeeType === "Resigned Employees") {
+        matchesType = emp.status === "Inactive";
+      }
       
-      return matchesSearch && matchesDept && matchesDesig && matchesLoc && matchesStatus;
+      return matchesSearch && matchesDept && matchesDesig && matchesLoc && matchesStatus && matchesType;
     });
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, formData.employeeType]);
 
   // Set default preview employee when entering step 3
   useMemo(() => {
@@ -419,148 +433,258 @@ export function LetterWizard({ onCancel, onComplete, onSaveDraft, initialData, i
                 initial={{ opacity: 0, x: 20 }} 
                 animate={{ opacity: 1, x: 0 }} 
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
+                className="space-y-8"
               >
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <h3 className="text-lg font-bold text-foreground">Select Employees</h3>
-                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        placeholder="Search name, ID, department..." 
-                        className="pl-10 h-10 bg-card rounded-xl" 
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setIsLoading(true);
-                          setTimeout(() => setIsLoading(false), 300);
-                        }}
-                      />
-                    </div>
-                    
-                    <Select value={filters.department} onValueChange={(v) => setFilters(f => ({ ...f, department: v }))}>
-                      <SelectTrigger className="h-10 bg-card rounded-xl w-32 text-[10px] font-bold">
-                        <SelectValue placeholder="Dept" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All">All Depts</SelectItem>
-                        {Array.from(new Set(employees.map(e => e.department))).map(d => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-secondary/10 p-6 rounded-[2rem] border border-border/50">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Authorised Signatory *</label>
+                    <MasterSelect 
+                      masterName="AuthorizedSignatory" 
+                      value={formData.authorisedSignatory || ""} 
+                      onChange={(v) => setFormData(prev => ({ ...prev, authorisedSignatory: v }))}
+                      placeholder="Select Signatory"
+                    />
+                  </div>
 
-                    <Select value={filters.location} onValueChange={(v) => setFilters(f => ({ ...f, location: v }))}>
-                      <SelectTrigger className="h-10 bg-card rounded-xl w-32 text-[10px] font-bold">
-                        <SelectValue placeholder="Location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All">All Locations</SelectItem>
-                        {Array.from(new Set(employees.map(e => e.location))).map(l => (
-                          <SelectItem key={l} value={l}>{l}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-10 w-10 rounded-xl"
-                      onClick={() => {
-                        setSearchQuery("");
-                        setFilters({ department: "All", designation: "All", location: "All", status: "All", employeeType: "All" });
+                  <div className="space-y-2 md:col-span-1">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Generate Letter *</label>
+                    <Select 
+                      value={formData.generationMode} 
+                      onValueChange={(v) => {
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          generationMode: v as "Single" | "Multiple",
+                          selectedEmployeeIds: [] // Reset selection on mode change
+                        }));
                       }}
                     >
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
+                      <SelectTrigger className="h-11 bg-card rounded-xl">
+                        <SelectValue placeholder="Select Mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Single">Single</SelectItem>
+                        <SelectItem value="Multiple">Multiple</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Employee Type *</label>
+                    <Select 
+                      value={formData.employeeType} 
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, employeeType: v as any }))}
+                    >
+                      <SelectTrigger className="h-11 bg-card rounded-xl">
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="All Employees">All Employees</SelectItem>
+                        <SelectItem value="Current Employees">Current Employees</SelectItem>
+                        <SelectItem value="Resigned Employees">Resigned Employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Purpose *</label>
+                    <Textarea 
+                      placeholder="Enter purpose/remarks..." 
+                      value={formData.purpose}
+                      onChange={(e) => setFormData(prev => ({ ...prev, purpose: e.target.value }))}
+                      className="h-11 min-h-[44px] bg-card rounded-xl py-2 px-3 resize-none text-xs font-medium"
+                    />
                   </div>
                 </div>
 
-                <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm">
-                  <Table>
-                    <TableHeader className="bg-muted/30">
-                      <TableRow className="hover:bg-transparent border-border">
-                        <TableHead className="w-[50px]">
-                          <Checkbox 
-                            checked={formData.selectedEmployeeIds?.length === filteredEmployees.length && filteredEmployees.length > 0}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                const newIds = Array.from(new Set([...(formData.selectedEmployeeIds || []), ...filteredEmployees.map(e => e.id)]));
-                                setFormData(prev => ({ ...prev, selectedEmployeeIds: newIds }));
-                              } else {
-                                const remainingIds = (formData.selectedEmployeeIds || []).filter(id => !filteredEmployees.find(fe => fe.id === id));
-                                setFormData(prev => ({ ...prev, selectedEmployeeIds: remainingIds }));
-                              }
-                            }}
-                          />
-                        </TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Employee</TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Department</TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Designation</TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Location</TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-64">
-                            <div className="flex flex-col items-center justify-center space-y-4">
-                              <RefreshCw className="w-8 h-8 text-primary animate-spin" />
-                              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Searching Employees...</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredEmployees.length > 0 ? (
-                        filteredEmployees.map((emp) => (
-                          <TableRow key={emp.id} className="border-border/50 group hover:bg-secondary/30 transition-colors">
-                            <TableCell>
-                              <Checkbox 
-                                checked={formData.selectedEmployeeIds?.includes(emp.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) setFormData(prev => ({ ...prev, selectedEmployeeIds: [...(prev.selectedEmployeeIds || []), emp.id] }));
-                                  else setFormData(prev => ({ ...prev, selectedEmployeeIds: (prev.selectedEmployeeIds || []).filter(id => id !== emp.id) }));
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shadow-sm", emp.avatarColor)}>
+                {formData.generationMode === "Single" ? (
+                  <div className="space-y-6">
+                    <div className="max-w-2xl mx-auto space-y-4">
+                      <div className="text-center space-y-2">
+                        <h4 className="text-lg font-bold text-foreground">Employee Search</h4>
+                        <p className="text-xs text-muted-foreground">Search by Name, ID, or Email to generate a single letter.</p>
+                      </div>
+                      <SearchableSelect 
+                        value={formData.selectedEmployeeIds?.[0] || ""} 
+                        onChange={(v) => setFormData(prev => ({ ...prev, selectedEmployeeIds: [v] }))}
+                        placeholder="Search employee..."
+                        options={filteredEmployees.map(emp => ({
+                          value: emp.id,
+                          label: `${emp.name} (${emp.employeeId}) - ${emp.email}`
+                        }))}
+                      />
+                      
+                      {formData.selectedEmployeeIds && formData.selectedEmployeeIds.length > 0 && (
+                        <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                          {(() => {
+                            const emp = employees.find(e => e.id === formData.selectedEmployeeIds?.[0]);
+                            return emp ? (
+                              <>
+                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold text-white shadow-lg", emp.avatarColor)}>
                                   {emp.initials}
                                 </div>
-                                <div>
-                                  <p className="text-sm font-bold text-foreground">{emp.name}</p>
-                                  <p className="text-[10px] font-medium text-muted-foreground font-mono uppercase tracking-tighter">{emp.employeeId}</p>
+                                <div className="flex-1">
+                                  <p className="text-sm font-black text-foreground">{emp.name}</p>
+                                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{emp.designation} • {emp.department}</p>
                                 </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-xs font-semibold text-muted-foreground">{emp.department}</TableCell>
-                            <TableCell className="text-xs font-semibold text-muted-foreground">{emp.designation}</TableCell>
-                            <TableCell className="text-xs font-semibold text-muted-foreground">{emp.location}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest rounded-md bg-emerald-500/5 text-emerald-500 border-emerald-500/10">
-                                {emp.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-32 text-center text-xs text-muted-foreground italic uppercase tracking-widest opacity-60">
-                            No employees found matching your criteria.
-                          </TableCell>
-                        </TableRow>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => setFormData(prev => ({ ...prev, selectedEmployeeIds: [] }))}
+                                  className="text-rose-500 hover:bg-rose-50 rounded-xl"
+                                >
+                                  <X size={18} />
+                                </Button>
+                              </>
+                            ) : null;
+                          })()}
+                        </div>
                       )}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl border border-border/50 text-xs font-bold text-muted-foreground">
-                  <p>{formData.selectedEmployeeIds?.length || 0} employees selected</p>
-                  <Button variant="ghost" size="sm" onClick={() => setFormData(prev => ({ ...prev, selectedEmployeeIds: [] }))} className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50">
-                    Clear Selection
-                  </Button>
-                </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                      <h3 className="text-lg font-bold text-foreground">Select Employees</h3>
+                      <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                        <div className="relative flex-1 md:w-64">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="Search name, ID, department..." 
+                            className="pl-10 h-10 bg-card rounded-xl" 
+                            value={searchQuery}
+                            onChange={(e) => {
+                              setSearchQuery(e.target.value);
+                              setIsLoading(true);
+                              setTimeout(() => setIsLoading(false), 300);
+                            }}
+                          />
+                        </div>
+                        
+                        <Select value={filters.department} onValueChange={(v) => setFilters(f => ({ ...f, department: v }))}>
+                          <SelectTrigger className="h-10 bg-card rounded-xl w-32 text-[10px] font-bold">
+                            <SelectValue placeholder="Dept" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="All">All Depts</SelectItem>
+                            {Array.from(new Set(employees.map(e => e.department))).map(d => (
+                              <SelectItem key={d} value={d}>{d}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={filters.location} onValueChange={(v) => setFilters(f => ({ ...f, location: v }))}>
+                          <SelectTrigger className="h-10 bg-card rounded-xl w-32 text-[10px] font-bold">
+                            <SelectValue placeholder="Location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="All">All Locations</SelectItem>
+                            {Array.from(new Set(employees.map(e => e.location))).map(l => (
+                              <SelectItem key={l} value={l}>{l}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-10 w-10 rounded-xl"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setFilters({ department: "All", designation: "All", location: "All", status: "All", employeeType: "All" });
+                          }}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm">
+                      <Table>
+                        <TableHeader className="bg-muted/30">
+                          <TableRow className="hover:bg-transparent border-border">
+                            <TableHead className="w-[50px]">
+                              <Checkbox 
+                                checked={formData.selectedEmployeeIds?.length === filteredEmployees.length && filteredEmployees.length > 0}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    const newIds = Array.from(new Set([...(formData.selectedEmployeeIds || []), ...filteredEmployees.map(e => e.id)]));
+                                    setFormData(prev => ({ ...prev, selectedEmployeeIds: newIds }));
+                                  } else {
+                                    const remainingIds = (formData.selectedEmployeeIds || []).filter(id => !filteredEmployees.find(fe => fe.id === id));
+                                    setFormData(prev => ({ ...prev, selectedEmployeeIds: remainingIds }));
+                                  }
+                                }}
+                              />
+                            </TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Employee</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Department</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Designation</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Location</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {isLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="h-64">
+                                <div className="flex flex-col items-center justify-center space-y-4">
+                                  <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Searching Employees...</p>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : filteredEmployees.length > 0 ? (
+                            filteredEmployees.map((emp) => (
+                              <TableRow key={emp.id} className="border-border/50 group hover:bg-secondary/30 transition-colors">
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={formData.selectedEmployeeIds?.includes(emp.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) setFormData(prev => ({ ...prev, selectedEmployeeIds: [...(prev.selectedEmployeeIds || []), emp.id] }));
+                                      else setFormData(prev => ({ ...prev, selectedEmployeeIds: (prev.selectedEmployeeIds || []).filter(id => id !== emp.id) }));
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shadow-sm", emp.avatarColor)}>
+                                      {emp.initials}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-bold text-foreground">{emp.name}</p>
+                                      <p className="text-[10px] font-medium text-muted-foreground font-mono uppercase tracking-tighter">{emp.employeeId}</p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs font-semibold text-muted-foreground">{emp.department}</TableCell>
+                                <TableCell className="text-xs font-semibold text-muted-foreground">{emp.designation}</TableCell>
+                                <TableCell className="text-xs font-semibold text-muted-foreground">{emp.location}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest rounded-md bg-emerald-500/5 text-emerald-500 border-emerald-500/10">
+                                    {emp.status}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={6} className="h-32 text-center text-xs text-muted-foreground italic uppercase tracking-widest opacity-60">
+                                No employees found matching your criteria.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl border border-border/50 text-xs font-bold text-muted-foreground">
+                      <p>{formData.selectedEmployeeIds?.length || 0} employees selected</p>
+                      <Button variant="ghost" size="sm" onClick={() => setFormData(prev => ({ ...prev, selectedEmployeeIds: [] }))} className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50">
+                        Clear Selection
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
 
