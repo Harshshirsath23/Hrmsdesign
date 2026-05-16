@@ -31,12 +31,14 @@ const EXPIRED_BADGE  = "bg-[#CED4DA] text-[#212529]";
 
 export function PassportVisa({ employee }: Props) {
   const [isEditing, setIsEditing] = useState(false);
+  const [visaEditing, setVisaEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
 
   useEffect(() => {
     setEditedData(employee);
     setIsEditing(false);
+    setVisaEditing(false);
   }, [employee]);
   const dispatch = useDispatch<AppDispatch>();
 
@@ -58,8 +60,18 @@ export function PassportVisa({ employee }: Props) {
   const passportExpiringSoon = isExpiringSoon(editedData.passportExpiry);
   const visaExpired          = editedData.visaExpiry ? isExpired(editedData.visaExpiry) : false;
 
+  const isPassportEditable = employee.editableSections?.includes("passport-details");
+  const isVisaEditable = employee.editableSections?.includes("visa-details");
+
+  const getStatusLabel = (editable: boolean) => {
+    if (employee.editRequestStatus === 'Pending') return { l: 'Pending Employee Update', c: 'bg-amber-500/10 text-amber-600 border-amber-200' };
+    if (employee.editRequestStatus === 'Updated') return { l: 'Updated by Employee', c: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' };
+    if (editable) return { l: 'Editable by Employee', c: 'bg-indigo-500/10 text-indigo-600 border-indigo-200' };
+    return { l: 'Locked by Admin', c: 'bg-slate-500/10 text-slate-500 border-slate-200' };
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-foreground">Passport & Visa Details</h2>
@@ -86,26 +98,55 @@ export function PassportVisa({ employee }: Props) {
 
       {/* ── Passport ──────────────────────────────────────── */}
       <div className="flat-card bg-card p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
-              <Globe className="w-4 h-4 text-foreground" />
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                <Globe className="w-4 h-4 text-foreground" />
+              </div>
+              Passport Details
+            </h3>
+            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border transition-all ${getStatusLabel(isPassportEditable).c}`}>
+               {getStatusLabel(isPassportEditable).l}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+             <label className="flex items-center gap-2 cursor-pointer group">
+              <div className="relative flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={isPassportEditable}
+                  onChange={(e) => handleToggleEditAccess(employee, "passport-details", e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center ${
+                  isPassportEditable ? "bg-indigo-500 border-indigo-500" : "border-slate-300 bg-white"
+                }`}>
+                  {isPassportEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
+                </div>
+              </div>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                Allow Employee to Edit
+              </span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              {passportExpired ? (
+                <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRED_BADGE}`}>
+                  <AlertCircle className="w-3.5 h-3.5" /> Expired
+                </span>
+              ) : passportExpiringSoon ? (
+                <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRING_BADGE}`}>
+                  <AlertCircle className="w-3.5 h-3.5" /> Expiring Soon
+                </span>
+              ) : (
+                <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${VALID_BADGE}`}>
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Valid
+                </span>
+              )}
             </div>
-            Passport Details
-          </h3>
-          {passportExpired ? (
-            <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRED_BADGE}`}>
-              <AlertCircle className="w-3.5 h-3.5" /> Expired
-            </span>
-          ) : passportExpiringSoon ? (
-            <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRING_BADGE}`}>
-              <AlertCircle className="w-3.5 h-3.5" /> Expiring Soon
-            </span>
-          ) : (
-            <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${VALID_BADGE}`}>
-              <CheckCircle2 className="w-3.5 h-3.5" /> Valid
-            </span>
-          )}
+          </div>
         </div>
 
         {/* Passport card — flat dark treatment */}
@@ -164,23 +205,83 @@ export function PassportVisa({ employee }: Props) {
       {/* ── Visa ─────────────────────────────────────────── */}
       <div className="flat-card bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
-              <BookOpen className="w-4 h-4 text-foreground" />
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                <BookOpen className="w-4 h-4 text-foreground" />
+              </div>
+              Visa Details
+            </h3>
+            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border transition-all ${getStatusLabel(isVisaEditable).c}`}>
+               {getStatusLabel(isVisaEditable).l}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+             <label className="flex items-center gap-2 cursor-pointer group">
+              <div className="relative flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={isVisaEditable}
+                  onChange={(e) => handleToggleEditAccess(employee, "visa-details", e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center ${
+                  isVisaEditable ? "bg-indigo-500 border-indigo-500" : "border-slate-300 bg-white"
+                }`}>
+                  {isVisaEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
+                </div>
+              </div>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                Allow Employee to Edit
+              </span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              {visaEditing ? (
+                <>
+                  <button
+                    onClick={async () => {
+                      const success = await handleAdminSave("Visa Details", employee, editedData);
+                      if (success) setVisaEditing(false);
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 bg-primary text-white rounded text-[10px] font-bold hover:bg-primary/90 transition-all"
+                  >
+                    <Save size={10} /> Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditedData(employee);
+                      setVisaEditing(false);
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 border border-border rounded text-[10px] font-bold hover:bg-secondary transition-all"
+                  >
+                    <X size={10} /> Cancel
+                  </button>
+                </>
+              ) : (
+                !isEditing && (
+                  <button
+                    onClick={() => setVisaEditing(true)}
+                    className="flex items-center gap-1 px-2 py-1 border border-border rounded text-[10px] font-bold hover:bg-secondary transition-all"
+                  >
+                    <Edit2 size={10} /> Edit
+                  </button>
+                )
+              )}
+              {editedData.visaExpiry && !isEditing && !visaEditing ? (
+                visaExpired ? (
+                  <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRED_BADGE}`}>
+                    <AlertCircle className="w-3.5 h-3.5" /> Expired
+                  </span>
+                ) : (
+                  <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${VALID_BADGE}`}>
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Valid
+                  </span>
+                )
+              ) : null}
             </div>
-            Visa Details
-          </h3>
-          {editedData.visaExpiry && !isEditing ? (
-            visaExpired ? (
-              <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRED_BADGE}`}>
-                <AlertCircle className="w-3.5 h-3.5" /> Expired
-              </span>
-            ) : (
-              <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${VALID_BADGE}`}>
-                <CheckCircle2 className="w-3.5 h-3.5" /> Valid
-              </span>
-            )
-          ) : null}
+          </div>
         </div>
 
         {editedData.visaCountry || editedData.visaType || isEditing ? (
@@ -198,12 +299,12 @@ export function PassportVisa({ employee }: Props) {
             ).map(([field, label]) => (
               <div key={field} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 py-2 border-b border-border last:border-0">
                 <span className="text-sm text-muted-foreground font-medium">{label}</span>
-                {isEditing ? (
+                {isEditing || visaEditing ? (
                   <input
                     type={field.includes("Date") || field.includes("Expiry") ? "date" : "text"}
                     value={(editedData as any)[field] || ""}
                     onChange={(e) => handleUpdate(field, e.target.value)}
-                    className="text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 sm:max-w-xs w-full"
+                    className="text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 sm:max-w-xs w-full focus:outline-none focus:ring-1 focus:ring-primary/30"
                   />
                 ) : (
                   <span className="text-sm font-semibold text-foreground">

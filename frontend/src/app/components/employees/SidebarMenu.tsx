@@ -12,19 +12,22 @@ import {
   GraduationCap,
   ShieldCheck,
   ClipboardList,
+  Monitor,
 } from "lucide-react";
 
 export type SidebarSection =
   | "profile"
   | "education"
   | "family"
+  | "nominee"
+  | "insurance"
   | "work"
   | "position"
   | "bank"
   | "passport"
   | "background"
+  | "assets"
   | "access"
-  | "separation"
   | "documents"
   | "salary"
   | "requests";
@@ -39,13 +42,15 @@ const menuItems: MenuItem[] = [
   { id: "profile", label: "Employee Profile", icon: User },
   { id: "education", label: "Education Details", icon: GraduationCap },
   { id: "family", label: "Family Details", icon: Users },
+  { id: "nominee", label: "Nominee Details", icon: Users },
+  { id: "insurance", label: "Insurance Details", icon: ShieldCheck },
   { id: "work", label: "Work Experience", icon: Building2 },
   { id: "position", label: "Position History", icon: Briefcase },
   { id: "bank", label: "Bank / PF / ESI", icon: CreditCard },
   { id: "passport", label: "Passport & Visa", icon: Globe },
   { id: "background", label: "Background Check", icon: ShieldCheck },
+  { id: "assets", label: "Asset Management", icon: Monitor },
   { id: "access", label: "Access Card Details", icon: Key },
-  { id: "separation", label: "Separation", icon: LogOut },
   { id: "documents", label: "Employee Documents", icon: FileText },
   { id: "salary", label: "Employee Salary", icon: DollarSign },
   { id: "requests", label: "Profile Update Requests", icon: ClipboardList },

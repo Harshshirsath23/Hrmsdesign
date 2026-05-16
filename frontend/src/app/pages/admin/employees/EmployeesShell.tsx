@@ -5,10 +5,8 @@ import {
   UserPlus,
   Briefcase,
   Settings,
-  BarChart3,
-  FileSpreadsheet,
   GitGraph,
-  LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 import { useEmployee } from "../../../context/EmployeeContext";
 
@@ -21,10 +19,8 @@ export function EmployeesShell() {
   const isAddEmployee = location.pathname.includes("/add");
   const isManagement = location.pathname.includes("/management");
   const isSetup = location.pathname.includes("/setup");
-  const isReports = location.pathname.includes("/reports");
-  const isImport = location.pathname.includes("/import");
   const isOrgChart = location.pathname.includes("/org-chart");
-  const isMain = location.pathname.includes("/main");
+  const isOffboarding = location.pathname.includes("/offboarding");
 
   const activeTab = isInformation
     ? "information"
@@ -34,14 +30,10 @@ export function EmployeesShell() {
     ? "management"
     : isSetup
     ? "setup"
-    : isReports
-    ? "reports"
-    : isImport
-    ? "import"
     : isOrgChart
     ? "org-chart"
-    : isMain
-    ? "main"
+    : isOffboarding
+    ? "offboarding"
     : "directory";
 
   return (
@@ -102,30 +94,6 @@ export function EmployeesShell() {
           </button>
 
           <button
-            onClick={() => navigate("/admin/employees/import")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "import"
-                ? "bg-secondary text-foreground font-semibold"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            Import
-          </button>
-
-          <button
-            onClick={() => navigate("/admin/employees/reports")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "reports"
-                ? "bg-secondary text-foreground font-semibold"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            Reports
-          </button>
-
-          <button
             onClick={() => navigate("/admin/employees/org-chart")}
             className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
               activeTab === "org-chart"
@@ -138,17 +106,16 @@ export function EmployeesShell() {
           </button>
 
           <button
-            onClick={() => navigate("/admin/employees/main")}
+            onClick={() => navigate("/admin/employees/offboarding")}
             className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "main"
+              activeTab === "offboarding"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             }`}
           >
-            <LayoutDashboard className="w-4 h-4" />
-            Main
+            <LogOut className="w-4 h-4" />
+            Employee Offboarding
           </button>
-
 
           {selectedEmployeeId && (
             <button

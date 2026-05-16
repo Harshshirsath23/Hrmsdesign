@@ -32,7 +32,7 @@ const emptyEntry = (id: string): WorkExperienceEntry => ({
 });
 
 export function WorkExperience({ employee }: Props) {
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<WorkExperienceEntry[]>(employee.workExperience || []);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
@@ -74,8 +74,10 @@ export function WorkExperience({ employee }: Props) {
     setIsEditing(false);
   };
 
+  const isEditable = employee.editableSections?.includes("work-experience");
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div>
         <h2 className="text-lg font-bold text-foreground">Work Experience</h2>
         <p className="text-sm text-muted-foreground mt-1">Prior employment history for {employee.name}</p>
@@ -84,6 +86,10 @@ export function WorkExperience({ employee }: Props) {
       <EditableSectionCard
         title="Work Experience"
         icon={Building2}
+        sectionId="work-experience"
+        canEmployeeEdit={isEditable}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "work-experience", v)}
+        requestStatus={employee.editRequestStatus}
         isEditing={isEditing}
         onEdit={() => {
           setDraft(baseline);
@@ -91,25 +97,14 @@ export function WorkExperience({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={addRow}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Work Experience
-            </button>
-          ) : null
-        }
+        headerExtra={null}
       >
         {dateError ? <p className="text-sm text-destructive mb-3">{dateError}</p> : null}
         {draft.length === 0 ? (
           <EmptyStateCard
             icon={Building2}
             title="No work experience on file"
-            description="Add prior roles using Add Work Experience when editing."
+            description="Prior employment history is provided by the employee."
           />
         ) : (
           <div className="space-y-4">
@@ -191,8 +186,9 @@ export function WorkExperience({ employee }: Props) {
                     <UploadField
                       label="Experience Letter Upload"
                       fileName={row.experienceLetterFileName}
+                      dataUrl={row.experienceLetterDataUrl}
                       editing={isEditing}
-                      onFileNameChange={(name) => updateRow(index, { experienceLetterFileName: name })}
+                      onFileChange={(name, data) => updateRow(index, { experienceLetterFileName: name, experienceLetterDataUrl: data })}
                     />
                   </div>
                 </div>

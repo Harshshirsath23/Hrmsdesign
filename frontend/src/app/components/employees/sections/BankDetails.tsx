@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Employee, EsiDetails, PfDetails } from "../mockData";
-import { CreditCard, Shield, Building2, Edit2, Save, X } from "lucide-react";
+import { CreditCard, Shield, Building2, Edit2, Save, X, Plus } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { addNotification } from "../../../../store/slices/notificationSlice";
 import { AppDispatch } from "../../../../store";
@@ -21,6 +21,8 @@ function StatSectionCard({
   onEdit,
   onSave,
   onCancel,
+  editLabel,
+  headerExtra,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -29,45 +31,56 @@ function StatSectionCard({
   onEdit?: () => void;
   onSave?: () => void;
   onCancel?: () => void;
+  editLabel?: string;
+  headerExtra?: React.ReactNode;
 }) {
+  const label = editLabel || "Edit";
+  const ShowIcon = label === "Add" ? Plus : Edit2;
+
   return (
     <div className="flat-card bg-card p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-sm font-bold text-foreground flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
-            <Icon className="w-4 h-4 text-foreground" />
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center">
+              <Icon className="w-4 h-4 text-foreground" />
+            </div>
+            {title}
+          </h3>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            {!isEditing && headerExtra}
+            {isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onSave}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90"
+                >
+                  <Save size={12} /> Save
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
+                >
+                  <X size={12} /> Cancel
+                </button>
+              </>
+            ) : (
+              onEdit && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
+                >
+                  <ShowIcon size={12} /> {label}
+                </button>
+              )
+            )}
           </div>
-          {title}
-        </h3>
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <button
-                type="button"
-                onClick={onSave}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90"
-              >
-                <Save size={12} /> Save
-              </button>
-              <button
-                type="button"
-                onClick={onCancel}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
-              >
-                <X size={12} /> Cancel
-              </button>
-            </>
-          ) : (
-            onEdit && (
-              <button
-                type="button"
-                onClick={onEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
-              >
-                <Edit2 size={12} /> Edit
-              </button>
-            )
-          )}
         </div>
       </div>
       {children}
@@ -109,16 +122,44 @@ export function BankDetails({ employee }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
   const [pfEdit, setPfEdit] = useState(false);
-  const [pfDraft, setPfDraft] = useState<PfDetails>(employee.pfDetails!);
+  const [pfDraft, setPfDraft] = useState<PfDetails>(employee.pfDetails || {
+    pfNumber: "",
+    pfType: "",
+    monthlyContribution: "",
+    employeeShare: "",
+    employerShare: "",
+    status: "Pending"
+  });
   const [esiEdit, setEsiEdit] = useState(false);
-  const [esiDraft, setEsiDraft] = useState<EsiDetails>(employee.esiDetails!);
-  const { handleAdminSave } = useAdminSync();
+  const [esiDraft, setEsiDraft] = useState<EsiDetails>(employee.esiDetails || {
+    esiNumber: "",
+    esiType: "",
+    employeeContribution: "",
+    employerContribution: "",
+    dispensary: "",
+    status: "Pending"
+  });
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     setEditedData(employee);
-    setPfDraft(employee.pfDetails!);
-    setEsiDraft(employee.esiDetails!);
+    setPfDraft(employee.pfDetails || {
+      pfNumber: "",
+      pfType: "",
+      monthlyContribution: "",
+      employeeShare: "",
+      employerShare: "",
+      status: "Pending"
+    });
+    setEsiDraft(employee.esiDetails || {
+      esiNumber: "",
+      esiType: "",
+      employeeContribution: "",
+      employerContribution: "",
+      dispensary: "",
+      status: "Pending"
+    });
   }, [employee]);
 
   const handleUpdate = (field: keyof Employee, value: string) => {
@@ -153,7 +194,7 @@ export function BankDetails({ employee }: Props) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div>
         <h2 className="text-lg font-bold text-foreground">Bank / PF / ESI Details</h2>
         <p className="text-sm text-muted-foreground mt-1">Financial and statutory details for {employee.name}</p>
@@ -169,6 +210,14 @@ export function BankDetails({ employee }: Props) {
           setEditedData(employee);
           setIsEditing(false);
         }}
+        headerExtra={
+          <button
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
+          >
+            <Plus size={12} /> Add
+          </button>
+        }
       >
         <div className="bg-foreground text-primary-foreground rounded-lg p-6 mb-5">
           <div className="flex justify-between items-start mb-4">
@@ -232,12 +281,20 @@ export function BankDetails({ employee }: Props) {
           setEditedData(employee);
           setIsEditing(false);
         }}
+        headerExtra={
+          <button
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
+          >
+            <Plus size={12} /> Add
+          </button>
+        }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-          <InfoRow label="PAN Number" value={editedData.panNumber || "—"} mono isEditing={isEditing} onChange={(v) => handleUpdate("panNumber", v)} />
-          <InfoRow label="Aadhaar Number" value={editedData.aadhaarNumber || "—"} mono isEditing={isEditing} onChange={(v) => handleUpdate("aadhaarNumber", v)} />
-          <InfoRow label="UAN Number" value={editedData.uanNumber || "—"} mono isEditing={isEditing} onChange={(v) => handleUpdate("uanNumber", v)} />
-          <InfoRow label="Tax Regime" value={editedData.taxRegime || "—"} isEditing={isEditing} onChange={(v) => handleUpdate("taxRegime", v)} />
+          <InfoRow label="PAN Number" value={editedData.panNumber || ""} mono isEditing={isEditing} onChange={(v) => handleUpdate("panNumber", v)} />
+          <InfoRow label="Aadhaar Number" value={editedData.aadhaarNumber || ""} mono isEditing={isEditing} onChange={(v) => handleUpdate("aadhaarNumber", v)} />
+          <InfoRow label="UAN Number" value={editedData.uanNumber || ""} mono isEditing={isEditing} onChange={(v) => handleUpdate("uanNumber", v)} />
+          <InfoRow label="Tax Regime" value={editedData.taxRegime || ""} isEditing={isEditing} onChange={(v) => handleUpdate("taxRegime", v)} />
         </div>
       </EditableSectionCard>
 
@@ -249,9 +306,17 @@ export function BankDetails({ employee }: Props) {
           onEdit={() => setPfEdit(true)}
           onSave={savePf}
           onCancel={() => {
-            setPfDraft(employee.pfDetails!);
+            setPfDraft(employee.pfDetails || pfDraft);
             setPfEdit(false);
           }}
+          headerExtra={
+            <button
+              onClick={() => setPfEdit(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
+            >
+              <Plus size={12} /> Add
+            </button>
+          }
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="PF Number" value={pfDraft.pfNumber} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfNumber: v }))} />
@@ -275,9 +340,17 @@ export function BankDetails({ employee }: Props) {
           onEdit={() => setEsiEdit(true)}
           onSave={saveEsi}
           onCancel={() => {
-            setEsiDraft(employee.esiDetails!);
+            setEsiDraft(employee.esiDetails || esiDraft);
             setEsiEdit(false);
           }}
+          headerExtra={
+            <button
+              onClick={() => setEsiEdit(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
+            >
+              <Plus size={12} /> Add
+            </button>
+          }
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="ESI Number" value={esiDraft.esiNumber} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiNumber: v }))} />
@@ -302,3 +375,4 @@ export function BankDetails({ employee }: Props) {
     </div>
   );
 }
+

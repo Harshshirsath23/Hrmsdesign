@@ -30,6 +30,7 @@ import { MASTER_CATEGORIES } from "./modules/masters/config";
 
 // Superadmin
 import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
+import { OffboardingPage } from "./pages/admin/employees/offboarding/OffboardingPage";
 
 // Management Pages (Lazy Loaded)
 const GenerateLetterPage = lazy(() => import("./pages/admin/employees/management/GenerateLetterPage").then(m => ({ default: m.GenerateLetterPage })));
@@ -169,6 +170,7 @@ export const router = createBrowserRouter([
           { path: "import", element: <Navigate to="/admin/employees/management/excel-import" replace /> },
           { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Employee Reports Module (Coming Soon)</div> },
           { path: "org-chart", element: <Suspense fallback={<div className="p-8 text-center animate-pulse font-bold text-slate-400">Loading Org Chart...</div>}><OrganizationChartPage /></Suspense> },
+          { path: "offboarding", Component: OffboardingPage },
         ],
       },
     ],

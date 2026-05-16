@@ -5,15 +5,16 @@ import { EducationDetails } from "./sections/EducationDetails";
 import { BackgroundCheck } from "./sections/BackgroundCheck";
 import { BankDetails } from "./sections/BankDetails";
 import { FamilyDetails } from "./sections/FamilyDetails";
+import { NomineeDetails } from "./sections/NomineeDetails";
+import { InsuranceDetails } from "./sections/InsuranceDetails";
+import { AssetManagement } from "./sections/AssetManagement";
 import { PassportVisa } from "./sections/PassportVisa";
 import { PositionHistory } from "./sections/PositionHistory";
 import { WorkExperience } from "./sections/WorkExperience";
 import { SalarySummary } from "./sections/SalarySummary";
-import { PlaceholderSection } from "./sections/PlaceholderSection";
-import { PendingRequestsPanel } from "../admin/PendingRequestsPanel";
 import { AccessCardDetails } from "./sections/AccessCardDetails";
 import { EmployeeDocumentsSection } from "./sections/EmployeeDocumentsSection";
-import { LogOut, Key } from "lucide-react";
+import { PendingRequestsPanel } from "../admin/PendingRequestsPanel";
 
 interface Props {
   employee: Employee;
@@ -28,6 +29,12 @@ export function ContentSection({ employee, activeSection }: Props) {
       return <BankDetails employee={employee} />;
     case "family":
       return <FamilyDetails employee={employee} />;
+    case "nominee":
+      return <NomineeDetails employee={employee} />;
+    case "insurance":
+      return <InsuranceDetails employee={employee} />;
+    case "assets":
+      return <AssetManagement employee={employee} />;
     case "passport":
       return <PassportVisa employee={employee} />;
     case "position":
@@ -38,14 +45,6 @@ export function ContentSection({ employee, activeSection }: Props) {
       return <EducationDetails employee={employee} />;
     case "background":
       return <BackgroundCheck employee={employee} />;
-    case "separation":
-      return (
-        <PlaceholderSection
-          title="Separation"
-          description="Manage employee separation, exit interviews and clearance"
-          icon={LogOut}
-        />
-      );
     case "access":
       return <AccessCardDetails employee={employee} />;
     case "documents":

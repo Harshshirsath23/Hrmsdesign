@@ -14,13 +14,9 @@ import {
   Plus,
 } from "lucide-react";
 import {
-  AssetEntry,
   Employee,
-  InsuranceEntry,
-  NomineeEntry,
 } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
-import { ProfileActivityTimeline } from "../../admin/ProfileActivityTimeline";
 import {
   EditableSectionCard,
   ProfileInfoField,
@@ -48,7 +44,7 @@ function formatDate(dateStr?: string) {
 }
 
 export function EmployeeProfile({ employee }: Props) {
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
 
   const [personalEdit, setPersonalEdit] = useState(false);
   const [personal, setPersonal] = useState(employee);
@@ -72,15 +68,6 @@ export function EmployeeProfile({ employee }: Props) {
     med: employee.medicalInfo,
   });
 
-  const [nomEdit, setNomEdit] = useState(false);
-  const [nominees, setNominees] = useState<NomineeEntry[]>(employee.nominees || []);
-
-  const [insEdit, setInsEdit] = useState(false);
-  const [insurance, setInsurance] = useState<InsuranceEntry[]>(employee.insurance || []);
-
-  const [assetEdit, setAssetEdit] = useState(false);
-  const [assets, setAssets] = useState<AssetEntry[]>(employee.assets || []);
-
   useEffect(() => {
     setPersonal(employee);
     setAddr({
@@ -91,9 +78,6 @@ export function EmployeeProfile({ employee }: Props) {
     setWork(employee);
     setLanguages(employee.languages || []);
     setEmergency({ ec: employee.emergencyContact, med: employee.medicalInfo });
-    setNominees(employee.nominees || []);
-    setInsurance(employee.insurance || []);
-    setAssets(employee.assets || []);
   }, [employee]);
 
   const mergeEmployee = useCallback(
@@ -106,6 +90,8 @@ export function EmployeeProfile({ employee }: Props) {
     "On Leave": "bg-amber-500 text-white",
     Inactive: "bg-rose-500 text-white",
   };
+
+  const isEditable = (id: string) => employee.editableSections?.includes(id);
 
   return (
     <div className="space-y-6 pb-20">
@@ -173,6 +159,10 @@ export function EmployeeProfile({ employee }: Props) {
       <EditableSectionCard
         title="Personal Information"
         icon={User}
+        sectionId="profile-personal"
+        canEmployeeEdit={isEditable("profile-personal")}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "profile-personal", v)}
+        requestStatus={employee.editRequestStatus}
         isEditing={personalEdit}
         onEdit={() => setPersonalEdit(true)}
         onCancel={() => {
@@ -312,6 +302,10 @@ export function EmployeeProfile({ employee }: Props) {
       <EditableSectionCard
         title="Address Details"
         icon={MapPin}
+        sectionId="profile-address"
+        canEmployeeEdit={isEditable("profile-address")}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "profile-address", v)}
+        requestStatus={employee.editRequestStatus}
         isEditing={addressEdit}
         onEdit={() => setAddressEdit(true)}
         onCancel={() => {
@@ -429,6 +423,10 @@ export function EmployeeProfile({ employee }: Props) {
       <EditableSectionCard
         title="Work Details"
         icon={Briefcase}
+        sectionId="profile-work"
+        canEmployeeEdit={isEditable("profile-work")}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "profile-work", v)}
+        requestStatus={employee.editRequestStatus}
         isEditing={workEdit}
         onEdit={() => setWorkEdit(true)}
         onCancel={() => {
@@ -545,6 +543,10 @@ export function EmployeeProfile({ employee }: Props) {
       <EditableSectionCard
         title="Language Details"
         icon={Languages}
+        sectionId="profile-languages"
+        canEmployeeEdit={isEditable("profile-languages")}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "profile-languages", v)}
+        requestStatus={employee.editRequestStatus}
         isEditing={langEdit}
         onEdit={() => setLangEdit(true)}
         onCancel={() => {
@@ -556,35 +558,13 @@ export function EmployeeProfile({ employee }: Props) {
           const ok = await handleAdminSave("Language Details", employee, next);
           if (ok) setLangEdit(false);
         }}
-        headerExtra={
-          langEdit ? (
-            <button
-              type="button"
-              onClick={() =>
-                setLanguages((rows) => [
-                  ...rows,
-                  {
-                    language: "",
-                    proficiency: "Intermediate",
-                    canRead: true,
-                    canWrite: false,
-                    canSpeak: true,
-                  },
-                ])
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Language
-            </button>
-          ) : null
-        }
+        headerExtra={null}
       >
         {!languages.length ? (
           <EmptyStateCard
             icon={Languages}
             title="No languages recorded"
-            description="Edit this section to add language proficiency."
+            description="Contact support or employee to record language proficiency."
           />
         ) : (
           <div className="space-y-4">
@@ -667,6 +647,10 @@ export function EmployeeProfile({ employee }: Props) {
       <EditableSectionCard
         title="Emergency & Medical Information"
         icon={Heart}
+        sectionId="profile-medical"
+        canEmployeeEdit={isEditable("profile-medical")}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "profile-medical", v)}
+        requestStatus={employee.editRequestStatus}
         isEditing={emEdit}
         onEdit={() => setEmEdit(true)}
         onCancel={() => {
@@ -738,397 +722,7 @@ export function EmployeeProfile({ employee }: Props) {
         </div>
       </EditableSectionCard>
 
-      <EditableSectionCard
-        title="Nominee Details"
-        icon={Users}
-        isEditing={nomEdit}
-        onEdit={() => setNomEdit(true)}
-        onCancel={() => {
-          setNominees(employee.nominees || []);
-          setNomEdit(false);
-        }}
-        onSave={async () => {
-          const next = mergeEmployee({ nominees });
-          const ok = await handleAdminSave("Nominee Details", employee, next);
-          if (ok) setNomEdit(false);
-        }}
-        headerExtra={
-          nomEdit ? (
-            <button
-              type="button"
-              onClick={() =>
-                setNominees((rows) => [
-                  ...rows,
-                  {
-                    id: `nom-${Date.now()}`,
-                    nomineeName: "",
-                    relationship: "",
-                    dateOfBirth: "",
-                    contactNumber: "",
-                    address: "",
-                    sharePercentage: "",
-                  },
-                ])
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Nominee
-            </button>
-          ) : null
-        }
-      >
-        {!nominees.length ? (
-          <EmptyStateCard icon={Users} title="No nominees on file" />
-        ) : (
-          <div className="space-y-4">
-            {nominees.map((n, idx) => (
-              <div key={n.id} className="rounded-xl border border-border bg-background p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <ProfileInfoField
-                    label="Nominee Name"
-                    value={n.nomineeName}
-                    editing={nomEdit}
-                    onChange={(v) =>
-                      setNominees((rows) => rows.map((r, i) => (i === idx ? { ...r, nomineeName: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Relationship"
-                    value={n.relationship}
-                    editing={nomEdit}
-                    onChange={(v) =>
-                      setNominees((rows) => rows.map((r, i) => (i === idx ? { ...r, relationship: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Date Of Birth"
-                    value={n.dateOfBirth}
-                    editing={nomEdit}
-                    onChange={(v) =>
-                      setNominees((rows) => rows.map((r, i) => (i === idx ? { ...r, dateOfBirth: v } : r)))
-                    }
-                    type="date"
-                  />
-                  <ProfileInfoField
-                    label="Contact Number"
-                    value={n.contactNumber}
-                    editing={nomEdit}
-                    onChange={(v) =>
-                      setNominees((rows) => rows.map((r, i) => (i === idx ? { ...r, contactNumber: v } : r)))
-                    }
-                  />
-                  <div className="sm:col-span-2">
-                    <ProfileInfoField
-                      label="Address"
-                      value={n.address}
-                      editing={nomEdit}
-                      onChange={(v) =>
-                        setNominees((rows) => rows.map((r, i) => (i === idx ? { ...r, address: v } : r)))
-                      }
-                      type="textarea"
-                    />
-                  </div>
-                  <ProfileInfoField
-                    label="Share Percentage"
-                    value={n.sharePercentage}
-                    editing={nomEdit}
-                    onChange={(v) =>
-                      setNominees((rows) => rows.map((r, i) => (i === idx ? { ...r, sharePercentage: v } : r)))
-                    }
-                  />
-                  <div className="sm:col-span-2">
-                    <UploadField
-                      label="ID Proof Upload"
-                      fileName={n.idProofFileName}
-                      editing={nomEdit}
-                      onFileNameChange={(name) =>
-                        setNominees((rows) => rows.map((r, i) => (i === idx ? { ...r, idProofFileName: name } : r)))
-                      }
-                    />
-                  </div>
-                </div>
-                {nomEdit ? (
-                  <button
-                    type="button"
-                    className="text-xs font-bold text-destructive hover:underline"
-                    onClick={() => setNominees((rows) => rows.filter((_, i) => i !== idx))}
-                  >
-                    Delete nominee
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-      </EditableSectionCard>
 
-      <EditableSectionCard
-        title="Insurance Details"
-        icon={ShieldCheck}
-        isEditing={insEdit}
-        onEdit={() => setInsEdit(true)}
-        onCancel={() => {
-          setInsurance(employee.insurance || []);
-          setInsEdit(false);
-        }}
-        onSave={async () => {
-          const next = mergeEmployee({ insurance });
-          const ok = await handleAdminSave("Insurance Details", employee, next);
-          if (ok) setInsEdit(false);
-        }}
-        headerExtra={
-          insEdit ? (
-            <button
-              type="button"
-              onClick={() =>
-                setInsurance((rows) => [
-                  ...rows,
-                  {
-                    id: `ins-${Date.now()}`,
-                    insuranceProvider: "",
-                    policyNumber: "",
-                    coverageType: "",
-                    coverageAmount: "",
-                    validTill: "",
-                    dependentsCovered: "",
-                  },
-                ])
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Policy
-            </button>
-          ) : null
-        }
-      >
-        {!insurance.length ? (
-          <EmptyStateCard icon={ShieldCheck} title="No insurance policies" />
-        ) : (
-          <div className="space-y-4">
-            {insurance.map((pol, idx) => (
-              <div key={pol.id} className="rounded-xl border border-border bg-background p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ProfileInfoField
-                    label="Insurance Provider"
-                    value={pol.insuranceProvider}
-                    editing={insEdit}
-                    onChange={(v) =>
-                      setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, insuranceProvider: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Policy Number"
-                    value={pol.policyNumber}
-                    editing={insEdit}
-                    onChange={(v) =>
-                      setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, policyNumber: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Coverage Type"
-                    value={pol.coverageType}
-                    editing={insEdit}
-                    onChange={(v) =>
-                      setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, coverageType: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Coverage Amount"
-                    value={pol.coverageAmount}
-                    editing={insEdit}
-                    onChange={(v) =>
-                      setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, coverageAmount: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Valid Till"
-                    value={pol.validTill}
-                    editing={insEdit}
-                    onChange={(v) =>
-                      setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, validTill: v } : r)))
-                    }
-                    type="date"
-                  />
-                  <ProfileInfoField
-                    label="Dependents Covered"
-                    value={pol.dependentsCovered}
-                    editing={insEdit}
-                    onChange={(v) =>
-                      setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, dependentsCovered: v } : r)))
-                    }
-                  />
-                  <div className="sm:col-span-2">
-                    <UploadField
-                      label="Insurance Document Upload"
-                      fileName={pol.documentFileName}
-                      editing={insEdit}
-                      onFileNameChange={(name) =>
-                        setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, documentFileName: name } : r)))
-                      }
-                    />
-                  </div>
-                </div>
-                {insEdit ? (
-                  <button
-                    type="button"
-                    className="text-xs font-bold text-destructive hover:underline"
-                    onClick={() => setInsurance((rows) => rows.filter((_, i) => i !== idx))}
-                  >
-                    Delete policy
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-      </EditableSectionCard>
-
-      <EditableSectionCard
-        title="Asset Management"
-        icon={Monitor}
-        isEditing={assetEdit}
-        onEdit={() => setAssetEdit(true)}
-        onCancel={() => {
-          setAssets(employee.assets || []);
-          setAssetEdit(false);
-        }}
-        onSave={async () => {
-          const next = mergeEmployee({ assets });
-          const ok = await handleAdminSave("Asset Management", employee, next);
-          if (ok) setAssetEdit(false);
-        }}
-        headerExtra={
-          assetEdit ? (
-            <button
-              type="button"
-              onClick={() =>
-                setAssets((rows) => [
-                  ...rows,
-                  {
-                    id: `ast-${Date.now()}`,
-                    assetName: "",
-                    assetId: "",
-                    assetCategory: "",
-                    serialNumber: "",
-                    assignedDate: "",
-                    returnDate: "",
-                    assetCondition: "",
-                    status: "Assigned",
-                    remarks: "",
-                  },
-                ])
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Asset
-            </button>
-          ) : null
-        }
-      >
-        {!assets.length ? (
-          <EmptyStateCard icon={Monitor} title="No assets assigned" />
-        ) : (
-          <div className="space-y-4">
-            {assets.map((a, idx) => (
-              <div key={a.id} className="rounded-xl border border-border bg-background p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <ProfileInfoField
-                    label="Asset Name"
-                    value={a.assetName}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetName: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Asset ID"
-                    value={a.assetId}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetId: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Asset Category"
-                    value={a.assetCategory}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetCategory: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Serial Number"
-                    value={a.serialNumber}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, serialNumber: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Assigned Date"
-                    value={a.assignedDate}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assignedDate: v } : r)))
-                    }
-                    type="date"
-                  />
-                  <ProfileInfoField
-                    label="Return Date"
-                    value={a.returnDate || ""}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, returnDate: v } : r)))
-                    }
-                    type="date"
-                  />
-                  <ProfileInfoField
-                    label="Asset Condition"
-                    value={a.assetCondition}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetCondition: v } : r)))
-                    }
-                  />
-                  <ProfileInfoField
-                    label="Status"
-                    value={a.status}
-                    editing={assetEdit}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, status: v } : r)))
-                    }
-                  />
-                  <div className="md:col-span-2">
-                    <ProfileInfoField
-                      label="Remarks"
-                      value={a.remarks || ""}
-                      editing={assetEdit}
-                      onChange={(v) =>
-                        setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, remarks: v } : r)))
-                      }
-                      type="textarea"
-                    />
-                  </div>
-                </div>
-                {assetEdit ? (
-                  <button
-                    type="button"
-                    className="text-xs font-bold text-destructive hover:underline"
-                    onClick={() => setAssets((rows) => rows.filter((_, i) => i !== idx))}
-                  >
-                    Delete asset
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-      </EditableSectionCard>
-
-      <ProfileActivityTimeline employeeId={employee.id} />
     </div>
   );
 }

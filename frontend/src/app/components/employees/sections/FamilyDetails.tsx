@@ -42,7 +42,7 @@ function EditableField({ label, value, onChange, isEditing }: { label: string; v
 export function FamilyDetails({ employee }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedFamily, setEditedFamily] = useState(employee.family || []);
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
 
   const updateMember = (idx: number, field: string, value: any) => {
     setEditedFamily(prev => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
@@ -54,34 +54,71 @@ export function FamilyDetails({ employee }: Props) {
     if (success) setIsEditing(false);
   };
 
+  const isEditable = employee.editableSections?.includes("family-details");
+  const getStatusLabel = () => {
+    if (employee.editRequestStatus === 'Pending') return { l: 'Pending Employee Update', c: 'bg-amber-500/10 text-amber-600 border-amber-200' };
+    if (employee.editRequestStatus === 'Updated') return { l: 'Updated by Employee', c: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' };
+    if (isEditable) return { l: 'Editable by Employee', c: 'bg-indigo-500/10 text-indigo-600 border-indigo-200' };
+    return { l: 'Locked by Admin', c: 'bg-slate-500/10 text-slate-500 border-slate-200' };
+  };
+
+  const status = getStatusLabel();
+
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-foreground flex items-center gap-2.5">
-            <Users size={20} className="text-indigo-500" />
-            Family & Dependents
-          </h2>
-          <p className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-widest">
-            {editedFamily.length} Registered Members
-          </p>
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-24">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-xl font-black text-foreground flex items-center gap-2.5">
+              <Users size={20} className="text-indigo-500" />
+              Family & Dependents
+            </h2>
+            <p className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-widest">
+              {editedFamily.length} Registered Members
+            </p>
+          </div>
+          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border transition-all ${status.c}`}>
+            {status.l}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90">
-                <Save size={12} /> Save Changes
+
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <div className="relative flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={isEditable}
+                onChange={(e) => handleToggleEditAccess(employee, "family-details", e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center ${
+                isEditable ? "bg-indigo-500 border-indigo-500" : "border-slate-300 bg-white"
+              }`}>
+                {isEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
+              </div>
+            </div>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              Allow Employee to Edit
+            </span>
+          </label>
+
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90">
+                  <Save size={12} /> Save Changes
+                </button>
+                <button onClick={() => { setEditedFamily(employee.family || []); setIsEditing(false); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                  <X size={12} /> Cancel
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                <Edit2 size={12} /> Edit Section
               </button>
-              <button onClick={() => { setEditedFamily(employee.family || []); setIsEditing(false); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
-                <X size={12} /> Cancel
-              </button>
-            </>
-          ) : (
-            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
-              <Edit2 size={12} /> Edit Section
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

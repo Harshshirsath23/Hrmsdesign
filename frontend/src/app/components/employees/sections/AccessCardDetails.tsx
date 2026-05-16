@@ -15,7 +15,7 @@ interface Props {
 }
 
 export function AccessCardDetails({ employee }: Props) {
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<AccessCardEntry[]>(employee.accessCards || []);
   const [delIdx, setDelIdx] = useState<number | null>(null);
@@ -31,7 +31,7 @@ export function AccessCardDetails({ employee }: Props) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div>
         <h2 className="text-lg font-bold text-foreground">Access Card Details</h2>
         <p className="text-sm text-muted-foreground mt-1">Building access cards for {employee.name}</p>

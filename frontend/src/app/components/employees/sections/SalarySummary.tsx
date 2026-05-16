@@ -40,7 +40,7 @@ function SalaryRow({
 export function SalarySummary({ employee }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
 
   const handleUpdate = (field: keyof Employee, value: number) => {
     setEditedData(prev => ({ ...prev, [field]: value }));
@@ -70,7 +70,7 @@ export function SalarySummary({ employee }: Props) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-foreground">Employee Salary</h2>

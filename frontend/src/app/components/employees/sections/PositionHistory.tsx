@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function PositionHistory({ employee }: Props) {
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<PositionHistoryEntry[]>(employee.positionHistory || []);
   const [delIdx, setDelIdx] = useState<number | null>(null);
@@ -23,6 +23,11 @@ export function PositionHistory({ employee }: Props) {
 
   const update = (i: number, p: Partial<PositionHistoryEntry>) =>
     setRows((list) => list.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
+
+  const handleSave = async () => {
+    const ok = await handleAdminSave("Position History", employee, { ...employee, positionHistory: rows });
+    if (ok) setIsEditing(false);
+  };
 
   const addRow = () => {
     setRows((list) => [
@@ -39,13 +44,29 @@ export function PositionHistory({ employee }: Props) {
     ]);
   };
 
-  const handleSave = async () => {
-    const ok = await handleAdminSave("Position History", employee, { ...employee, positionHistory: rows });
-    if (ok) setIsEditing(false);
+  const startAdding = () => {
+    if (!isEditing) {
+      const initialRows = baseline.map((r, i) => ({ ...r, id: r.id || `pos-${employee.id}-${i}` }));
+      setRows([
+        ...initialRows,
+        {
+          id: `pos-${Date.now()}`,
+          title: "",
+          department: "",
+          from: "",
+          to: "",
+          reportingTo: "",
+          isCurrentPosition: false,
+        },
+      ]);
+      setIsEditing(true);
+    } else {
+      addRow();
+    }
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div>
         <h2 className="text-lg font-bold text-foreground">Position History</h2>
         <p className="text-sm text-muted-foreground mt-1">Career progression within the organization</p>
@@ -64,24 +85,21 @@ export function PositionHistory({ employee }: Props) {
         }}
         onSave={handleSave}
         headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={addRow}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Position
-            </button>
-          ) : null
+          <button
+            type="button"
+            onClick={startAdding}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Position
+          </button>
         }
       >
         <div className="space-y-4">
           {rows.map((pos, index) => (
             <EditableFormCard
               key={pos.id}
-              showDelete={isEditing}
-              onDelete={() => setDelIdx(index)}
+              showDelete={false}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ProfileInfoField
@@ -147,19 +165,6 @@ export function PositionHistory({ employee }: Props) {
           ))}
         </div>
       </EditableSectionCard>
-      <ConfirmationDialog
-        open={delIdx !== null}
-        onOpenChange={(o) => !o && setDelIdx(null)}
-        title="Remove position?"
-        description="This row will be removed. Save the section to persist."
-        confirmLabel="Remove"
-        destructive
-        onConfirm={() => {
-          if (delIdx === null) return;
-          setRows((list) => list.filter((_, i) => i !== delIdx));
-          setDelIdx(null);
-        }}
-      />
     </div>
   );
 }
