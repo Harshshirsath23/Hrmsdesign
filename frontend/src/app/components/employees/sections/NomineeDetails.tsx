@@ -109,7 +109,7 @@ export function NomineeDetails({ employee }: Props) {
                     }
                     type="date"
                   />
-                  
+
                   <ProfileInfoField
                     label="Contact Number"
                     value={n.contactNumber}
