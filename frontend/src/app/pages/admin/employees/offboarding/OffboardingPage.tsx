@@ -15,7 +15,8 @@ import {
   Eye,
   Edit,
   Check,
-  FileText
+  FileText,
+  Trash2
 } from "lucide-react";
 import { employees, Employee } from "../../../../components/employees/mockData";
 import { AddOffboardingForm } from "./AddOffboardingForm";
@@ -456,15 +457,24 @@ export function OffboardingPage() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => alert(`Edit offboarding for ${record.name}`)}
+                          onClick={() => {
+                            const element = document.createElement("a");
+                            const contentText = `HRMS OFFBOARDING RECORD\n\nEmployee: \${record.name}\nDesignation: \${record.designation}\nDepartment: \${record.department}\nResignation Date: \${record.resignationDate}\nLast Working Day: \${record.lastWorkingDay}\nNotice Status: \${record.noticeStatus}\nExit Status: \${record.exitStatus}`;
+                            const file = new Blob([contentText], { type: 'text/plain' });
+                            element.href = URL.createObjectURL(file);
+                            element.download = `\${record.name.replace(/\\s+/g, "_")}_offboarding.txt`;
+                            document.body.appendChild(element);
+                            element.click();
+                            document.body.removeChild(element);
+                          }}
                           className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground" 
-                          title="Edit"
+                          title="Download Documents"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Download className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => {
-                            if(window.confirm(`Approve offboarding for ${record.name}?`)) {
+                            if(window.confirm(`Approve offboarding for \${record.name}?`)) {
                               setOffboardingData(prev => prev.map(item => 
                                 item.id === record.id ? { ...item, exitStatus: "Approved" } : item
                               ));
@@ -476,11 +486,15 @@ export function OffboardingPage() {
                           <Check className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => alert(`Downloading documents for ${record.name}...`)}
-                          className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground" 
-                          title="Download Documents"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete the offboarding record for \${record.name}?`)) {
+                              setOffboardingData(prev => prev.filter(item => item.id !== record.id));
+                            }
+                          }}
+                          className="p-2 hover:bg-rose-50 rounded-lg transition-colors text-rose-500 hover:text-rose-600" 
+                          title="Delete Record"
                         >
-                          <FileText className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

@@ -35,7 +35,6 @@ export function InformationLayout() {
     access: "Access Card Details",
     documents: "Employee Documents",
     salary: "Employee Salary",
-    requests: "Profile Update Requests",
   };
 
   const statusStyle: Record<string, string> = {

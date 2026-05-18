@@ -112,8 +112,13 @@ interface FormState {
   shiftAssignmentId: string;
   assetCategory: string;
   assetCondition: string;
-  assetType: string;
+  assetName: string;
   assetId: string;
+  serialNumber: string;
+  assignDate: string;
+  returnDate: string;
+  assetStatus: string;
+  assetRemarks: string;
   activeTab: "new" | "rehire" | "bulk";
   // NEW FIELDS
   bgcStatus: string;
@@ -274,8 +279,13 @@ const INIT: FormState = {
   shiftAssignmentId: "",
   assetCategory: "",
   assetCondition: "",
-  assetType: "",
+  assetName: "",
   assetId: "",
+  serialNumber: "",
+  assignDate: "",
+  returnDate: "",
+  assetStatus: "Assigned",
+  assetRemarks: "",
   activeTab: "new",
   rehireDate: "",
   rehireRemarks: "",
@@ -1906,7 +1916,7 @@ export function AddEmployeePage() {
                   onChange={(e) => set("basicSalary", e.target.value)}
                   onBlur={() => blur("basicSalary")}
                   placeholder="85,000"
-                  icon={<span className="text-xs font-bold">$</span>}
+                  icon={<span className="text-xs font-bold">₹</span>}
                   err={!!errors.basicSalary}
                   success={ok("basicSalary")}
                 />
@@ -2056,7 +2066,24 @@ export function AddEmployeePage() {
               desc="Company property and equipment assigned to the employee"
               Icon={Monitor}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="sm:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <FF label="Asset Name" required>
+                  <Inp
+                    value={form.assetName}
+                    onChange={(e) => set("assetName", e.target.value)}
+                    placeholder="E.g. MacBook Pro 16"
+                  />
+                </FF>
+
+                <FF label="Asset ID" required error={errors.assetId}>
+                  <Inp
+                    value={form.assetId}
+                    onChange={(e) => set("assetId", e.target.value)}
+                    placeholder="E.g. AST-2024-001"
+                    icon={<Hash size={13} />}
+                  />
+                </FF>
+
                 <FF label="Asset Category" required error={errors.assetCategory}>
                   <MasterSelect
                     masterName="AssetCategory"
@@ -2065,20 +2092,27 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Asset Type / Device Name" required>
-                  <MasterSelect
-                    masterName="AssetType"
-                    value={form.assetType}
-                    onChange={(v) => set("assetType", v)}
+                <FF label="Serial Number">
+                  <Inp
+                    value={form.serialNumber}
+                    onChange={(e) => set("serialNumber", e.target.value)}
+                    placeholder="Device Serial Number"
                   />
                 </FF>
 
-                <FF label="Asset ID / Asset Code" required error={errors.assetId}>
+                <FF label="Assign Date">
                   <Inp
-                    value={form.assetId}
-                    onChange={(e) => set("assetId", e.target.value)}
-                    placeholder="E.g. AST-2024-001"
-                    icon={<Hash size={13} />}
+                    type="date"
+                    value={form.assignDate}
+                    onChange={(e) => set("assignDate", e.target.value)}
+                  />
+                </FF>
+
+                <FF label="Return Date">
+                  <Inp
+                    type="date"
+                    value={form.returnDate}
+                    onChange={(e) => set("returnDate", e.target.value)}
                   />
                 </FF>
 
@@ -2089,14 +2123,31 @@ export function AddEmployeePage() {
                     onChange={(v) => set("assetCondition", v)}
                   />
                 </FF>
+
+                <FF label="Status">
+                  <Sel
+                    value={form.assetStatus}
+                    onChange={(e) => set("assetStatus", e.target.value)}
+                    opts={[
+                      { v: "Assigned", l: "Assigned" },
+                      { v: "Returned", l: "Returned" },
+                      { v: "Lost", l: "Lost" },
+                      { v: "Damaged", l: "Damaged" },
+                    ]}
+                  />
+                </FF>
+
+                <div className="md:col-span-2 lg:col-span-4">
+                  <FF label="Remarks">
+                    <Inp
+                      value={form.assetRemarks}
+                      onChange={(e) => set("assetRemarks", e.target.value)}
+                      placeholder="Additional notes about the asset"
+                    />
+                  </FF>
+                </div>
               </div>
 
-              <div className="mt-8 flex items-start gap-3 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
-                <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
-                <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
-                  Assigning an asset here will automatically update the inventory status. For bulk asset assignment or peripheral tracking, please use the <strong>Asset Inventory Dashboard</strong> after saving the employee profile.
-                </p>
-              </div>
             </SC>
 
             {/* ─────────────────────────────────────────────

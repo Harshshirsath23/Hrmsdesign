@@ -142,9 +142,8 @@ export function ManagerLayout() {
 
         {/* Nav items */}
         <nav
-          className={`flex-1 overflow-y-auto space-y-0.5 ${
-            collapsed ? "px-3 pt-4" : "px-3"
-          }`}
+          className={`flex-1 overflow-y-auto space-y-0.5 ${collapsed ? "px-3 pt-4" : "px-3"
+            }`}
         >
           {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
             const active = isActive(path);
@@ -157,10 +156,9 @@ export function ManagerLayout() {
                     title={collapsed ? label : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                       transition-all duration-150 relative
-                      ${
-                        active
-                          ? "bg-secondary text-foreground font-semibold"
-                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      ${active
+                        ? "bg-secondary text-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                       }
                       ${collapsed ? "justify-center" : ""}`}
                   >
@@ -175,9 +173,8 @@ export function ManagerLayout() {
                         <span>My Leaves</span>
 
                         <ChevronDown
-                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${
-                            leaveOpen ? "rotate-180" : ""
-                          }`}
+                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${leaveOpen ? "rotate-180" : ""
+                            }`}
                         />
                       </>
                     )}
@@ -193,10 +190,9 @@ export function ManagerLayout() {
                             key={path}
                             onClick={() => navigate(path)}
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all
-                              ${
-                                subActive
-                                  ? "bg-secondary text-foreground font-semibold"
-                                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              ${subActive
+                                ? "bg-secondary text-foreground font-semibold"
+                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                               }`}
                           >
                             <SubIcon className="w-4 h-4 flex-shrink-0" />
@@ -217,10 +213,9 @@ export function ManagerLayout() {
                 title={collapsed ? label : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-all duration-150 relative
-                  ${
-                    active
-                      ? "bg-secondary text-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  ${active
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }
                   ${collapsed ? "justify-center" : ""}`}
               >

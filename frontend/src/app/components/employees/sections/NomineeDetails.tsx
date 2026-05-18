@@ -49,33 +49,7 @@ export function NomineeDetails({ employee }: Props) {
         onEdit={() => setIsEditing(true)}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={() => {
-                setNominees((rows) => [
-                  ...rows,
-                  {
-                    id: `nom-${Date.now()}`,
-                    nomineeName: "",
-                    relationship: "",
-                    dateOfBirth: "",
-                    contactNumber: "",
-                    address: "",
-                    sharePercentage: "",
-                    idProofFileName: "",
-                    idProofDataUrl: "",
-                  },
-                ]);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Nominee
-            </button>
-          ) : null
-        }
+        headerExtra={null}
       >
         {!nominees.length ? (
           <EmptyStateCard icon={Users} title="No nominees on file" />

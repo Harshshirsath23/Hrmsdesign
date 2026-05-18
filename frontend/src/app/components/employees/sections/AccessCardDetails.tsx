@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Key, Plus } from "lucide-react";
 import { AccessCardEntry, Employee } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
@@ -21,6 +21,10 @@ export function AccessCardDetails({ employee }: Props) {
   const [delIdx, setDelIdx] = useState<number | null>(null);
 
   const baseline = useMemo(() => employee.accessCards || [], [employee.accessCards]);
+
+  useEffect(() => {
+    setDraft(baseline);
+  }, [employee, baseline]);
 
   const update = (i: number, p: Partial<AccessCardEntry>) =>
     setDraft((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
@@ -50,18 +54,19 @@ export function AccessCardDetails({ employee }: Props) {
         }}
         onSave={handleSave}
         headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={() =>
-                setDraft((r) => [...r, { id: `acc-${Date.now()}`, cardNumber: "", fromDate: "", toDate: "" }])
+          <button
+            type="button"
+            onClick={() => {
+              if (!isEditing) {
+                setIsEditing(true);
               }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Access Card
-            </button>
-          ) : null
+              setDraft((r) => [...r, { id: `acc-${Date.now()}`, employeeId: employee.employeeId || "", cardNumber: "", fromDate: "", toDate: "" }]);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Access Card
+          </button>
         }
       >
         {!draft.length ? (
@@ -70,7 +75,13 @@ export function AccessCardDetails({ employee }: Props) {
           <div className="space-y-4">
             {draft.map((row, i) => (
               <EditableFormCard key={row.id} showDelete={isEditing} onDelete={() => setDelIdx(i)}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <ProfileInfoField
+                    label="Employee ID"
+                    value={row.employeeId || ""}
+                    editing={isEditing}
+                    onChange={(v) => update(i, { employeeId: v })}
+                  />
                   <ProfileInfoField
                     label="Access Card Number"
                     value={row.cardNumber}

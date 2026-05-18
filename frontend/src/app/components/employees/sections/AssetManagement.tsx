@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Monitor, Plus } from "lucide-react";
 import { Employee, AssetEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
@@ -16,6 +16,10 @@ export function AssetManagement({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
   const [assets, setAssets] = useState<AssetEntry[]>(employee.assets || []);
+
+  useEffect(() => {
+    setAssets(employee.assets || []);
+  }, [employee]);
 
   const handleSave = async () => {
     const updated = { ...employee, assets };
@@ -57,20 +61,26 @@ export function AssetManagement({ employee }: Props) {
         title="Asset Management"
         icon={Monitor}
         isEditing={isEditing}
-        onEdit={() => setIsEditing(true)}
+        onEdit={() => {
+          setAssets(employee.assets || []);
+          setIsEditing(true);
+        }}
         onCancel={handleCancel}
         onSave={handleSave}
         headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={addAsset}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Asset
-            </button>
-          ) : null
+          <button
+            type="button"
+            onClick={() => {
+              if (!isEditing) {
+                setIsEditing(true);
+              }
+              addAsset();
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Asset
+          </button>
         }
       >
         {!assets.length ? (
@@ -79,7 +89,7 @@ export function AssetManagement({ employee }: Props) {
           <div className="space-y-6">
             {assets.map((a, idx) => (
               <div key={a.id} className="rounded-2xl border border-border bg-secondary/10 p-6 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <ProfileInfoField
                     label="Asset Name"
                     value={a.assetName}
@@ -114,7 +124,7 @@ export function AssetManagement({ employee }: Props) {
                     }
                   />
                   <ProfileInfoField
-                    label="Assigned Date"
+                    label="Assign Date"
                     value={a.assignedDate}
                     editing={isEditing}
                     onChange={(v) =>
@@ -148,9 +158,7 @@ export function AssetManagement({ employee }: Props) {
                       setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, status: v } : r)))
                     }
                   />
-                  <div className="hidden lg:block"></div>
-
-                  <div className="lg:col-span-3">
+                  <div className="lg:col-span-4">
                     <ProfileInfoField
                       label="Remarks"
                       value={a.remarks || ""}
