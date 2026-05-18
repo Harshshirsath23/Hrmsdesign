@@ -27,6 +27,7 @@ export interface AdminLeaveTypeRef {
   id: string;
   code: string;
   name: string;
+  color_code?: string;
   is_paid: boolean;
   is_active: boolean;
 }
@@ -103,6 +104,7 @@ export interface AdminLeaveRequestRow {
 
 export interface LeaveTypeMasterRecord extends AdminLeaveTypeRef {
   description?: string;
+  color_code?: string;
   max_yearly_allocation: number;
   carry_forward: boolean;
   encashment: boolean;

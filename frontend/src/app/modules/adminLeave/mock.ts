@@ -1,16 +1,16 @@
 import type { AdminLeaveRequestRow, AdminLeaveTypeRef, LeaveTypeMasterRecord } from "./types";
 
 const TYPES: AdminLeaveTypeRef[] = [
-  { id: "lt-pl", code: "PL", name: "Privilege Leave", is_paid: true, is_active: true },
-  { id: "lt-sl", code: "SL", name: "Sick Leave", is_paid: true, is_active: true },
-  { id: "lt-cl", code: "CL", name: "Casual Leave", is_paid: true, is_active: true },
-  { id: "lt-lop", code: "LOP", name: "Loss of Pay", is_paid: false, is_active: true },
-  { id: "lt-co", code: "CO", name: "Comp Off", is_paid: true, is_active: true },
-  { id: "lt-shl", code: "SHL", name: "Short Leave", is_paid: true, is_active: true },
-  { id: "lt-od", code: "OD", name: "Out Duty", is_paid: true, is_active: true },
-  { id: "lt-wfh", code: "WFH", name: "Work From Home", is_paid: true, is_active: true },
-  { id: "lt-gp", code: "GP", name: "Gate Pass", is_paid: true, is_active: true },
-  { id: "lt-ot", code: "OT", name: "Overtime", is_paid: true, is_active: true },
+  { id: "lt-pl", code: "PL", name: "Privilege Leave", color_code: "#212529", is_paid: true, is_active: true },
+  { id: "lt-sl", code: "SL", name: "Sick Leave", color_code: "#495057", is_paid: true, is_active: true },
+  { id: "lt-cl", code: "CL", name: "Casual Leave", color_code: "#6C757D", is_paid: true, is_active: true },
+  { id: "lt-lop", code: "LOP", name: "Loss of Pay", color_code: "#ADB5BD", is_paid: false, is_active: true },
+  { id: "lt-co", code: "CO", name: "Comp Off", color_code: "#495057", is_paid: true, is_active: true },
+  { id: "lt-shl", code: "SHL", name: "Short Leave", color_code: "#6C757D", is_paid: true, is_active: true },
+  { id: "lt-od", code: "OD", name: "Out Duty", color_code: "#495057", is_paid: true, is_active: true },
+  { id: "lt-wfh", code: "WFH", name: "Work From Home", color_code: "#343A40", is_paid: true, is_active: true },
+  { id: "lt-gp", code: "GP", name: "Gate Pass", color_code: "#868E96", is_paid: true, is_active: true },
+  { id: "lt-ot", code: "OT", name: "Overtime", color_code: "#212529", is_paid: true, is_active: true },
 ];
 
 export const LEAVE_TYPE_MASTER: LeaveTypeMasterRecord[] = [

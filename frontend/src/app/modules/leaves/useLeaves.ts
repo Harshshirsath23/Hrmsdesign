@@ -188,3 +188,194 @@ export function useRejectLeave() {
   return { mutate, isPending };
 }
 
+export function useUpdateLeave() {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  const mutate = useCallback(
+    async (payload: { id: string } & ApplyLeavePayload, opts?: { onSuccess?: () => void; onError?: () => void }) => {
+      setIsPending(true);
+      setIsSuccess(false);
+      setIsError(false);
+      setError(null);
+      try {
+        const apps = readStore(LEAVE_APP_KEY, DEMO_APPLICATIONS);
+        const target = apps.find((app) => app.id === payload.id);
+        if (!target) {
+          throw new Error("Leave application not found.");
+        }
+
+        const typeDetail = DEMO_LEAVE_TYPES.find((l) => l.id === payload.leave_type) ?? DEMO_LEAVE_TYPES[0];
+        const updatedApp: LeaveApplicationAPI = {
+          ...target,
+          leave_type: payload.leave_type,
+          leave_type_detail: typeDetail,
+          from_date: payload.from_date,
+          to_date: payload.to_date,
+          from_half: payload.from_half,
+          to_half: payload.to_half,
+          total_days: payload.total_days,
+          reason: payload.reason,
+          contact_during_leave: payload.contact_during_leave,
+          document_url: payload.document_url,
+          status: payload.status ?? target.status,
+        };
+
+        writeStore(
+          LEAVE_APP_KEY,
+          apps.map((app) => (app.id === payload.id ? updatedApp : app)),
+        );
+
+        const balances = readStore(LEAVE_BAL_KEY, DEMO_BALANCES);
+        const oldPending = ["SUBMITTED", "PENDING", "DRAFT"].includes(target.status);
+        const newPending = ["SUBMITTED", "PENDING", "DRAFT"].includes(updatedApp.status);
+
+        if (oldPending && newPending) {
+          const updatedBalances = balances.map((bal) => {
+            if (bal.employee_code !== target.employee_code) return bal;
+            if (target.leave_type === updatedApp.leave_type) {
+              if (bal.leave_type !== target.leave_type) return bal;
+              const diff = updatedApp.total_days - target.total_days;
+              return {
+                ...bal,
+                pending_approval: Math.max(0, Number(bal.pending_approval) + diff),
+                available: Math.max(0, Number(bal.available) - diff),
+              };
+            }
+            if (bal.leave_type === target.leave_type) {
+              return {
+                ...bal,
+                pending_approval: Math.max(0, Number(bal.pending_approval) - target.total_days),
+                available: Number(bal.available) + target.total_days,
+              };
+            }
+            if (bal.leave_type === updatedApp.leave_type) {
+              return {
+                ...bal,
+                pending_approval: Number(bal.pending_approval) + updatedApp.total_days,
+                available: Math.max(0, Number(bal.available) - updatedApp.total_days),
+              };
+            }
+            return bal;
+          });
+          writeStore(LEAVE_BAL_KEY, updatedBalances);
+        }
+
+        setIsSuccess(true);
+        opts?.onSuccess?.();
+        return updatedApp;
+      } catch (e) {
+        setIsError(true);
+        setError(e);
+        opts?.onError?.();
+        throw e;
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [],
+  );
+
+  return { mutate, isPending, isSuccess, isError, error };
+}
+
+export function useCancelLeave() {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  const mutate = useCallback(async (id: string, opts?: { onSuccess?: () => void; onError?: () => void }) => {
+    setIsPending(true);
+    setIsSuccess(false);
+    setIsError(false);
+    setError(null);
+    try {
+      const apps = readStore(LEAVE_APP_KEY, DEMO_APPLICATIONS);
+      const target = apps.find((app) => app.id === id);
+      if (!target) {
+        throw new Error("Leave application not found.");
+      }
+
+      const updatedApps = apps.map((app) =>
+        app.id === id ? { ...app, status: "CANCELLED" as const } : app,
+      );
+      writeStore(LEAVE_APP_KEY, updatedApps);
+
+      if (["SUBMITTED", "PENDING", "DRAFT"].includes(target.status)) {
+        const balances = readStore(LEAVE_BAL_KEY, DEMO_BALANCES).map((bal) =>
+          bal.employee_code !== target.employee_code || bal.leave_type !== target.leave_type
+            ? bal
+            : {
+                ...bal,
+                pending_approval: Math.max(0, Number(bal.pending_approval) - target.total_days),
+                available: Number(bal.available) + target.total_days,
+              },
+        );
+        writeStore(LEAVE_BAL_KEY, balances);
+      }
+
+      setIsSuccess(true);
+      opts?.onSuccess?.();
+      return updatedApps.find((a) => a.id === id);
+    } catch (e) {
+      setIsError(true);
+      setError(e);
+      opts?.onError?.();
+      throw e;
+    } finally {
+      setIsPending(false);
+    }
+  }, []);
+
+  return { mutate, isPending, isSuccess, isError, error };
+}
+
+export function useResubmitLeave() {
+  const [isPending, setIsPending] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  const mutate = useCallback(async (id: string, opts?: { onSuccess?: () => void; onError?: () => void }) => {
+    setIsPending(true);
+    setIsSuccess(false);
+    setIsError(false);
+    setError(null);
+    try {
+      const apps = readStore(LEAVE_APP_KEY, DEMO_APPLICATIONS);
+      const target = apps.find((app) => app.id === id);
+      if (!target) {
+        throw new Error("Leave application not found.");
+      }
+
+      const updatedApps = apps.map((app) =>
+        app.id === id
+          ? {
+              ...app,
+              status: "SUBMITTED" as const,
+              applied_on: todayISO(),
+              approved_at: null,
+            }
+          : app,
+      );
+      writeStore(LEAVE_APP_KEY, updatedApps);
+
+      setIsSuccess(true);
+      opts?.onSuccess?.();
+      return updatedApps.find((a) => a.id === id);
+    } catch (e) {
+      setIsError(true);
+      setError(e);
+      opts?.onError?.();
+      throw e;
+    } finally {
+      setIsPending(false);
+    }
+  }, []);
+
+  return { mutate, isPending, isSuccess, isError, error };
+}
+

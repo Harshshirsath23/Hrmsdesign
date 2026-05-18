@@ -244,6 +244,8 @@ export function MasterForm({
               </Select>
             )}
           />
+        ) : field.type === "color" ? (
+          <Input type="color" {...form.register(field.key)} disabled={disabled || field.readOnly} />
         ) : (
           <Input
             type={field.type === "number" ? "number" : "text"}

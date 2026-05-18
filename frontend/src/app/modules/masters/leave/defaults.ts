@@ -4,6 +4,7 @@ export const LEAVE_TYPE_DEFAULTS = {
   requires_attachment: false,
   has_expiry: false,
   is_paid: true,
+  color_code: "#3B82F6",
   allow_half_day: false,
   allow_hourly: false,
   is_clubbing_allowed: false,

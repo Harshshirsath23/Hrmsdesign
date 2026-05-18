@@ -38,17 +38,26 @@ export interface LeaveApplicationAPI {
   employee_name: string;
   leave_type: string;
   leave_type_detail: LeaveTypeRef;
+
   from_date: string;
   to_date: string;
+
   from_half: "AM" | "PM" | "FULL";
   to_half: "AM" | "PM" | "FULL";
+
   total_days: number;
+
   reason: string;
+
+  // Newly added fields
+  contact_during_leave?: string;
+  document_url?: string | null;
+
   status: LeaveApplicationStatus;
+
   applied_on: string;
   approved_at: string | null;
 }
-
 export interface HolidayAPI {
   id: string;
   name: string;

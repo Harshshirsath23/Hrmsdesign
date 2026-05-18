@@ -5,6 +5,7 @@ import {
   MoreHorizontal,
   Search,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import type { LeaveApplicationAPI, LeaveApplicationStatus } from "../../../modules/leaves/types";
 import { Button } from "../../ui/button";
@@ -20,6 +21,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent as DrawerPaneContent,
+  DrawerHeader as DrawerPaneHeader,
+  DrawerTitle as DrawerPaneTitle,
+} from "../../ui/drawer";
+import { Input } from "../../ui/input";
+import { Textarea } from "../../ui/textarea";
 import { cn } from "../../ui/utils";
 import { EmployeeLeaveStatusBadge, employeeLeaveStatusLabel } from "./EmployeeLeaveStatusBadge";
 import { LeaveEmptyState } from "./LeaveEmptyState";
@@ -84,6 +94,68 @@ export function ApplicationsHistoryTable({
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   const [detail, setDetail] = useState<LeaveApplicationAPI | null>(null);
+  const [editLeave, setEditLeave] = useState<LeaveApplicationAPI | null>(null);
+  const [editForm, setEditForm] = useState({
+    leaveType: "",
+    from_date: "",
+    to_date: "",
+    from_half: "FULL" as LeaveApplicationAPI["from_half"],
+    to_half: "FULL" as LeaveApplicationAPI["to_half"],
+    total_days: 0,
+    reason: "",
+  });
+
+  const openEditLeave = (app: LeaveApplicationAPI) => {
+    setEditLeave(app);
+    setEditForm({
+      leaveType: app.leave_type,
+      from_date: app.from_date,
+      to_date: app.to_date,
+      from_half: app.from_half,
+      to_half: app.to_half,
+      total_days: app.total_days,
+      reason: app.reason ?? "",
+    });
+  };
+
+  const handleEditLeave = (app: LeaveApplicationAPI) => {
+    openEditLeave(app);
+  };
+
+  const handleSaveEdit = async () => {
+    console.log("Save mock edit:", editLeave?.id, editForm);
+    setEditLeave(null);
+  };
+
+const handleCancelLeave = async (app: LeaveApplicationAPI) => {
+  try {
+    console.log("Cancel leave:", app);
+
+    // Example API call
+    // await cancelLeaveApplication(app.id)
+
+    // toast.success("Leave cancelled successfully")
+  } catch (error) {
+    console.error(error);
+
+    // toast.error("Failed to cancel leave")
+  }
+};
+
+const handleResubmitLeave = async (app: LeaveApplicationAPI) => {
+  try {
+    console.log("Resubmit leave:", app);
+
+    // Example API call
+    // await resubmitLeaveApplication(app.id)
+
+    // toast.success("Leave resubmitted successfully")
+  } catch (error) {
+    console.error(error);
+
+    // toast.error("Failed to resubmit leave")
+  }
+};
 
   const years = useMemo(() => {
     const y = new Set<number>();
@@ -275,69 +347,97 @@ export function ApplicationsHistoryTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((app) => (
-                <tr
-                  key={app.id}
-                  className="transition-colors duration-150 hover:bg-secondary/60"
-                >
-                  <td className="px-4 py-3 sm:px-5">
-                    <div className="flex items-center gap-2">
-                      <LeaveTypePill code={app.leave_type_detail?.code ?? "—"} />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">{app.leave_type_detail?.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {app.leave_type_detail?.is_paid ? "Paid" : "Unpaid"}
-                        </p>
+              {filtered.map((app) => {
+                const rowStatus = app.status.toUpperCase();
+                return (
+                  <tr key={app.id} className="transition-colors duration-150 hover:bg-secondary/60">
+                    <td className="px-4 py-3 sm:px-5">
+                      <div className="flex items-center gap-2">
+                        <LeaveTypePill code={app.leave_type_detail?.code ?? "—"} />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">{app.leave_type_detail?.name}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {app.leave_type_detail?.is_paid ? "Paid" : "Unpaid"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground sm:px-5">
-                    {formatLeaveShortDate(app.from_date)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground sm:px-5">
-                    {formatLeaveShortDate(app.to_date)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold tabular-nums text-foreground sm:px-5">
-                    {app.total_days}
-                  </td>
-                  <td className="max-w-[200px] px-4 py-3 sm:max-w-[240px] sm:px-5">
-                    <p className="truncate text-sm text-muted-foreground" title={app.reason}>
-                      {app.reason}
-                    </p>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground sm:px-5">
-                    {formatLeaveDate(app.applied_on)}
-                  </td>
-                  <td className="px-4 py-3 sm:px-5">
-                    <EmployeeLeaveStatusBadge status={app.status} />
-                  </td>
-                  <td className="px-2 py-3 text-right sm:px-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
-                          aria-label="Row actions"
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground sm:px-5">
+                      {formatLeaveShortDate(app.from_date)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground sm:px-5">
+                      {formatLeaveShortDate(app.to_date)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold tabular-nums text-foreground sm:px-5">
+                      {app.total_days}
+                    </td>
+                    <td className="max-w-[200px] px-4 py-3 sm:max-w-[240px] sm:px-5">
+                      <p className="truncate text-sm text-muted-foreground" title={app.reason}>
+                        {app.reason}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground sm:px-5">
+                      {formatLeaveDate(app.applied_on)}
+                    </td>
+                    <td className="px-4 py-3 sm:px-5">
+                      <EmployeeLeaveStatusBadge status={app.status} />
+                    </td>
+                    <td className="px-2 py-3 text-right sm:px-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                            aria-label="Row actions"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent
+                          align="end"
+                          sideOffset={6}
+                          className="z-50 w-52 rounded-xl border border-border bg-popover p-1 shadow-lg"
                         >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44 rounded-lg border-border">
-                        <DropdownMenuItem className="text-sm" onClick={() => setDetail(app)}>
-                          View details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-sm"
-                          onClick={() => navigator.clipboard?.writeText(app.id)}
-                        >
-                          Copy request ID
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
+                          {(rowStatus === "PENDING" || rowStatus === "SUBMITTED" || rowStatus === "DRAFT") && (
+                            <>
+                              <DropdownMenuItem
+                                className="cursor-pointer rounded-md text-sm"
+                                onClick={() => handleEditLeave(app)}
+                              >
+                                Edit pending leave
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                className="cursor-pointer rounded-md text-sm text-red-500 focus:text-red-500"
+                                onClick={() => handleCancelLeave(app)}
+                              >
+                                Cancel leave
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          {(rowStatus === "REJECTED" || rowStatus === "CANCELLED") && (
+                            <DropdownMenuItem
+                              className="cursor-pointer rounded-md text-sm"
+                              onClick={() => handleResubmitLeave(app)}
+                            >
+                              Resubmit leave
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuItem
+                            className="cursor-pointer rounded-md text-sm"
+                            onClick={() => setDetail(app)}
+                          >
+                            View details
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -375,6 +475,89 @@ export function ApplicationsHistoryTable({
           )}
         </DialogContent>
       </Dialog>
+
+      <Drawer open={!!editLeave} onOpenChange={(open) => !open && setEditLeave(null)} direction="right">
+        <DrawerPaneContent className="max-w-md border-l border-border bg-background">
+          <DrawerPaneHeader className="border-b border-border bg-card sticky top-0 z-10 px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <DrawerPaneTitle className="text-base">Edit pending leave</DrawerPaneTitle>
+                <p className="text-xs text-muted-foreground mt-1">Mock edit flow for pending requests.</p>
+              </div>
+              <DrawerClose asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </DrawerClose>
+            </div>
+          </DrawerPaneHeader>
+
+          <div className="space-y-4 p-5">
+            <div className="grid gap-4">
+              <label className="space-y-2 text-sm">
+                <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Leave type</span>
+                <select
+                  value={editForm.leaveType}
+                  onChange={(e) => setEditForm((curr) => ({ ...curr, leaveType: e.target.value }))}
+                  className="flat-input h-10 w-full rounded-xl px-3 text-sm"
+                >
+                  {leaveTypeOptions.map((lt) => (
+                    <option key={lt.id} value={lt.id}>
+                      {lt.name} ({lt.code})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-2 text-sm">
+                  <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From</span>
+                  <Input
+                    type="date"
+                    value={editForm.from_date}
+                    onChange={(e) => setEditForm((curr) => ({ ...curr, from_date: e.target.value }))}
+                  />
+                </label>
+                <label className="space-y-2 text-sm">
+                  <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To</span>
+                  <Input
+                    type="date"
+                    value={editForm.to_date}
+                    onChange={(e) => setEditForm((curr) => ({ ...curr, to_date: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <label className="space-y-2 text-sm">
+                <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Reason</span>
+                <Textarea
+                  value={editForm.reason}
+                  onChange={(e) => setEditForm((curr) => ({ ...curr, reason: e.target.value }))}
+                  className="min-h-[120px]"
+                />
+              </label>
+            </div>
+
+            <div className="rounded-xl border border-border bg-secondary/50 p-4 text-sm text-muted-foreground">
+              <p className="font-semibold text-foreground">Request details</p>
+              <p className="mt-2">Applied on: {editLeave?.applied_on}</p>
+              <p>Status: {editLeave?.status}</p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditLeave(null)}>
+                Cancel
+              </Button>
+              <Button type="button" size="sm" onClick={handleSaveEdit}>
+                Save changes
+              </Button>
+            </div>
+          </div>
+        </DrawerPaneContent>
+      </Drawer>
     </div>
   );
 }

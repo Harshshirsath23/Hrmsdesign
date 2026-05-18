@@ -65,6 +65,7 @@ const MODULE_OPTIONS = [
 export const LEAVE_TYPE_FIELDS: MasterFieldConfig[] = [
   { key: "code", label: "Code", type: "text", required: true, section: "Basic Information", placeholder: "Enter code" },
   { key: "name", label: "Name", type: "text", required: true, section: "Basic Information", placeholder: "Enter name" },
+  { key: "color_code", label: "Color", type: "color", section: "Basic Information", placeholder: "Select color" },
   { key: "employee_type", label: "Employee Type", type: "select", relationMaster: "EmployeeType", section: "Basic Information" },
   { key: "description", label: "Description", type: "textarea", section: "Basic Information", placeholder: "Enter description" },
   { key: "max_days_per_year", label: "Max Days Per Year", type: "number", required: true, min: 1, section: "Leave Limits" },

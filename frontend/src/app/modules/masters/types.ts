@@ -1,4 +1,4 @@
-export type MasterFieldType = "text" | "textarea" | "number" | "select" | "boolean" | "date" | "multiselect";
+export type MasterFieldType = "text" | "textarea" | "number" | "select" | "boolean" | "date" | "multiselect" | "color";
 
 export interface MasterFieldDisabledWhen {
   field: string;
