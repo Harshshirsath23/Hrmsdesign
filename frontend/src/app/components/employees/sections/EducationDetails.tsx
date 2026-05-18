@@ -27,7 +27,7 @@ const emptyEdu = (): EducationEntry => ({
 });
 
 export function EducationDetails({ employee }: Props) {
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<EducationEntry[]>(employee.education || []);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
@@ -77,8 +77,10 @@ export function EducationDetails({ employee }: Props) {
     setIsEditing(false);
   };
 
+  const isEditable = employee.editableSections?.includes("education-details");
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div>
         <h2 className="text-lg font-bold text-foreground">Education Details</h2>
         <p className="text-sm text-muted-foreground mt-1">Academic qualifications for {employee.name}</p>
@@ -87,6 +89,10 @@ export function EducationDetails({ employee }: Props) {
       <EditableSectionCard
         title="Education Details"
         icon={GraduationCap}
+        sectionId="education-details"
+        canEmployeeEdit={isEditable}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "education-details", v)}
+        requestStatus={employee.editRequestStatus}
         isEditing={isEditing}
         onEdit={() => {
           setDraft(baseline.length ? baseline : [emptyEdu()]);
@@ -94,25 +100,14 @@ export function EducationDetails({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={addRow}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Education
-            </button>
-          ) : null
-        }
+        headerExtra={null}
       >
         {formError ? <p className="text-sm text-destructive mb-3">{formError}</p> : null}
         {!draft.length ? (
           <EmptyStateCard
             icon={GraduationCap}
             title="No education records"
-            description="Use Edit, then Add Education to capture qualifications."
+            description="Contact employee to update their educational qualifications."
           />
         ) : (
           <div className="space-y-4">

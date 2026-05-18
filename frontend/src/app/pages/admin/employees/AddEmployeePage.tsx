@@ -10,6 +10,9 @@ import {
   type FormEvent,
 } from "react";
 import { useNavigate } from "react-router";
+import { useDispatch } from "react-redux";
+import { addAdminEmployee } from "@/store/slices/adminSlice";
+import { Employee, normalizeLegacyEmployee } from "@/app/components/employees/mockData";
 import {
   User,
   Briefcase,
@@ -45,6 +48,7 @@ import {
 } from "lucide-react";
 import { MasterSelect } from "@/app/components/ui/MasterSelect";
 import { SearchableSelect } from "@/app/components/ui/SearchableSelect";
+import { BulkImportTab } from "./BulkImportTab";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -99,10 +103,6 @@ interface FormState {
   leavePolicy: string;
   annualLeave: string;
   sickLeave: string;
-  idProof: UploadedFile | null;
-  addressProof: UploadedFile | null;
-  offerLetter: UploadedFile | null;
-  otherDocs: UploadedFile[];
   username: string;
   password: string;
   role: string;
@@ -114,45 +114,18 @@ interface FormState {
   assetCondition: string;
   assetType: string;
   assetId: string;
-  activeTab: "new" | "rehire";
-  familyDetails: {
-    name: string;
-    relationship: string;
-    dob: string;
-    gender: string;
-    bloodGroup: string;
-    phone: string;
-    occupation: string;
-    isDependent: boolean;
-    isEmergencyContact: boolean;
-    isNominee: boolean;
-  }[];
+  activeTab: "new" | "rehire" | "bulk";
   // NEW FIELDS
-  education: {
-    level: string;
-    qualification: string;
-    specialization: string;
-    institution: string;
-    yearOfPassing: string;
-    grade: string;
-  }[];
   bgcStatus: string;
   bgcAgency: string;
   bgcVerifiedBy: string;
   bgcReference: string;
   bgcRemarks: string;
-  nominees: {
-    name: string;
-    relationship: string;
-    dob: string;
-    percentage: string;
-  }[];
   rehireDate: string;
   rehireRemarks: string;
   restoreSalary: boolean;
   restoreAssets: boolean;
   restoreLeaves: boolean;
-  restoreDocs: boolean;
 }
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -164,16 +137,13 @@ type Touched = Partial<Record<keyof FormState, boolean>>;
 
 const SECTIONS = [
   { id: "s-basic", n: 1, label: "Basic Information", Icon: User },
-  { id: "s-family", n: 2, label: "Family & Nominees", Icon: UserPlus },
-  { id: "s-job", n: 3, label: "Job Details", Icon: Briefcase },
-  { id: "s-attendance", n: 4, label: "Attendance Settings", Icon: Clock },
-  { id: "s-payroll", n: 5, label: "Payroll Information", Icon: CreditCard },
-  { id: "s-leave", n: 6, label: "Leave Configuration", Icon: Calendar },
-  { id: "s-documents", n: 7, label: "Documents", Icon: FileText },
-  { id: "s-education", n: 8, label: "Education Details", Icon: GraduationCap },
-  { id: "s-background", n: 9, label: "Background Check", Icon: Shield },
-  { id: "s-assets", n: 10, label: "Asset Management", Icon: Monitor },
-  { id: "s-account", n: 11, label: "Account Access", Icon: Shield },
+  { id: "s-job", n: 2, label: "Job Details", Icon: Briefcase },
+  { id: "s-attendance", n: 3, label: "Attendance Settings", Icon: Clock },
+  { id: "s-payroll", n: 4, label: "Payroll Information", Icon: CreditCard },
+  { id: "s-leave", n: 5, label: "Leave Configuration", Icon: Calendar },
+  { id: "s-background", n: 6, label: "Background Check", Icon: Shield },
+  { id: "s-assets", n: 7, label: "Asset Management", Icon: Monitor },
+  { id: "s-account", n: 8, label: "Account Access", Icon: Shield },
 ];
 
 const DEPTS = [
@@ -295,10 +265,6 @@ const INIT: FormState = {
   leavePolicy: "",
   annualLeave: "24",
   sickLeave: "12",
-  idProof: null,
-  addressProof: null,
-  offerLetter: null,
-  otherDocs: [],
   username: "",
   password: "",
   role: "employee",
@@ -311,15 +277,11 @@ const INIT: FormState = {
   assetType: "",
   assetId: "",
   activeTab: "new",
-  familyDetails: [],
-  nominees: [],
   rehireDate: "",
   rehireRemarks: "",
   restoreSalary: false,
   restoreAssets: false,
   restoreLeaves: false,
-  restoreDocs: false,
-  education: [],
   bgcStatus: "Pending",
   bgcAgency: "",
   bgcVerifiedBy: "",
@@ -1150,6 +1112,7 @@ function RehireSearch({ onSelect }: { onSelect: (emp: any) => void }) {
 
 export function AddEmployeePage() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [form, setForm] = useState<FormState>({ ...INIT });
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Touched>({});
@@ -1300,6 +1263,19 @@ export function AddEmployeePage() {
     if (!validateAll()) return;
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 1800));
+
+    // Create the employee object
+    const newEmp = normalizeLegacyEmployee({
+      ...form,
+      id: form.employeeId,
+      name: `${form.firstName} ${form.lastName}`,
+      phone: `${form.phoneCode} ${form.phone}`,
+      status: "Active", // Initial status
+      // Add other necessary mappings if any
+    });
+
+    dispatch(addAdminEmployee(newEmp));
+    
     setSubmitting(false);
     setSubmitted(true);
   };
@@ -1386,6 +1362,17 @@ export function AddEmployeePage() {
           >
             Rehire Employee
           </button>
+          <button
+            type="button"
+            onClick={() => set("activeTab", "bulk")}
+            className={`px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
+              form.activeTab === "bulk"
+                ? "bg-foreground text-primary-foreground shadow-lg scale-[1.02]"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            Bulk Import
+          </button>
         </div>
       </div>
 
@@ -1403,7 +1390,11 @@ export function AddEmployeePage() {
             </button>
             <div>
               <h1 className="text-base font-semibold text-foreground leading-tight flex items-center gap-2">
-                {form.activeTab === "new" ? "Add New Employee" : "Rehire Former Employee"}
+                {form.activeTab === "new" 
+                  ? "Add New Employee" 
+                  : form.activeTab === "rehire"
+                    ? "Rehire Former Employee"
+                    : "Bulk Employee Import"}
                 {form.activeTab === "rehire" && form.firstName && (
                   <span className="px-1.5 py-0.5 rounded bg-indigo-500 text-white text-[8px] font-black uppercase tracking-tighter">
                     Rehired
@@ -1413,20 +1404,24 @@ export function AddEmployeePage() {
               <p className="text-xs text-muted-foreground mt-0.5">
                 {form.activeTab === "new" 
                   ? "Register a fresh talent into the system" 
-                  : `Reactivating profile for ${form.firstName} ${form.lastName}`}
+                  : form.activeTab === "rehire"
+                    ? `Reactivating profile for ${form.firstName} ${form.lastName}`
+                    : "Import multiple employee records via excel file"}
               </p>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleDraft}
-              disabled={draftSaving}
-              className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-secondary transition-all disabled:opacity-50"
-            >
-              {draftSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              Save Draft
-            </button>
+            {form.activeTab !== "bulk" && (
+              <button
+                type="button"
+                onClick={handleDraft}
+                disabled={draftSaving}
+                className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-secondary transition-all disabled:opacity-50"
+              >
+                {draftSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                Save Draft
+              </button>
+            )}
           </div>
         </div>
 
@@ -1437,7 +1432,14 @@ export function AddEmployeePage() {
           ) : null}
 
           <div className="flex-1 min-w-0">
-            {form.activeTab === "rehire" && !form.firstName ? (
+            {form.activeTab === "bulk" ? (
+              <BulkImportTab 
+                onImportComplete={(data) => {
+                  console.log("Imported data:", data);
+                  navigate("/admin/employees");
+                }}
+              />
+            ) : form.activeTab === "rehire" && !form.firstName ? (
               <RehireSearch 
                 onSelect={(emp) => {
                   setForm(f => ({
@@ -1504,7 +1506,6 @@ export function AddEmployeePage() {
                       <Toggle on={form.restoreSalary} setOn={(v) => set("restoreSalary", v)} label="Restore Salary" desc="Prev. structure" />
                       <Toggle on={form.restoreAssets} setOn={(v) => set("restoreAssets", v)} label="Restore Assets" desc="Prev. assignments" />
                       <Toggle on={form.restoreLeaves} setOn={(v) => set("restoreLeaves", v)} label="Restore Leaves" desc="Prev. balances" />
-                      <Toggle on={form.restoreDocs} setOn={(v) => set("restoreDocs", v)} label="Restore Docs" desc="Prev. uploads" />
                     </div>
                   </div>
                 )}
@@ -1751,239 +1752,14 @@ export function AddEmployeePage() {
               </div>
             </SC>
 
-            {/* ─────────────────────────────────────────────
-                SECTION 2 · FAMILY & NOMINEES
-            ───────────────────────────────────────────── */}
-            <SC
-              id="s-family"
-              n={2}
-              title="Family & Nominees"
-              desc="Declare family members and assign nominees for benefits"
-              Icon={UserPlus}
-            >
-              <div className="flex flex-col gap-6">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Family Details</h4>
-                    <button
-                      type="button"
-                      onClick={() => set("familyDetails", [...form.familyDetails, { 
-                        name: "", 
-                        relationship: "", 
-                        dob: "", 
-                        gender: "Male",
-                        bloodGroup: "",
-                        phone: "",
-                        occupation: "",
-                        isDependent: true,
-                        isEmergencyContact: false,
-                        isNominee: false 
-                      }])}
-                      className="flex items-center gap-1.5 text-[10px] font-black text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-widest"
-                    >
-                      <Plus size={12} />
-                      Add Member
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {form.familyDetails.map((member, idx) => (
-                      <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl border border-border bg-secondary/20 relative group">
-                        <button 
-                          type="button"
-                          onClick={() => set("familyDetails", form.familyDetails.filter((_, i) => i !== idx))}
-                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                        >
-                          <X size={12} />
-                        </button>
-                        <FF label="Full Name">
-                          <Inp 
-                            value={member.name}
-                            onChange={(e) => {
-                              const news = [...form.familyDetails];
-                              news[idx].name = e.target.value;
-                              set("familyDetails", news);
-                            }}
-                            placeholder="Rajesh Kumar"
-                          />
-                        </FF>
-                        <FF label="Relationship">
-                          <Sel 
-                            value={member.relationship}
-                            onChange={(e) => {
-                              const news = [...form.familyDetails];
-                              news[idx].relationship = e.target.value;
-                              set("familyDetails", news);
-                            }}
-                            ph="Select..."
-                            opts={[{ v: "Father", l: "Father" }, { v: "Mother", l: "Mother" }, { v: "Spouse", l: "Spouse" }, { v: "Child", l: "Child" }]}
-                          />
-                        </FF>
-                        <FF label="Date of Birth">
-                          <Inp 
-                            type="date"
-                            value={member.dob}
-                            onChange={(e) => {
-                              const news = [...form.familyDetails];
-                              news[idx].dob = e.target.value;
-                              set("familyDetails", news);
-                            }}
-                          />
-                        </FF>
-                        <FF label="Gender">
-                          <Sel 
-                            value={member.gender}
-                            onChange={(e) => {
-                              const news = [...form.familyDetails];
-                              news[idx].gender = e.target.value;
-                              set("familyDetails", news);
-                            }}
-                            opts={[{ v: "Male", l: "Male" }, { v: "Female", l: "Female" }, { v: "Other", l: "Other" }]}
-                          />
-                        </FF>
-                        <FF label="Blood Group">
-                          <Inp 
-                            value={member.bloodGroup}
-                            onChange={(e) => {
-                              const news = [...form.familyDetails];
-                              news[idx].bloodGroup = e.target.value;
-                              set("familyDetails", news);
-                            }}
-                            placeholder="A+"
-                          />
-                        </FF>
-                        <FF label="Phone Number">
-                          <Inp 
-                            value={member.phone}
-                            onChange={(e) => {
-                              const news = [...form.familyDetails];
-                              news[idx].phone = e.target.value;
-                              set("familyDetails", news);
-                            }}
-                            placeholder="+91"
-                          />
-                        </FF>
-                        <FF label="Occupation">
-                          <Inp 
-                            value={member.occupation}
-                            onChange={(e) => {
-                              const news = [...form.familyDetails];
-                              news[idx].occupation = e.target.value;
-                              set("familyDetails", news);
-                            }}
-                            placeholder="Self-employed"
-                          />
-                        </FF>
-                        <div className="sm:col-span-3 flex flex-wrap gap-4 mt-2">
-                           <Toggle 
-                             on={member.isDependent} 
-                             setOn={(v) => {
-                               const news = [...form.familyDetails];
-                               news[idx].isDependent = v;
-                               set("familyDetails", news);
-                             }}
-                             label="Is Dependent"
-                           />
-                           <Toggle 
-                             on={member.isEmergencyContact} 
-                             setOn={(v) => {
-                               const news = [...form.familyDetails];
-                               news[idx].isEmergencyContact = v;
-                               set("familyDetails", news);
-                             }}
-                             label="Emergency Contact"
-                           />
-                        </div>
-                      </div>
-                    ))}
-                    {form.familyDetails.length === 0 && (
-                      <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl bg-secondary/10">
-                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest italic">No family members added yet</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                <div className="pt-4 border-t border-border">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-xs font-black text-foreground uppercase tracking-widest">Nominee Details</h4>
-                    <button
-                      type="button"
-                      disabled={form.familyDetails.length === 0}
-                      onClick={() => set("nominees", [...form.nominees, { name: "", relationship: "", dob: "", percentage: "" }])}
-                      className="flex items-center gap-1.5 text-[10px] font-black text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-widest disabled:opacity-30"
-                    >
-                      <Plus size={12} />
-                      Add Nominee
-                    </button>
-                  </div>
-
-                  {form.familyDetails.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center gap-3">
-                      <AlertCircle size={16} className="text-amber-500" />
-                      <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Please add family details first.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {form.nominees.map((nominee, idx) => (
-                        <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 rounded-xl border border-border bg-indigo-500/5 relative group">
-                          <button 
-                            type="button"
-                            onClick={() => set("nominees", form.nominees.filter((_, i) => i !== idx))}
-                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                          >
-                            <X size={12} />
-                          </button>
-                          <FF label="Nominee Name">
-                            <Sel 
-                              value={nominee.name}
-                              onChange={(e) => {
-                                const name = e.target.value;
-                                const member = form.familyDetails.find(f => f.name === name);
-                                const news = [...form.nominees];
-                                news[idx].name = name;
-                                if (member) {
-                                  news[idx].relationship = member.relationship;
-                                  news[idx].dob = member.dob;
-                                }
-                                set("nominees", news);
-                              }}
-                              ph="Select Name..."
-                              opts={form.familyDetails.map(f => ({ v: f.name, l: f.name }))}
-                            />
-                          </FF>
-                          <FF label="Relationship">
-                            <Inp value={nominee.relationship} readOnly placeholder="Auto-filled" className="bg-secondary/50" />
-                          </FF>
-                          <FF label="DOB">
-                            <Inp value={nominee.dob} readOnly placeholder="Auto-filled" className="bg-secondary/50" />
-                          </FF>
-                          <FF label="Percentage">
-                            <Inp 
-                              type="number"
-                              value={nominee.percentage}
-                              onChange={(e) => {
-                                const news = [...form.nominees];
-                                news[idx].percentage = e.target.value;
-                                set("nominees", news);
-                              }}
-                              placeholder="100"
-                            />
-                          </FF>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </SC>
 
             {/* ─────────────────────────────────────────────
                 SECTION 2 · JOB DETAILS
             ───────────────────────────────────────────── */}
             <SC
               id="s-job"
-              n={3}
+              n={2}
               title="Job Details"
               desc="Role, department, and employment configuration"
               Icon={Briefcase}
@@ -2055,7 +1831,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-attendance"
-              n={4}
+              n={3}
               title="Attendance Settings"
               desc="Shift allocation, leave policy, and attendance tracking"
               Icon={Clock}
@@ -2105,7 +1881,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-payroll"
-              n={5}
+              n={4}
               title="Payroll Information"
               desc="Salary structure and banking details"
               Icon={CreditCard}
@@ -2177,7 +1953,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-leave"
-              n={6}
+              n={5}
               title="Leave Configuration"
               desc="Leave policy and opening balances for the employee"
               Icon={Calendar}
@@ -2214,147 +1990,14 @@ export function AddEmployeePage() {
               </FF>
             </SC>
 
-            {/* ─────────────────────────────────────────────
-                SECTION 6 · DOCUMENTS
-            ───────────────────────────────────────────── */}
-            <SC
-              id="s-documents"
-              n={7}
-              title="Documents"
-              desc="Upload required identification and employment documents"
-              Icon={FileText}
-            >
-              <FF label="ID Proof" hint="Passport, Driver's License, or National ID">
-                <FileUp
-                  label="PDF, JPG, PNG · Max 5 MB"
-                  file={form.idProof}
-                  onChange={(v) => set("idProof", v)}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                />
-              </FF>
 
-              <FF label="Address Proof" hint="Utility bill, bank statement, or lease">
-                <FileUp
-                  label="PDF, JPG, PNG · Max 5 MB"
-                  file={form.addressProof}
-                  onChange={(v) => set("addressProof", v)}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                />
-              </FF>
-
-              <FF label="Offer Letter">
-                <FileUp
-                  label="PDF · Max 10 MB"
-                  file={form.offerLetter}
-                  onChange={(v) => set("offerLetter", v)}
-                  accept=".pdf"
-                />
-              </FF>
-
-              <FF label="Other Documents" hint="Additional supporting documents">
-                <FileUp
-                  label="Any format · Max 10 MB"
-                  file={form.otherDocs[0] ?? null}
-                  onChange={(v) => set("otherDocs", v ? [v] : [])}
-                />
-              </FF>
-            </SC>
-
-            {/* ─────────────────────────────────────────────
-                SECTION 7 · EDUCATION DETAILS
-            ───────────────────────────────────────────── */}
-            <SC
-              id="s-education"
-              n={8}
-              title="Education Details"
-              desc="Academic qualifications and professional certifications"
-              Icon={GraduationCap}
-            >
-              <div className="col-span-2 space-y-6">
-                {(form.education || []).map((edu, index) => (
-                  <div key={index} className="p-5 rounded-xl border border-border bg-secondary/10 relative group">
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        const next = [...form.education];
-                        next.splice(index, 1);
-                        set("education", next);
-                      }}
-                      className="absolute right-3 top-3 p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FF label="Level">
-                        <Sel 
-                          value={edu.level} 
-                          onChange={(e) => {
-                            const next = [...form.education];
-                            next[index].level = e.target.value;
-                            set("education", next);
-                          }}
-                          opts={[
-                            { v: "ssc", l: "SSC" },
-                            { v: "hsc", l: "HSC" },
-                            { v: "bachelors", l: "Bachelor's" },
-                            { v: "masters", l: "Master's" },
-                            { v: "phd", l: "PhD" }
-                          ]}
-                        />
-                      </FF>
-                      <FF label="Qualification">
-                        <Inp 
-                          value={edu.qualification} 
-                          onChange={(e) => {
-                            const next = [...form.education];
-                            next[index].qualification = e.target.value;
-                            set("education", next);
-                          }}
-                          placeholder="E.g. B.Tech Computer Science"
-                        />
-                      </FF>
-                      <FF label="Institution">
-                        <Inp 
-                          value={edu.institution} 
-                          onChange={(e) => {
-                            const next = [...form.education];
-                            next[index].institution = e.target.value;
-                            set("education", next);
-                          }}
-                          placeholder="University Name"
-                        />
-                      </FF>
-                      <FF label="Year of Passing">
-                        <Inp 
-                          value={edu.yearOfPassing} 
-                          onChange={(e) => {
-                            const next = [...form.education];
-                            next[index].yearOfPassing = e.target.value;
-                            set("education", next);
-                          }}
-                          placeholder="2020"
-                        />
-                      </FF>
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => set("education", [...(form.education || []), { level: "bachelors", qualification: "", specialization: "", institution: "", yearOfPassing: "", grade: "" }])}
-                  className="w-full h-12 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground hover:border-foreground hover:text-foreground transition-all"
-                >
-                  <Plus size={14} />
-                  Add Education Record
-                </button>
-              </div>
-            </SC>
 
             {/* ─────────────────────────────────────────────
                 SECTION 8 · BACKGROUND CHECK
             ───────────────────────────────────────────── */}
             <SC
               id="s-background"
-              n={9}
+              n={6}
               title="Background Check"
               desc="Verification status and agency audit details"
               Icon={Shield}
@@ -2408,7 +2051,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-assets"
-              n={10}
+              n={7}
               title="Asset Management"
               desc="Company property and equipment assigned to the employee"
               Icon={Monitor}
@@ -2461,7 +2104,7 @@ export function AddEmployeePage() {
             ───────────────────────────────────────────── */}
             <SC
               id="s-account"
-              n={11}
+              n={8}
               title="Account Access"
               desc="System credentials and role-based access permissions"
               Icon={Shield}

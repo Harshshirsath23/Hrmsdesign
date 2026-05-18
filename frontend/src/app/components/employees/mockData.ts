@@ -18,6 +18,7 @@ export interface WorkExperienceEntry {
   technologiesUsed: string;
   location: string;
   experienceLetterFileName?: string;
+  experienceLetterDataUrl?: string;
   reasonForLeaving: string;
   startDate: string;
   endDate: string;
@@ -32,6 +33,7 @@ export interface NomineeEntry {
   address: string;
   sharePercentage: string;
   idProofFileName?: string;
+  idProofDataUrl?: string;
 }
 
 export interface InsuranceEntry {
@@ -43,6 +45,7 @@ export interface InsuranceEntry {
   validTill: string;
   dependentsCovered: string;
   documentFileName?: string;
+  documentDataUrl?: string;
 }
 
 export interface AssetEntry {
@@ -313,6 +316,10 @@ export interface Employee {
     phone: string;
     alternatePhone?: string;
   };
+
+  // Selective Editing for ESS
+  editableSections?: string[]; // IDs of sections/subsections employee can edit
+  editRequestStatus?: 'None' | 'Pending' | 'Updated';
 }
 
 const _legacyEmployees: Record<string, unknown>[] = [
@@ -523,32 +530,36 @@ const _legacyEmployees: Record<string, unknown>[] = [
     ],
     nominees: [
       {
-        name: "Priya Sharma",
+        id: "nom-1",
+        nomineeName: "Priya Sharma",
         relationship: "Spouse",
-        dob: "1994-03-10",
-        sharePercentage: "100",
-        phone: "+91 98765 00001",
+        dateOfBirth: "1994-03-10",
+        contactNumber: "+91 98765 00001",
         address: "42, Koramangala, Bangalore",
+        sharePercentage: "100",
       },
     ],
     insurance: [
       {
-        policyType: "Health",
+        id: "ins-1",
+        insuranceProvider: "Star Health",
         policyNumber: "POL-H-99231",
-        provider: "Star Health",
-        coverageAmount: "₹ 10,00,000",
-        startDate: "2023-04-01",
-        endDate: "2026-03-31",
-        nomineeName: "Priya Sharma",
+        coverageType: "Health",
+        coverageAmount: "1000000",
+        validTill: "2026-03-31",
+        dependentsCovered: "Priya Sharma",
       },
     ],
     assets: [
       {
-        name: "MacBook Pro 16",
-        code: "AST-LAP-001",
-        type: "Laptop",
+        id: "ast-1",
+        assetName: "MacBook Pro 16",
+        assetId: "AST-LAP-001",
+        assetCategory: "Laptop",
+        serialNumber: "SN-MBP-2021-001",
         assignedDate: "2021-03-20",
-        condition: "Good",
+        returnDate: "",
+        assetCondition: "Good",
         status: "Assigned",
         remarks: "Company issued",
       },

@@ -1,172 +1,372 @@
-import { Megaphone, Pin, Calendar, Users, Eye, Edit3, Trash2, Plus, Paperclip, PinOff, Copy, Archive } from "lucide-react";
-import { KebabMenu } from "../../../../components/ui/KebabMenu";
-import { toast } from "sonner";
-
-interface Notice {
-  id: string;
-  title: string;
-  content: string;
-  department: string;
-  date: string;
-  isPinned: boolean;
-  expiryDate: string;
-}
-
-const MOCK_NOTICES: Notice[] = [
-  {
-    id: "1",
-    title: "Annual Townhall 2026",
-    content: "All employees are requested to join the annual townhall meeting on Friday.",
-    department: "All Departments",
-    date: "2026-05-10",
-    isPinned: true,
-    expiryDate: "2026-05-15"
-  },
-  {
-    id: "2",
-    title: "New Policy Update: Remote Work",
-    content: "The company has updated the remote work policy. Please check the attachment.",
-    department: "HR & Operations",
-    date: "2026-05-08",
-    isPinned: false,
-    expiryDate: "2026-06-01"
-  }
-];
+import React, { useState, useMemo } from "react";
+import { 
+  Megaphone, 
+  Calendar, 
+  Users, 
+  Eye, 
+  Edit3, 
+  Trash2, 
+  Plus, 
+  RefreshCw, 
+  Filter, 
+  Clock, 
+  ShieldCheck, 
+  Download,
+  Info,
+  HelpCircle,
+  Database,
+  Tag,
+  ArrowRight,
+  Search,
+  MoreVertical,
+  Layers,
+  Star
+} from "lucide-react";
+import { Button } from "../../../../components/ui/button";
+import { Input } from "../../../../components/ui/input";
+import { Badge } from "../../../../components/ui/badge";
+import { cn } from "../../../../components/ui/utils";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "../../../../components/ui/select";
+import { Bulletin, BulletinStatus } from "./BulletinBoard/types";
+import { AddBulletinModal } from "./BulletinBoard/AddBulletinModal";
+import { BULLETIN_CATEGORIES } from "./BulletinBoard/BulletinBoardConfig";
 
 export function BulletinBoardPage() {
-  const [notices] = useState<Notice[]>(MOCK_NOTICES);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editBulletin, setEditBulletin] = useState<Bulletin | null>(null);
+  const [statusFilter, setStatusFilter] = useState<BulletinStatus>("Open");
+  const [payrollMonth, setPayrollMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [bulletins, setBulletins] = useState<Bulletin[]>([
+    {
+      id: "1",
+      category: "hr-campaign",
+      title: "Annual Townhall 2026 - Save the Date!",
+      content: "All employees are requested to join the annual townhall meeting on Friday.",
+      postedDate: "2026-05-10T10:00:00Z",
+      startDate: "2026-05-10",
+      expiryDate: "2026-05-20",
+      rank: 1,
+      isHidden: false,
+      attachments: [],
+      employeeFilters: ["all"],
+      status: "Open"
+    },
+    {
+      id: "2",
+      category: "notification",
+      title: "New Policy Update: Flexible Working Hours",
+      content: "The company has updated the remote work policy. Please check the attachment.",
+      postedDate: "2026-05-08T14:30:00Z",
+      startDate: "2026-05-08",
+      expiryDate: "2026-06-01",
+      rank: 2,
+      isHidden: false,
+      attachments: [],
+      employeeFilters: ["bangalore", "sales"],
+      status: "Open"
+    },
+    {
+      id: "3",
+      category: "general",
+      title: "Cafeteria Maintenance Schedule",
+      content: "The cafeteria will be closed for maintenance on Sunday.",
+      postedDate: "2026-05-01T09:15:00Z",
+      startDate: "2026-05-01",
+      expiryDate: "2026-05-05",
+      rank: 5,
+      isHidden: true,
+      attachments: [],
+      employeeFilters: ["all-current"],
+      status: "Closed"
+    }
+  ]);
+
+  const filteredBulletins = useMemo(() => {
+    return bulletins.filter(b => {
+      const matchesStatus = b.status === statusFilter;
+      const matchesSearch = b.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           b.category.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesStatus && matchesSearch;
+    }).sort((a, b) => a.rank - b.rank);
+  }, [bulletins, statusFilter, searchQuery]);
+
+  const handleSave = (data: Partial<Bulletin>) => {
+    if (editBulletin) {
+      setBulletins(bulletins.map(b => b.id === editBulletin.id ? { ...b, ...data } as Bulletin : b));
+    } else {
+      const newBulletin: Bulletin = {
+        ...data,
+        id: Math.random().toString(36).substr(2, 9),
+        postedDate: new Date().toISOString(),
+      } as Bulletin;
+      setBulletins([newBulletin, ...bulletins]);
+    }
+    setIsModalOpen(false);
+    setEditBulletin(null);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this bulletin?")) {
+      setBulletins(bulletins.filter(b => b.id !== id));
+    }
+  };
+
+  const handleEdit = (bulletin: Bulletin) => {
+    setEditBulletin(bulletin);
+    setIsModalOpen(true);
+  };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex flex-col h-full bg-background/30 overflow-hidden">
+      {/* Header */}
+      <div className="px-8 py-6 border-b border-border bg-card/50 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-20 shadow-sm">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Megaphone className="w-5 h-5 text-orange-500" />
+          <h1 className="text-xl font-black text-foreground tracking-tight uppercase flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-primary" />
             Bulletin Board
-          </h2>
-          <p className="text-sm text-muted-foreground">Manage company-wide announcements and departmental notices.</p>
+          </h1>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+            Manage announcements, notifications, and company campaigns
+          </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-bold rounded-lg hover:opacity-90 transition-all">
-          <Plus className="w-4 h-4" />
-          Post New Notice
-        </button>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-secondary/50 rounded-xl border border-border mr-2 shadow-inner">
+            <Calendar className="w-4 h-4 text-primary" />
+            <Input 
+              type="month" 
+              value={payrollMonth} 
+              onChange={(e) => setPayrollMonth(e.target.value)} 
+              className="h-8 w-32 border-none bg-transparent text-xs font-bold p-0 focus-visible:ring-0" 
+            />
+          </div>
+          <Button variant="outline" className="h-11 px-6 rounded-2xl border-border text-xs font-black uppercase tracking-widest">
+            <HelpCircle className="w-4 h-4 mr-2" />
+            Help
+          </Button>
+          <Button 
+            onClick={() => {
+              setEditBulletin(null);
+              setIsModalOpen(true);
+            }}
+            className="h-11 px-8 rounded-2xl bg-primary text-white hover:opacity-90 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Bulletin
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Editor / List Section */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Active Notices</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-xs bg-secondary px-2 py-1 rounded-md border border-border">Total: {notices.length}</span>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {notices.map((notice) => (
-              <div key={notice.id} className="bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-                {notice.isPinned && (
-                  <div className="absolute top-0 right-0 p-2 text-orange-500">
-                    <Pin className="w-4 h-4 fill-current" />
-                  </div>
-                )}
-                
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <h4 className="text-lg font-bold text-foreground">{notice.title}</h4>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {notice.date}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5" />
-                          {notice.department}
-                        </span>
-                        <span className="flex items-center gap-1 text-orange-600 font-medium bg-orange-500/10 px-1.5 py-0.5 rounded">
-                          Expires: {notice.expiryDate}
-                        </span>
-                      </div>
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-[1400px] mx-auto space-y-8">
+          
+          {/* Quick Filters & Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="md:col-span-3 bg-card border border-border rounded-[2.5rem] p-8 flex items-center justify-between shadow-sm">
+               <div className="flex items-center gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">Bulletin Status</label>
+                    <div className="flex p-1 bg-secondary/50 rounded-2xl border border-border">
+                      {(["Open", "Closed"] as BulletinStatus[]).map(s => (
+                        <button 
+                          key={s} 
+                          onClick={() => setStatusFilter(s)}
+                          className={cn(
+                            "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            statusFilter === s ? "bg-background shadow-lg text-primary" : "text-muted-foreground hover:bg-secondary"
+                          )}
+                        >
+                          {s} Bulletins
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {notice.content}
-                  </p>
+                  <div className="h-12 w-px bg-border mx-2" />
 
-                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                    <div className="flex items-center gap-2">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium hover:bg-secondary rounded-lg transition-colors">
-                        <Paperclip className="w-3.5 h-3.5" />
-                        Attachment.pdf
-                      </button>
-                    </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                      <KebabMenu 
-                        size="sm"
-                        items={[
-                          { label: "View Notice", icon: Eye, onClick: () => toast.info(`Viewing ${notice.title}`) },
-                          { label: "Edit Notice", icon: Edit3, onClick: () => toast.info(`Editing ${notice.title}`) },
-                          { label: notice.isPinned ? "Unpin Notice" : "Pin Notice", icon: notice.isPinned ? PinOff : Pin, onClick: () => toast.success(notice.isPinned ? "Unpinned" : "Pinned") },
-                          { label: "Duplicate", icon: Copy, onClick: () => toast.info("Notice duplicated") },
-                          { label: "Archive", icon: Archive, onClick: () => toast.info("Notice archived") },
-                          { label: "Delete", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
-                            if (confirm(`Permanently delete "${notice.title}"?`)) toast.error("Notice deleted");
-                          }},
-                        ]}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">Global Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search title or tags..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 h-11 w-64 bg-secondary/30 border-none rounded-xl text-xs font-bold shadow-inner" 
                       />
                     </div>
                   </div>
+               </div>
+
+               <Button variant="ghost" size="icon" className="h-11 w-11 rounded-2xl bg-secondary/50 hover:bg-primary/10 hover:text-primary transition-all">
+                 <RefreshCw className="w-5 h-5" />
+               </Button>
+            </div>
+
+            <div className="bg-primary border border-primary/20 rounded-[2.5rem] p-8 text-white shadow-xl shadow-primary/20 flex flex-col justify-center">
+              <div className="flex items-center justify-between mb-2">
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Active Pulse</p>
+                 <Star className="w-4 h-4 fill-white/20 text-white/40" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-4xl font-black">{bulletins.filter(b => b.status === "Open").length}</p>
+                <p className="text-xs font-bold uppercase opacity-80">Live Bulletins</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Database className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-foreground uppercase tracking-tight">Announcement Inventory</h3>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                    Showing {filteredBulletins.length} items based on current filters
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+              <Button variant="outline" className="h-10 px-5 rounded-xl border-border text-[10px] font-black uppercase tracking-widest shadow-sm">
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
 
-        {/* Filters / Stats */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-4">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Filters</h3>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground">Department</label>
-                <select className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm">
-                  <option>All Departments</option>
-                  <option>Human Resources</option>
-                  <option>Engineering</option>
-                  <option>Sales & Marketing</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground">Status</label>
-                <div className="flex flex-col gap-2">
-                  {["Active", "Expired", "Pinned Only", "Scheduled"].map(status => (
-                    <label key={status} className="flex items-center gap-2 text-sm text-foreground cursor-pointer group">
-                      <div className="w-4 h-4 rounded border border-border group-hover:border-primary flex items-center justify-center">
-                        <div className="w-2 h-2 bg-primary rounded-sm opacity-0 group-hover:opacity-20" />
-                      </div>
-                      {status}
-                    </label>
+            <div className="bg-card border border-border rounded-[3rem] overflow-hidden shadow-2xl">
+              <table className="w-full text-left">
+                <thead className="bg-muted/50 border-b border-border">
+                  <tr>
+                    <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Category</th>
+                    <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Announcement Title</th>
+                    <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Posted Date</th>
+                    <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Rank</th>
+                    <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {filteredBulletins.map((bulletin) => (
+                    <tr key={bulletin.id} className="hover:bg-secondary/20 transition-all group">
+                      <td className="px-10 py-6">
+                        <div className="flex items-center gap-3">
+                           <div className={cn(
+                             "w-10 h-10 rounded-xl flex items-center justify-center shadow-inner",
+                             bulletin.category === "general" ? "bg-blue-500/10 text-blue-600" :
+                             bulletin.category === "notification" ? "bg-amber-500/10 text-amber-600" :
+                             "bg-emerald-500/10 text-emerald-600"
+                           )}>
+                             <Tag className="w-5 h-5" />
+                           </div>
+                           <div>
+                             <p className="text-xs font-black text-foreground uppercase tracking-tight">
+                               {BULLETIN_CATEGORIES.find(c => c.id === bulletin.category)?.label}
+                             </p>
+                             <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">Category ID: {bulletin.category}</p>
+                           </div>
+                        </div>
+                      </td>
+                      <td className="px-10 py-6">
+                        <div className="space-y-1.5 max-w-md">
+                          <p className="text-sm font-black text-foreground leading-tight group-hover:text-primary transition-colors">
+                            {bulletin.title}
+                          </p>
+                          <div className="flex items-center gap-2">
+                             <Badge variant="outline" className="text-[9px] font-black uppercase bg-background border-border/50 text-muted-foreground">
+                               {bulletin.employeeFilters.length} Target Groups
+                             </Badge>
+                             {bulletin.isHidden && (
+                               <Badge className="bg-rose-500/10 text-rose-600 border-none text-[9px] font-black uppercase">Hidden</Badge>
+                             )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-10 py-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-foreground uppercase tracking-tight">
+                               {new Date(bulletin.postedDate).toLocaleDateString("en-US", { day: '2-digit', month: 'short' })}
+                            </p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                               {new Date(bulletin.postedDate).getFullYear()}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-10 py-6">
+                         <div className="w-10 h-10 rounded-full bg-secondary/30 border border-border flex items-center justify-center">
+                            <span className="text-xs font-black text-foreground">#{bulletin.rank}</span>
+                         </div>
+                      </td>
+                      <td className="px-10 py-6 text-right">
+                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleEdit(bulletin)}
+                            className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDelete(bulletin.id)}
+                            className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-muted-foreground">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                </div>
-              </div>
+                  {filteredBulletins.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-10 py-20 text-center">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <Layers className="w-16 h-16 text-muted-foreground opacity-10" />
+                          <div className="space-y-1">
+                             <p className="text-lg font-black text-foreground uppercase tracking-tight">No Bulletins Found</p>
+                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">Adjust your filters or create a new announcement</p>
+                          </div>
+                          <Button onClick={() => setIsModalOpen(true)} className="mt-4 bg-primary rounded-xl h-10 px-8 text-[10px] font-black uppercase tracking-widest">
+                            Create First Bulletin
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
-
-          <div className="bg-primary/5 p-6 rounded-xl border border-primary/10 space-y-3">
-            <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
-              <Megaphone className="w-5 h-5 text-primary" />
-            </div>
-            <h4 className="text-sm font-bold text-foreground">Pro-Tip</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Pinned notices always stay at the top of the employee's dashboard until they expire or are manually unpinned.
-            </p>
           </div>
         </div>
       </div>
+
+      <AddBulletinModal 
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditBulletin(null);
+        }}
+        onSave={handleSave}
+        editData={editBulletin}
+      />
     </div>
   );
 }

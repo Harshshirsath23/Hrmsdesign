@@ -14,7 +14,9 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { employees, departments, teams, designations, Employee } from "./mockData";
+import { departments, teams, designations, Employee } from "./mockData";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 type ViewMode = "card" | "list";
 
@@ -95,6 +97,7 @@ export function EmployeeDirectory() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectEmployee } = useEmployee();
+  const employees = useSelector((state: RootState) => state.admin.employees);
 
   const [filters, setFilters] = useState<DirectoryFilters>({
     search:      searchParams.get("search")      || "",

@@ -1,152 +1,143 @@
 import React, { useState } from "react";
-import { FileSpreadsheet, Download, Upload, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { 
+  FileSpreadsheet, 
+  Download, 
+  Upload, 
+  History, 
+  Calendar,
+  Plus,
+  Info,
+  Clock,
+  ArrowRight,
+  Database,
+  CheckCircle2,
+  ShieldCheck
+} from "lucide-react";
+import { Button } from "../../../../components/ui/button";
+import { Input } from "../../../../components/ui/input";
+import { Badge } from "../../../../components/ui/badge";
+import { ImportHistory } from "./ExcelImport/types";
+import { ImportHistoryTable } from "./ExcelImport/ImportHistoryTable";
+import { ImportWizardModal } from "./ExcelImport/ImportWizardModal";
 
 export function ExcelImportPage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<"idle" | "validating" | "success" | "error">("idle");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [payrollMonth, setPayrollMonth] = useState(new Date().toISOString().slice(0, 7));
+  
+  // Mock History
+  const [history, setHistory] = useState<ImportHistory[]>([
+    { id: "1", fileName: "June_Attendance.xlsx", uploadedDate: "2026-06-01T10:00:00Z", uploadedBy: "Admin User", importerType: "Attendance", status: "COMPLETED" },
+    { id: "2", fileName: "New_Hires_Batch_A.xlsx", uploadedDate: "2026-06-05T14:30:00Z", uploadedBy: "HR Manager", importerType: "Add Employee Importer", status: "FAILED" },
+    { id: "3", fileName: "Salary_Revisions.xlsx", uploadedDate: "2026-06-10T09:15:00Z", uploadedBy: "Payroll Admin", importerType: "Add / Revise Salary", status: "COMPLETED" },
+  ]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setStatus("idle");
-    }
-  };
-
-  const handleUpload = () => {
-    if (!file) return;
-    setIsUploading(true);
-    setStatus("validating");
-    
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 10;
-      setProgress(currentProgress);
-      if (currentProgress >= 100) {
-        clearInterval(interval);
-        setIsUploading(false);
-        setStatus("success");
-      }
-    }, 200);
+  const handleImportComplete = (data: any) => {
+    // Add to history (simulated)
+    const newEntry: ImportHistory = {
+      id: Date.now().toString(),
+      fileName: data.file?.name || "unnamed_file.xlsx",
+      uploadedDate: new Date().toISOString(),
+      uploadedBy: "Admin User",
+      importerType: data.importer?.label || "Unknown",
+      status: "COMPLETED"
+    };
+    setHistory(prev => [newEntry, ...prev]);
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex flex-col h-full overflow-hidden bg-background/30">
+      {/* Header */}
+      <div className="px-8 py-6 border-b border-border bg-card/50 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-20">
         <div className="space-y-1">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-green-500" />
-            Excel Data Import
-          </h2>
-          <p className="text-sm text-muted-foreground">Bulk create employee profiles using standardized Excel templates.</p>
+          <h1 className="text-xl font-black text-foreground tracking-tight uppercase flex items-center gap-2">
+            <Database className="w-5 h-5 text-primary" />
+            Excel Data Importer
+          </h1>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+            Enterprise data migration and bulk update utility
+          </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground text-sm font-medium rounded-lg hover:bg-secondary/80 transition-colors">
-          <Download className="w-4 h-4" />
-          Download Sample Template
-        </button>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-secondary/50 rounded-xl border border-border mr-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            <Input 
+              type="month" 
+              value={payrollMonth} 
+              onChange={(e) => setPayrollMonth(e.target.value)} 
+              className="h-8 w-32 border-none bg-transparent text-xs font-bold p-0 focus-visible:ring-0" 
+            />
+          </div>
+          <Button 
+            onClick={() => setIsModalOpen(true)}
+            className="h-11 px-6 rounded-2xl bg-primary text-white hover:opacity-90 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Import
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Upload Zone */}
-        <div 
-          className={`border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center transition-all ${
-            file ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-secondary/30"
-          }`}
-        >
-          {!file ? (
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
-                <Upload className="w-8 h-8 text-muted-foreground" />
-              </div>
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="max-w-[1400px] mx-auto space-y-8">
+          
+          {/* History Section - Now at Top */}
+          <div className="space-y-6" id="import-history">
+            <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-semibold">Click to upload or drag and drop</p>
-                <p className="text-xs text-muted-foreground">XLSX or CSV files only (Max. 10MB)</p>
+                <h3 className="text-lg font-black text-foreground uppercase tracking-tight flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Data Import Logs
+                </h3>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                  Detailed audit trail of all historical data migrations
+                </p>
               </div>
-              <input 
-                type="file" 
-                accept=".xlsx, .xls, .csv" 
-                className="hidden" 
-                id="file-upload" 
-                onChange={handleFileChange}
-              />
-              <label 
-                htmlFor="file-upload"
-                className="inline-block px-6 py-2.5 bg-foreground text-background text-sm font-bold rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-              >
-                Select File
-              </label>
-            </div>
-          ) : (
-            <div className="w-full max-w-md space-y-6">
-              <div className="flex items-center justify-between p-4 bg-background border border-border rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
-                    <FileSpreadsheet className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold truncate max-w-[200px]">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                </div>
-                <button onClick={() => setFile(null)} className="p-1 hover:bg-secondary rounded-full transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                  Filter History
+                </Button>
+                <Button variant="ghost" size="sm" className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5">
+                  Export Log
+                </Button>
               </div>
-
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium">Uploading & Validating...</span>
-                    <span className="text-muted-foreground font-mono">{progress}%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary transition-all duration-300" 
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {!isUploading && status === "idle" && (
-                <button 
-                  onClick={handleUpload}
-                  className="w-full py-3 bg-foreground text-background font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                >
-                  Confirm Upload
-                </button>
-              )}
-
-              {status === "success" && (
-                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-green-600">Import Successful!</p>
-                    <p className="text-xs text-green-600/80">150 employees successfully created. No errors found.</p>
-                  </div>
-                </div>
-              )}
             </div>
-          )}
-        </div>
 
-        {/* Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-card border border-border rounded-xl space-y-2">
-            <h4 className="text-xs font-bold uppercase text-muted-foreground">Step 1</h4>
-            <p className="text-sm font-medium">Download the official template to ensure data compatibility.</p>
+            <ImportHistoryTable history={history} />
           </div>
-          <div className="p-4 bg-card border border-border rounded-xl space-y-2">
-            <h4 className="text-xs font-bold uppercase text-muted-foreground">Step 2</h4>
-            <p className="text-sm font-medium">Fill in the employee details accurately in each column.</p>
-          </div>
-          <div className="p-4 bg-card border border-border rounded-xl space-y-2">
-            <h4 className="text-xs font-bold uppercase text-muted-foreground">Step 3</h4>
-            <p className="text-sm font-medium">Upload the file. System will auto-detect duplicates and errors.</p>
+
+          <div className="p-8 rounded-[2.5rem] bg-secondary/20 border border-border/50 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6 text-primary" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-sm font-black text-foreground uppercase tracking-tight">Security & Validation</p>
+                <p className="text-xs font-medium text-muted-foreground">All imports undergo a multi-step verification process to ensure data integrity.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-8 px-8">
+               <div className="text-center">
+                 <p className="text-xl font-black text-foreground">1,240</p>
+                 <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Total Imports</p>
+               </div>
+               <div className="h-8 w-px bg-border" />
+               <div className="text-center">
+                 <p className="text-xl font-black text-emerald-500">98.2%</p>
+                 <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Success Rate</p>
+               </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Import Wizard Modal */}
+      <ImportWizardModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onComplete={handleImportComplete}
+        payrollMonth={payrollMonth}
+      />
     </div>
   );
 }

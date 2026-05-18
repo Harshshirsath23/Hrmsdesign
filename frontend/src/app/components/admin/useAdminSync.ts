@@ -76,5 +76,16 @@ export function useAdminSync() {
     return true;
   };
 
-  return { handleAdminSave };
+  const handleToggleEditAccess = async (employee: Employee, sectionId: string, checked: boolean) => {
+    const currentSections = employee.editableSections || [];
+    const nextSections = checked
+      ? [...currentSections, sectionId]
+      : currentSections.filter((id) => id !== sectionId);
+
+    const next = { ...employee, editableSections: nextSections };
+    dispatch(updateAdminEmployee(next));
+    return true;
+  };
+
+  return { handleAdminSave, handleToggleEditAccess };
 }

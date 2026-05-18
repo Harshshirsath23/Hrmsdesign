@@ -46,7 +46,9 @@ import {
   ShieldCheck,
   Trash2
 } from "lucide-react";
-import { employees, Employee } from "../../../components/employees/mockData";
+import { Employee } from "../../../components/employees/mockData";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 import { cn } from "../../../components/ui/utils";
 import { Button } from "../../../components/ui/button";
 import { KebabMenu } from "../../../components/ui/KebabMenu";
@@ -235,7 +237,9 @@ const getLayoutedElements = (employees: Employee[], direction = 'TB', isCompact 
 };
 
 export function OrganizationChartPage() {
+  const navigate = useNavigate();
   const { setViewport, fitView, zoomIn, zoomOut, getNodes } = useReactFlow();
+  const employees = useSelector((state: RootState) => state.admin.employees);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [searchTerm, setSearchTerm] = useState("");

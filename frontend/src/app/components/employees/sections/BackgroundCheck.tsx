@@ -4,7 +4,7 @@ import {
   ShieldCheck, 
   FileText, 
   Download, 
-  Edit2, 
+  Pencil,
   Plus, 
   Eye,
   Calendar,
@@ -61,7 +61,7 @@ function SectionHeader({ title, icon: Icon, onStart }: { title: string; icon: an
 export function BackgroundCheck({ employee }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedBgCheck, setEditedBgCheck] = useState(employee.backgroundCheck || DEFAULT_BG_CHECK);
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
 
   useEffect(() => {
     setEditedBgCheck(employee.backgroundCheck || DEFAULT_BG_CHECK);
@@ -95,10 +95,9 @@ export function BackgroundCheck({ employee }: Props) {
   const config = statusConfig[status] || statusConfig.Pending;
   const StatusIcon = config.icon;
 
-
   return (
-    <div className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
             <ShieldCheck className="w-6 h-6 text-primary" />
@@ -108,6 +107,7 @@ export function BackgroundCheck({ employee }: Props) {
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">Verification & Compliance</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
           {isEditing ? (
             <>
@@ -121,7 +121,7 @@ export function BackgroundCheck({ employee }: Props) {
             </>
           ) : (
             <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
-              <Edit2 size={12} /> Edit Section
+              <Pencil size={12} /> Edit Section
             </button>
           )}
         </div>
