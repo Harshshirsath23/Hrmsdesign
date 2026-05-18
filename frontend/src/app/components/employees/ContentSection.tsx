@@ -14,7 +14,6 @@ import { WorkExperience } from "./sections/WorkExperience";
 import { SalarySummary } from "./sections/SalarySummary";
 import { AccessCardDetails } from "./sections/AccessCardDetails";
 import { EmployeeDocumentsSection } from "./sections/EmployeeDocumentsSection";
-import { PendingRequestsPanel } from "../admin/PendingRequestsPanel";
 
 interface Props {
   employee: Employee;
@@ -51,8 +50,6 @@ export function ContentSection({ employee, activeSection }: Props) {
       return <EmployeeDocumentsSection employee={employee} />;
     case "salary":
       return <SalarySummary employee={employee} />;
-    case "requests":
-      return <PendingRequestsPanel employeeId={employee.id} />;
     default:
       return <EmployeeProfile employee={employee} />;
   }

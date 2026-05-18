@@ -315,8 +315,70 @@ export function BulletinBoardPage() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={() => handleEdit(bulletin)}
+                            onClick={() => {
+                              const win = window.open("", "_blank");
+                              if (win) {
+                                win.document.write(`
+                                  <html>
+                                    <head>
+                                      <title>Preview Announcement - \${bulletin.title}</title>
+                                      <style>
+                                        body { font-family: sans-serif; padding: 40px; background: #f8f9fa; color: #333; line-height: 1.6; }
+                                        .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); max-width: 650px; margin: auto; }
+                                        h1 { color: #111; font-size: 24px; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+                                        .meta { font-size: 13px; color: #666; margin: 15px 0 25px 0; }
+                                        .content { font-size: 16px; color: #444; background: #f8f9fa; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef; }
+                                        .badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-weight: bold; background: #e7f5ff; color: #228be6; font-size: 11px; }
+                                      </style>
+                                    </head>
+                                    <body>
+                                      <div class="card">
+                                        <span class="badge">\${bulletin.category.toUpperCase()}</span>
+                                        <h1>📢 \${bulletin.title}</h1>
+                                        <div class="meta">
+                                          <strong>Posted Date:</strong> \${new Date(bulletin.postedDate).toLocaleDateString()}<br/>
+                                          <strong>Priority Rank:</strong> #\${bulletin.rank}<br/>
+                                          <strong>Target Groups:</strong> \${bulletin.employeeFilters.join(", ") || "All Employees"}
+                                        </div>
+                                        <div class="content">
+                                          \${bulletin.description || "No description provided for this bulletin board announcement."}
+                                        </div>
+                                      </div>
+                                    </body>
+                                  </html>
+                                `);
+                                win.document.close();
+                              }
+                            }}
                             className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+                            title="View Announcement"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => {
+                              const element = document.createElement("a");
+                              const contentText = `HRMS BULLETIN ANNOUNCEMENT\n\nTitle: ${bulletin.title}\nCategory: ${bulletin.category}\nPosted Date: ${bulletin.postedDate}\nRank: #${bulletin.rank}\n\nDescription:\n${bulletin.description || "No description."}`;
+                              const file = new Blob([contentText], { type: 'text/plain' });
+                              element.href = URL.createObjectURL(file);
+                              element.download = `${bulletin.title.replace(/\s+/g, "_")}.txt`;
+                              document.body.appendChild(element);
+                              element.click();
+                              document.body.removeChild(element);
+                            }}
+                            className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600"
+                            title="Download Announcement text"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleEdit(bulletin)}
+                            className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-amber-500 hover:bg-amber-50 hover:text-amber-600"
+                            title="Edit"
                           >
                             <Edit3 className="w-4 h-4" />
                           </Button>
@@ -325,11 +387,9 @@ export function BulletinBoardPage() {
                             size="icon" 
                             onClick={() => handleDelete(bulletin.id)}
                             className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                            title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-background border border-border shadow-sm text-muted-foreground">
-                            <MoreVertical className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>

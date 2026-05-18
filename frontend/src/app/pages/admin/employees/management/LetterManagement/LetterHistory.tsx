@@ -42,10 +42,11 @@ interface LetterHistoryProps {
   onPreview: (batch: LetterBatch) => void;
   onRepublish: (batch: LetterBatch) => void;
   onDuplicate: (batch: LetterBatch) => void;
+  onDeleteBatch?: (id: string) => void;
   batches: LetterBatch[];
 }
 
-export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplicate, batches }: LetterHistoryProps) {
+export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplicate, onDeleteBatch, batches }: LetterHistoryProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<LetterStatus | "All">("All");
 
@@ -82,9 +83,15 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
   }, [search, statusFilter]);
 
   const handleAction = (action: string, batch: LetterBatch) => {
-    // Simulate real actions with feedback
     if (action === "Download ZIP" || action === "Download PDF") {
-      toast.success(`${action} started for batch ${batch.id}`);
+      const element = document.createElement("a");
+      const file = new Blob([`Mock PDF/ZIP Letter content for Batch ID: \${batch.id}\nSubject: \${batch.subject}\nType: \${batch.letterType}`], { type: 'text/plain' });
+      element.href = URL.createObjectURL(file);
+      element.download = `\${batch.subject.replace(/\\s+/g, "_")}_\${batch.id}.\${action === "Download ZIP" ? "zip" : "pdf"}`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      toast.success(`\${action} downloaded successfully!`);
     } else if (action === "Cancel Batch") {
       if (batch.status === "Published" || batch.status === "Approved") {
         toast.error("Cannot cancel a batch that is already approved or published.");
@@ -93,12 +100,10 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
           toast.success("Batch cancelled successfully.");
         }
       }
-    } else if (action === "Delete Draft") {
-      if (confirm("Permanently delete this draft?")) {
-        toast.error("Draft deleted");
-      }
+    } else if (action === "Delete Batch") {
+      onDeleteBatch?.(batch.id);
     } else {
-      toast.info(`Action: ${action}`);
+      toast.info(`Action: \${action}`);
     }
   };
 
@@ -199,7 +204,7 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
                             { label: "Re-publish", icon: RefreshCw, onClick: () => onRepublish(batch) },
                             { label: "Duplicate", icon: Copy, onClick: () => onDuplicate(batch) },
                             { label: "Cancel Batch", icon: X, separator: true, disabled: batch.status === "Published" || batch.status === "Approved", onClick: () => handleAction("Cancel Batch", batch) },
-                            { label: "Delete Draft", icon: Trash2, variant: "destructive", disabled: batch.status !== "Draft", onClick: () => handleAction("Delete Draft", batch) },
+                            { label: "Delete Batch", icon: Trash2, variant: "destructive", onClick: () => handleAction("Delete Batch", batch) },
                           ]}
                         />
                       </div>

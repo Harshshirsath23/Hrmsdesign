@@ -63,6 +63,14 @@ export function GenerateLetterPage() {
     setView("wizard");
   };
 
+  const handleDeleteBatch = (id: string) => {
+    if (confirm("Are you sure you want to delete this letter batch permanently?")) {
+      const updated = batches.filter(b => b.id !== id);
+      persistBatches(updated);
+      toast.success("Letter batch deleted successfully.");
+    }
+  };
+
   const handlePreview = (batch: LetterBatch) => {
     setSelectedBatch(batch);
     setIsPreviewing(true);
@@ -176,6 +184,7 @@ export function GenerateLetterPage() {
               onPreview={handlePreview}
               onRepublish={handleRepublish}
               onDuplicate={handleDuplicate}
+              onDeleteBatch={handleDeleteBatch}
               batches={batches}
             />
           )}

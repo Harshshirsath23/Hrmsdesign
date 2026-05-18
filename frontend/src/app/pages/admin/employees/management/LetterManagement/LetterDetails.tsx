@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   FileText, 
   ChevronLeft, 
@@ -19,7 +19,8 @@ import {
   Plus,
   Send,
   Paperclip,
-  File
+  File,
+  Trash2
 } from "lucide-react";
 import { Button } from "../../../../../components/ui/button";
 import { KebabMenu } from "../../../../../components/ui/KebabMenu";
@@ -44,7 +45,26 @@ interface LetterDetailsProps {
 }
 
 export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
-  const selectedEmployees = employees.filter(e => batch.selectedEmployeeIds.includes(e.id));
+  const [recipientIds, setRecipientIds] = useState<string[]>(batch.selectedEmployeeIds);
+  const selectedEmployees = employees.filter(e => recipientIds.includes(e.id));
+
+  const handleDeleteRecipient = (empId: string, empName: string) => {
+    if (confirm(`Are you sure you want to remove \${empName} from this letter batch?`)) {
+      setRecipientIds(prev => prev.filter(id => id !== empId));
+      toast.success(`\${empName} has been removed from this batch.`);
+    }
+  };
+
+  const handleDownloadPDF = (empName: string) => {
+    const element = document.createElement("a");
+    const file = new Blob([`Mock PDF Letter for recipient: \${empName}\nBatch: \${batch.subject}\nType: \${batch.letterType}`], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = `\${empName.replace(/\\s+/g, "_")}_Letter.pdf`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    toast.success(`Download started for \${empName}`);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -134,9 +154,10 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
                         size="sm"
                         items={[
                           { label: "Preview Letter", icon: Eye, onClick: () => toast.info(`Previewing for ${emp.name}`) },
-                          { label: "Download PDF", icon: Download, onClick: () => toast.success("Download started") },
+                          { label: "Download PDF", icon: Download, onClick: () => handleDownloadPDF(emp.name) },
                           { label: "Print Letter", icon: Printer, onClick: () => window.print() },
-                          { label: "Send to Employee", icon: Send, separator: true, onClick: () => toast.info("Sending email notification...") },
+                          { label: "Send to Employee", icon: Send, onClick: () => toast.info("Sending email notification...") },
+                          { label: "Remove Recipient", icon: Trash2, variant: "destructive", separator: true, onClick: () => handleDeleteRecipient(emp.id, emp.name) },
                         ]}
                       />
                     </TableCell>

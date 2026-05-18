@@ -45,6 +45,50 @@ export function DocumentsPage() {
     }
   };
 
+  const downloadDoc = (doc: Document) => {
+    const element = document.createElement("a");
+    const file = new Blob([`Mock document content for: ${doc.name}\nCategory: ${doc.category}\nUploaded By: ${doc.uploadedBy}`], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    const extension = doc.type.toLowerCase();
+    element.download = doc.name.toLowerCase().endsWith(`.${extension}`) ? doc.name : `${doc.name}.${extension}`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const viewDoc = (doc: Document) => {
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(`
+        <html>
+          <head>
+            <title>Preview - \${doc.name}</title>
+            <style>
+              body { font-family: sans-serif; padding: 40px; background: #f8f9fa; color: #333; }
+              .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 600px; margin: auto; }
+              h1 { margin-top: 0; color: #111; font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 12px; }
+              .meta { font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.6; }
+              .content { background: #f1f3f5; padding: 20px; border-radius: 8px; font-family: monospace; white-space: pre-wrap; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>📄 \${doc.name}</h1>
+              <div class="meta">
+                <strong>Category:</strong> \${doc.category}<br/>
+                <strong>Uploaded By:</strong> \${doc.uploadedBy}<br/>
+                <strong>Date:</strong> \${new Date(doc.uploadDate).toLocaleDateString()}<br/>
+                <strong>Size:</strong> \${doc.size}
+              </div>
+              <div class="content">--- Mock Preview of \${doc.type} Document ---</div>
+            </div>
+          </body>
+        </html>
+      `);
+      win.document.close();
+    }
+  };
+
   const categoryCounts = CATEGORIES.reduce<Record<string, number>>((acc, cat) => {
     acc[cat] = cat === "All" ? docs.length : docs.filter((d) => d.category === cat).length;
     return acc;
@@ -163,10 +207,18 @@ export function DocumentsPage() {
                       <td className="px-6 py-4 text-sm text-muted-foreground">{doc.size}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-border transition-colors" title="View">
+                          <button
+                            onClick={() => viewDoc(doc)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-border transition-colors"
+                            title="View"
+                          >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-border transition-colors" title="Download">
+                          <button
+                            onClick={() => downloadDoc(doc)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-border transition-colors"
+                            title="Download"
+                          >
                             <Download className="w-4 h-4" />
                           </button>
                           <button
@@ -216,12 +268,24 @@ export function DocumentsPage() {
                       {doc.category}
                     </span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      <button className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); viewDoc(doc); }}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                        title="View"
+                      >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => deleteDoc(doc.id)}
+                        onClick={(e) => { e.stopPropagation(); downloadDoc(doc); }}
                         className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteDoc(doc.id); }}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                        title="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

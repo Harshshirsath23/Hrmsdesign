@@ -15,7 +15,9 @@ import {
   AlertCircle,
   MoreVertical,
   Calendar,
-  History
+  History,
+  Eye,
+  Trash2
 } from "lucide-react";
 import { cn } from "../../../../components/ui/utils";
 import { Button } from "../../../../components/ui/button";
@@ -166,26 +168,75 @@ export function BulkPhotoUploadPage() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
+                            className="h-9 w-9 rounded-xl text-blue-500 hover:bg-blue-50"
+                            onClick={() => {
+                              const win = window.open("", "_blank");
+                              if (win) {
+                                win.document.write(`
+                                  <html>
+                                    <head>
+                                      <title>Photo Upload Log - \${item.fileName}</title>
+                                      <style>
+                                        body { font-family: sans-serif; padding: 40px; background: #f8f9fa; color: #333; }
+                                        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 500px; margin: auto; }
+                                        h1 { color: #111; font-size: 20px; border-bottom: 2px solid #eee; padding-bottom: 12px; }
+                                        .log { background: #1e1e1e; color: #a6e22e; padding: 15px; border-radius: 6px; font-family: monospace; white-space: pre-wrap; font-size: 13px; }
+                                      </style>
+                                    </head>
+                                    <body>
+                                      <div class="card">
+                                        <h1>📷 Photo Sync Log</h1>
+                                        <p><strong>File:</strong> \${item.fileName}</p>
+                                        <p><strong>Date:</strong> \${new Date(item.date).toLocaleString()}</p>
+                                        <p><strong>Status:</strong> \${item.status}</p>
+                                        <p><strong>Records:</strong> \${item.recordCount} processed</p>
+                                        <h3>Activity Output:</h3>
+                                        <div class="log">
+[SUCCESS] Upload session started.
+[INFO] Scanning upload archive for employee match...
+[SUCCESS] \${item.recordCount} records mapped correctly.
+[SUCCESS] Database write verified.
+                                        </div>
+                                      </div>
+                                    </body>
+                                  </html>
+                                `);
+                                win.document.close();
+                              }
+                            }}
+                            title="View Log"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
                             className="h-9 w-9 rounded-xl text-primary hover:bg-primary/5"
-                            onClick={() => console.log("Download", item.id)}
+                            onClick={() => {
+                              const element = document.createElement("a");
+                              const file = new Blob([`Mock ZIP/Photo Upload log data for \${item.fileName}`], { type: 'text/plain' });
+                              element.href = URL.createObjectURL(file);
+                              element.download = item.fileName;
+                              document.body.appendChild(element);
+                              element.click();
+                              document.body.removeChild(element);
+                            }}
+                            title="Download ZIP"
                           >
                             <Download className="w-4 h-4" />
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={() => setHistory(history.filter(h => h.id !== item.id))}
+                            onClick={() => {
+                              if (confirm("Delete this upload record from history?")) {
+                                setHistory(history.filter(h => h.id !== item.id));
+                              }
+                            }}
                             className="h-9 w-9 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                            title="Delete"
                           >
-                            <X className="X w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl text-blue-500 hover:bg-blue-50"
-                            onClick={() => console.log("View", item.id)}
-                          >
-                            <FileText className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>

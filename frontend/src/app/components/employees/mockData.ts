@@ -81,6 +81,7 @@ export interface EsiDetails {
 
 export interface AccessCardEntry {
   id: string;
+  employeeId?: string;
   cardNumber: string;
   fromDate: string;
   toDate: string;
@@ -1237,6 +1238,7 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
   const acRaw = (e.accessCards ?? []) as Record<string, unknown>[];
   const accessCards: AccessCardEntry[] = acRaw.map((c, i) => ({
     id: String(c.id ?? `acc-${e.id}-${i}`),
+    employeeId: String(c.employeeId ?? ""),
     cardNumber: String(c.cardNumber ?? ""),
     fromDate: String(c.fromDate ?? ""),
     toDate: String(c.toDate ?? ""),

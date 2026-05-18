@@ -65,16 +65,19 @@ export function InsuranceDetails({ employee }: Props) {
         onCancel={handleCancel}
         onSave={handleSave}
         headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={addPolicy}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Policy
-            </button>
-          ) : null
+          <button
+            type="button"
+            onClick={() => {
+              if (!isEditing) {
+                setIsEditing(true);
+              }
+              addPolicy();
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Policy
+          </button>
         }
       >
         {!insurance.length ? (
