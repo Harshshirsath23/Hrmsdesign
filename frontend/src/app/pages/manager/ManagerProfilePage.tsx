@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ESS_SECTIONS } from "../../modules/ess/data";
+import { EssProfileHeaderCard } from "../../components/employee/EssProfileHeaderCard";
 import {
   getChangeRequests,
   getPendingSections,
@@ -720,6 +721,25 @@ export function ManagerProfilePage() {
   const [pendingSections, setPendingSections] = useState<SectionKey[]>([]);
   const [banner, setBanner] = useState<BannerState>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("profile");
+
+  const uniqueSections = useMemo(() => {
+    const combined = [...ESS_SECTIONS, ...EXTRA_SECTIONS];
+    const seen = new Set();
+    const result = combined.filter((section) => {
+      if (seen.has(section.key)) return false;
+      seen.add(section.key);
+      return true;
+    }).map(s => {
+      if (s.key === "assets") {
+        return { ...s, label: "Assets" };
+      }
+      return s;
+    });
+
+    result.push({ key: "requests", label: "My Requests", editable: false, optional: false });
+    return result;
+  }, []);
 
   const changeHistory = useMemo(
     () => getChangeRequests(employeeId),
@@ -849,10 +869,7 @@ export function ManagerProfilePage() {
   }
 
   // Merge static ESS_SECTIONS with extra sections for sidebar + rendering
-  const allSections = [
-    ...ESS_SECTIONS,
-    ...EXTRA_SECTIONS,
-  ] as Array<{ key: string; label: string; editable: boolean; optional?: boolean }>;
+  const allSections = uniqueSections;
 
   const renderSectionBody = (sectionKey: string, sectionData: unknown, isReadOnly: boolean) => {
     // ---- Profile ----
@@ -1186,162 +1203,217 @@ export function ManagerProfilePage() {
     );
   };
 
+  const selectedSection = allSections.find(s => s.key === activeSection) || allSections[0];
+  const isPending = pendingSections.includes(selectedSection.key as SectionKey);
+  const isEditing = editingSection === selectedSection.key;
+  const rawData = (profile as any)[selectedSection.key];
+  const sectionData = isEditing ? draft : rawData;
+  const isReadOnly = !isEditing || !selectedSection.editable;
+
+  // Skip rendering sections with no data and optional flag (clean UX)
+  const isEmpty =
+    sectionData === undefined ||
+    sectionData === null ||
+    (Array.isArray(sectionData) && sectionData.length === 0) ||
+    (typeof sectionData === "object" &&
+      !Array.isArray(sectionData) &&
+      Object.keys(sectionData as object).length === 0);
+
   return (
-    <div className="p-6 flex gap-6">
-      {/* Sidebar */}
-      <aside className="w-64 hidden lg:block">
-        <div className="sticky top-6 rounded-xl border border-border bg-card p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-foreground">Profile Sections</h3>
-          {allSections.map((section) => (
-            <a
-              key={section.key}
-              href={`#${section.key}`}
-              className="flex items-center justify-between rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <span>{section.label}</span>
-              <div className="flex items-center gap-1">
-                {section.optional && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
-                    Optional
-                  </span>
-                )}
-                {pendingSections.includes(section.key as SectionKey) && (
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-secondary border border-border">
-                    Pending
-                  </span>
-                )}
-              </div>
-            </a>
-          ))}
-        </div>
-      </aside>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto pb-28 relative">
+      {/* Hero Profile Header Card */}
+      <EssProfileHeaderCard employeeId={employeeId} profile={profile} />
 
-      {/* Main content */}
-      <div className="flex-1 space-y-4">
-        {banner && (
-          <div
-            className={`rounded-lg px-4 py-3 text-sm border ${
-              banner.type === "success"
-                ? "bg-secondary text-foreground border-border"
-                : "bg-destructive/10 text-destructive border-destructive/30"
-            }`}
+      {/* Main container */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Mobile Dropdown */}
+        <div className="lg:hidden w-full">
+          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Select Section</label>
+          <select
+            value={activeSection}
+            onChange={(e) => setActiveSection(e.target.value)}
+            className="w-full h-11 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-sm focus:outline-none"
           >
-            {banner.message}
-          </div>
-        )}
+            {allSections.map((section) => (
+              <option key={section.key} value={section.key}>
+                {section.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {allSections.map((section) => {
-          const isPending = pendingSections.includes(section.key as SectionKey);
-          const isEditing = editingSection === section.key;
-          const rawData = (profile as any)[section.key];
-          const sectionData = isEditing ? draft : rawData;
-          const isReadOnly = !isEditing || !section.editable;
+        {/* Sidebar Navigation */}
+        <aside className="w-64 min-w-[256px] hidden lg:block bg-card border border-border rounded-xl p-3 space-y-1 sticky top-6 shadow-sm">
+          <p className="px-3 pb-3 pt-2 text-[10px] uppercase tracking-widest text-muted-foreground font-bold border-b border-border mb-2">
+            Profile Sections
+          </p>
+          <nav className="space-y-0.5">
+            {allSections.map((section) => {
+              const isActive = activeSection === section.key;
+              const isSectionPending = pendingSections.includes(section.key as SectionKey);
+              return (
+                <button
+                  key={section.key}
+                  onClick={() => {
+                    cancelEdit();
+                    setActiveSection(section.key);
+                  }}
+                  className={`w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all relative
+                    ${
+                      isActive
+                        ? "bg-secondary text-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    }`}
+                >
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
+                  )}
+                  <span className="truncate">{section.label}</span>
+                  <div className="flex items-center gap-1">
+                    {section.optional && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                        Opt
+                      </span>
+                    )}
+                    {isSectionPending && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600 font-bold">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-          // Skip rendering sections with no data and optional flag (clean UX)
-          const isEmpty =
-            sectionData === undefined ||
-            sectionData === null ||
-            (Array.isArray(sectionData) && sectionData.length === 0) ||
-            (typeof sectionData === "object" &&
-              !Array.isArray(sectionData) &&
-              Object.keys(sectionData as object).length === 0);
-
-          return (
-            <section
-              key={section.key}
-              id={section.key}
-              className="rounded-xl border border-border bg-card p-5 space-y-4"
+        {/* Right Content Area */}
+        <div className="flex-1 w-full space-y-6">
+          {banner && (
+            <div
+              className={`rounded-xl px-4 py-3 text-sm border shadow-sm ${
+                banner.type === "success"
+                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-medium"
+                  : "bg-destructive/10 text-destructive border-destructive/20 font-medium"
+              }`}
             >
-              <div className="flex items-center justify-between gap-3">
+              {banner.message}
+            </div>
+          )}
+
+          {/* Render selected section inside a clean panel */}
+          {selectedSection.key === "requests" ? (
+            <section className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-foreground">My Requests</h2>
+              <p className="text-xs text-muted-foreground">Track all profile modification requests and their approvals status.</p>
+              
+              <div className="space-y-2">
+                {changeHistory.length === 0 && (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No change requests submitted yet.</p>
+                )}
+                {changeHistory.map((request) => (
+                  <div
+                    key={request.id}
+                    className="rounded-lg border border-border px-3 py-2.5 flex items-center justify-between hover:bg-secondary/40 transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{request.section_label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(request.created_at).toLocaleString("en-IN")}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border
+                      ${
+                        request.status === "approved"
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                          : request.status === "rejected"
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                          : "bg-amber-500/10 text-amber-600 border-amber-500/20 animate-pulse"
+                      }`}
+                    >
+                      {request.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section className="rounded-xl border border-border bg-card p-6 space-y-6 shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-semibold text-foreground">{section.label}</h2>
-                    {section.optional && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground">
+                    <h2 className="text-lg font-bold text-foreground">{selectedSection.label}</h2>
+                    {selectedSection.optional && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground font-semibold">
                         Optional
                       </span>
                     )}
                   </div>
                   {isPending && (
-                    <p className="text-xs text-muted-foreground mt-1">Pending Approval</p>
+                    <p className="text-xs text-amber-600 font-medium mt-1">Pending Approval</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={() => submitChange(section.key as SectionKey)}
-                        disabled={submitting}
-                        className="h-9 px-4 rounded-lg bg-foreground text-primary-foreground text-sm disabled:opacity-60"
-                      >
-                        {submitting ? "Submitting..." : "Submit"}
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="h-9 px-4 rounded-lg border border-border text-sm"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    section.editable && (
-                      <button
-                        onClick={() => beginEdit(section.key as SectionKey)}
-                        disabled={isPending}
-                        className="h-9 px-4 rounded-lg border border-border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Edit Section
-                      </button>
-                    )
+                  {selectedSection.editable && !isEditing && (
+                    <button
+                      onClick={() => beginEdit(selectedSection.key as SectionKey)}
+                      disabled={isPending}
+                      className="h-9 px-4 rounded-lg bg-secondary text-foreground border border-border text-xs font-bold hover:bg-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Edit Section
+                    </button>
                   )}
                 </div>
               </div>
 
               {isEmpty && !isEditing ? (
-                <p className="text-sm text-muted-foreground">
-                  No data added yet.{" "}
-                  {section.editable && (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    No data added yet.
+                  </p>
+                  {selectedSection.editable && (
                     <button
-                      onClick={() => beginEdit(section.key as SectionKey)}
-                      className="underline text-foreground"
+                      onClick={() => beginEdit(selectedSection.key as SectionKey)}
+                      className="h-9 px-4 rounded-lg bg-foreground text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity"
                     >
-                      Add now
+                      Add data now
                     </button>
                   )}
-                </p>
+                </div>
               ) : (
-                renderSectionBody(section.key, sectionData, isReadOnly)
+                renderSectionBody(selectedSection.key, sectionData, isReadOnly)
               )}
             </section>
-          );
-        })}
-
-        {/* Change Request History */}
-        <section className="rounded-xl border border-border bg-card p-5">
-          <h2 className="text-base font-semibold text-foreground mb-3">Change Request History</h2>
-          <div className="space-y-2">
-            {changeHistory.length === 0 && (
-              <p className="text-sm text-muted-foreground">No change requests submitted yet.</p>
-            )}
-            {changeHistory.map((request) => (
-              <div
-                key={request.id}
-                className="rounded-lg border border-border px-3 py-2 flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">{request.section_label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(request.created_at).toLocaleString("en-IN")}
-                  </p>
-                </div>
-                <span className="text-xs rounded-full border border-border px-2 py-0.5 capitalize">
-                  {request.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+          )}
+        </div>
       </div>
+
+      {/* Sticky Bottom Action Bar */}
+      {isEditing && (
+        <div className="fixed bottom-0 left-0 right-0 h-20 bg-card/85 backdrop-blur-xl border-t border-border flex items-center justify-between px-8 z-40 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-foreground animate-pulse shadow-[0_0_8px_rgba(0,0,0,0.2)]" />
+            <span className="text-xs font-bold text-foreground">
+              Editing {selectedSection.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={cancelEdit}
+              className="h-10 px-5 rounded-xl border border-border text-xs font-bold hover:bg-secondary transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => submitChange(selectedSection.key as SectionKey)}
+              disabled={submitting}
+              className="h-10 px-5 bg-foreground text-primary-foreground rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {submitting ? "Submitting..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
