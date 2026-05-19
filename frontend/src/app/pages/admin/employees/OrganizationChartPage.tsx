@@ -1,269 +1,840 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
-  ReactFlow,
   Background,
   Controls,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Position,
-  MarkerType,
   Handle,
-  NodeProps,
   Panel,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  useEdgesState,
+  useNodesState,
   useReactFlow,
-  ReactFlowProvider
 } from "@xyflow/react";
+import type { Edge, Node, NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import * as d3 from "d3-hierarchy";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 import {
-  Search,
+  ArrowLeftRight,
+  ArrowUpDown,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  Download,
+  Filter,
+  Info,
   Maximize,
   Minimize,
-  Plus,
-  Minus,
-  Download,
-  RefreshCw,
-  FileImage,
-  FileText,
-  ChevronDown,
-  ChevronUp,
-  ChevronRight,
-  X,
-  Building2,
-  Mail,
-  Phone,
-  Calendar,
   MoreVertical,
-  Edit2,
-  Send,
-  ExternalLink,
+  RefreshCw,
+  Search,
+  Trash2,
+  User,
   Users,
-  Layout,
-  Printer,
-  ShieldCheck,
-  Trash2
+  X,
 } from "lucide-react";
-import { Employee } from "../../../components/employees/mockData";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/store";
+import { updateAdminEmployee } from "@/store/slices/adminSlice";
+import type { Employee } from "../../../components/employees/mockData";
 import { cn } from "../../../components/ui/utils";
-import { Button } from "../../../components/ui/button";
-import { KebabMenu } from "../../../components/ui/KebabMenu";
-import { toast } from "sonner";
-import { Input } from "../../../components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../../../components/ui/sheet";
-import { motion, AnimatePresence } from "motion";
 
-console.log("OrganizationChartPage module loaded");
+type ModalType = "top" | "mass" | "assign" | null;
+type ViewMode = "vertical" | "horizontal";
 
-
-// --- Types ---
-interface OrgNodeData {
+type OrgNodeData = Record<string, unknown> & {
   employee: Employee;
-  isRoot?: boolean;
-  hasChildren?: boolean;
-  childCount?: number;
-  isExpanded?: boolean;
-  isCompact?: boolean;
-  onToggleExpand?: (id: string) => void;
-  onNodeClick?: (emp: Employee) => void;
-}
+  childCount: number;
+  isRoot: boolean;
+  isCompact: boolean;
+  isHighlighted: boolean;
+  isExpanded: boolean;
+  onToggle: (id: string) => void;
+  onOpen: (employee: Employee) => void;
+  onDropReportee: (reporteeId: string, managerId: string) => void;
+  onRemoveFromTree: (employeeId: string) => void;
+};
 
-// --- Custom Node Component ---
-const OrgNode = ({ data }: NodeProps<any>) => {
-  const { employee, isRoot, childCount, onNodeClick } = data as OrgNodeData;
+type OrgFlowNode = Node<OrgNodeData, "orgNode">;
+
+function EmployeeAvatar({ employee, size = "md" }: { employee: Employee; size?: "sm" | "md" }) {
+  const sizeClass = size === "sm" ? "h-9 w-9" : "h-11 w-11";
+
+  if (employee.avatar) {
+    return (
+      <img
+        src={employee.avatar}
+        alt={employee.name}
+        className={cn(sizeClass, "rounded-full border border-white object-cover shadow-sm")}
+      />
+    );
+  }
 
   return (
     <div
-      className={cn(
-        "group relative flex flex-col rounded-2xl border transition-all duration-300",
-        data.isCompact ? "p-3 w-[200px]" : "p-4 w-[260px]",
-        "bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl",
-        "hover:shadow-2xl hover:scale-[1.02] cursor-pointer",
-        isRoot
-          ? "border-emerald-500/50 shadow-emerald-500/10 ring-1 ring-emerald-500/20"
-          : "border-slate-200 dark:border-slate-800 shadow-lg shadow-black/5"
-      )}
-      onClick={() => onNodeClick?.(employee)}
+      className={cn(sizeClass, "flex items-center justify-center rounded-full text-xs font-semibold text-white shadow-sm")}
+      style={{ backgroundColor: employee.avatarColor }}
     >
-      {/* Decorative Peacock Feather Accent */}
-      {isRoot && (
-        <div className="absolute -top-1 -left-1 w-12 h-12 overflow-hidden rounded-tl-2xl opacity-20 pointer-events-none">
-          <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 rotate-45 transform -translate-x-1/2 -translate-y-1/2" />
-        </div>
+      {employee.initials}
+    </div>
+  );
+}
+
+function OrgNode({ data }: NodeProps) {
+  const node = data as OrgNodeData;
+  const accent = node.isRoot ? "bg-foreground" : "bg-muted-foreground";
+
+  return (
+    <div
+      onClick={() => node.onOpen(node.employee)}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        const reporteeId = event.dataTransfer.getData("employee/id");
+        if (reporteeId && reporteeId !== node.employee.id) {
+          node.onDropReportee(reporteeId, node.employee.id);
+        }
+      }}
+      className={cn(
+        "group relative flex cursor-pointer items-center gap-3 rounded-md border bg-card pr-8 shadow-xs transition",
+        node.isCompact ? "h-[66px] w-[198px] pl-4" : "h-[78px] w-[232px] pl-5",
+        node.isRoot ? "border-foreground bg-secondary" : "border-border bg-card",
+        node.isHighlighted && "ring-2 ring-foreground ring-offset-2",
+        "hover:-translate-y-0.5 hover:shadow-md"
+      )}
+    >
+      <div className={cn("absolute inset-y-0 left-0 w-2 rounded-l-md", accent)} />
+      <EmployeeAvatar employee={node.employee} size={node.isCompact ? "sm" : "md"} />
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold text-foreground">{node.employee.name}</p>
+        <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">{node.employee.designation}</p>
+        <p className="mt-1 text-[11px] font-medium text-muted-foreground">Emp ID - {node.employee.employeeId}</p>
+      </div>
+
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          node.onRemoveFromTree(node.employee.id);
+        }}
+        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
+        title="Remove from organization chart"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+
+      {node.childCount > 0 && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            node.onToggle(node.employee.id);
+          }}
+          className="absolute -bottom-8 left-1/2 z-10 flex h-6 min-w-6 -translate-x-1/2 items-center justify-center rounded-md border border-border bg-background px-1.5 text-[11px] font-semibold text-muted-foreground shadow-sm hover:bg-secondary"
+          title={node.isExpanded ? "Collapse reportees" : "Expand reportees"}
+        >
+          {node.isExpanded ? node.childCount : "+"}
+        </button>
       )}
 
-      <div className="flex items-center gap-3">
-        {/* Avatar */}
-        <div className="relative">
-          {employee.avatar ? (
-            <img
-              src={employee.avatar}
-              alt={employee.name}
-              className={cn("rounded-xl object-cover border-2 border-white dark:border-slate-800 shadow-sm", data.isCompact ? "w-10 h-10" : "w-12 h-12")}
-            />
-          ) : (
-            <div
-              className={cn("rounded-xl flex items-center justify-center text-white font-bold border-2 border-white dark:border-slate-800 shadow-sm", data.isCompact ? "w-10 h-10 text-xs" : "w-12 h-12 text-sm")}
-              style={{ backgroundColor: employee.avatarColor }}
-            >
-              {employee.initials}
-            </div>
-          )}
-          {/* Status Dot */}
-          <div className={cn(
-            "absolute -bottom-1 -right-1 rounded-full border-2 border-white dark:border-slate-900 shadow-sm",
-            data.isCompact ? "w-3 h-3" : "w-3.5 h-3.5",
-            employee.status === "Active" ? "bg-green-500" : employee.status === "On Leave" ? "bg-amber-500" : "bg-slate-400"
-          )} />
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <h4 className={cn("font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 transition-colors", data.isCompact ? "text-[12px]" : "text-sm")}>
-            {employee.name}
-          </h4>
-          <p className={cn("font-medium text-slate-500 dark:text-slate-400 truncate leading-tight", data.isCompact ? "text-[10px]" : "text-[11px]")}>
-            {employee.designation}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{employee.employeeId}</span>
-          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{employee.department}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {childCount && childCount > 0 ? (
-            <button
-              className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group/btn hover:bg-emerald-500 hover:text-white transition-all"
-              onClick={(e) => {
-                e.stopPropagation();
-                data.onToggleExpand?.(employee.id);
-              }}
-            >
-              {data.isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
-          ) : null}
-          {childCount && childCount > 0 && (
-            <div className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-              <Users className="w-2.5 h-2.5 text-slate-500" />
-              <span className="text-[10px] font-black text-slate-600 dark:text-slate-400">{childCount}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Handles for connections */}
       <Handle type="target" position={Position.Top} className="opacity-0" />
       <Handle type="source" position={Position.Bottom} className="opacity-0" />
     </div>
   );
-};
+}
 
-const nodeTypes = {
-  orgNode: OrgNode,
-};
+const nodeTypes = { orgNode: OrgNode };
 
-// --- Layout Logic using D3 ---
-const getLayoutedElements = (employees: Employee[], direction = 'TB', isCompact = false) => {
-  // To handle multiple roots, we add a "virtual root"
-  const virtualRootId = "VIRTUAL_ROOT";
-  const dataWithVirtualRoot = [
-    { id: virtualRootId, name: "Virtual Root", reportingManagerId: undefined },
-    ...employees.map(emp => ({
-      ...emp,
-      reportingManagerId: emp.reportingManagerId || virtualRootId
-    }))
+function getDirectReportCount(employees: Employee[], managerId: string) {
+  return employees.filter((employee) => employee.reportingManagerId === managerId).length;
+}
+
+function getReporteeIds(employees: Employee[], managerId: string) {
+  const direct = employees.filter((employee) => employee.reportingManagerId === managerId);
+  return direct.flatMap((employee) => [employee.id, ...getReporteeIds(employees, employee.id)]);
+}
+
+function filterVisibleEmployees(employees: Employee[], expanded: Set<string>) {
+  const byId = new Map(employees.map((employee) => [employee.id, employee]));
+
+  return employees.filter((employee) => {
+    let managerId = employee.reportingManagerId;
+    while (managerId) {
+      if (!expanded.has(managerId)) return false;
+      managerId = byId.get(managerId)?.reportingManagerId;
+    }
+    return true;
+  });
+}
+
+function layoutEmployees(
+  allEmployees: Employee[],
+  visibleEmployees: Employee[],
+  viewMode: ViewMode,
+  isCompact: boolean,
+  highlightedId: string | null,
+  expanded: Set<string>,
+  handlers: Pick<OrgNodeData, "onToggle" | "onOpen" | "onDropReportee" | "onRemoveFromTree">,
+) {
+  const virtualRootId = "virtual-root";
+  const rows = [
+    { id: virtualRootId, reportingManagerId: undefined },
+    ...visibleEmployees.map((employee) => ({
+      ...employee,
+      reportingManagerId: employee.reportingManagerId || virtualRootId,
+    })),
   ];
 
-  const root = d3.stratify<any>()
-    .id(d => d.id)
-    .parentId(d => d.reportingManagerId)(dataWithVirtualRoot);
+  const root = d3
+    .stratify<any>()
+    .id((row) => row.id)
+    .parentId((row) => row.reportingManagerId)(rows);
 
-  const nodeWidth = isCompact ? 200 : 260;
-  const nodeHeight = isCompact ? 90 : 120;
-  const spacingX = isCompact ? 50 : 100;
-  const spacingY = isCompact ? 60 : 100;
+  const nodeWidth = isCompact ? 198 : 232;
+  const nodeHeight = isCompact ? 66 : 78;
+  const tree = d3.tree().nodeSize(
+    viewMode === "vertical"
+      ? [nodeWidth + 54, nodeHeight + 80]
+      : [nodeHeight + 80, nodeWidth + 80],
+  );
 
-  // D3 Tree layout
-  const treeLayout = d3.tree().nodeSize(direction === 'TB' ? [nodeWidth + spacingX, nodeHeight + spacingY] : [nodeHeight + spacingY, nodeWidth + spacingX]);
-  treeLayout(root);
+  tree(root);
 
-  const nodes: any[] = [];
-  const edges: any[] = [];
+  const nodes: OrgFlowNode[] = [];
+  const edges: Edge[] = [];
 
-  root.descendants().forEach((d: any) => {
-    // Skip virtual root
-    if (d.data.id === virtualRootId) return;
+  root.descendants().forEach((item: any) => {
+    if (item.data.id === virtualRootId) return;
 
-    const isRoot = d.parent?.data.id === virtualRootId;
-
-    // Swap X and Y for horizontal layout
-    const x = direction === 'TB' ? d.x : d.y;
-    const y = direction === 'TB' ? d.y : d.x;
+    const employee = item.data as Employee;
+    const x = viewMode === "vertical" ? item.x : item.y;
+    const y = viewMode === "vertical" ? item.y : item.x;
 
     nodes.push({
-      id: d.data.id,
-      type: 'orgNode',
-      data: {
-        employee: d.data,
-        isRoot,
-        isCompact,
-        childCount: d.children?.length || 0,
-      },
+      id: employee.id,
+      type: "orgNode",
       position: { x, y },
+      data: {
+        employee,
+        childCount: getDirectReportCount(allEmployees, employee.id),
+        isRoot: item.parent?.data.id === virtualRootId,
+        isCompact,
+        isHighlighted: employee.id === highlightedId,
+        isExpanded: expanded.has(employee.id),
+        ...handlers,
+      },
     });
 
-    if (d.parent && d.parent.data.id !== virtualRootId) {
+    if (item.parent?.data.id && item.parent.data.id !== virtualRootId) {
       edges.push({
-        id: `e${d.parent.data.id}-${d.data.id}`,
-        source: d.parent.data.id,
-        target: d.data.id,
-        type: 'smoothstep',
-        animated: false,
-        style: { stroke: '#CBD5E1', strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#CBD5E1' },
+        id: `${item.parent.data.id}-${employee.id}`,
+        source: item.parent.data.id,
+        target: employee.id,
+        type: "step",
+        style: { stroke: "#9CA3AF", strokeWidth: 1.2 },
       });
     }
   });
 
   return { nodes, edges };
-};
+}
+
+function SearchSelect({
+  employees,
+  value,
+  onChange,
+  placeholder = "Search by Emp No / Name",
+}: {
+  employees: Employee[];
+  value: string;
+  onChange: (id: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const selected = employees.find((employee) => employee.id === value);
+  const filtered = useMemo(() => {
+    const text = search.trim().toLowerCase();
+    if (!text) return employees;
+    return employees.filter(
+      (employee) =>
+        employee.name.toLowerCase().includes(text) ||
+        employee.employeeId.toLowerCase().includes(text) ||
+        employee.designation.toLowerCase().includes(text),
+    );
+  }, [employees, search]);
+
+  return (
+    <div
+      className="relative"
+      onBlur={(event) => {
+        const nextFocus = event.relatedTarget;
+        if (!(nextFocus instanceof HTMLElement) || !event.currentTarget.contains(nextFocus)) setOpen(false);
+      }}
+    >
+      <User className="absolute left-3 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full bg-secondary p-2 text-muted-foreground" />
+      <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <input
+        value={open ? search : selected ? `${selected.name} (${selected.employeeId})` : ""}
+        onChange={(event) => {
+          setSearch(event.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => {
+          setSearch("");
+          setOpen(true);
+        }}
+        placeholder={placeholder}
+        className="h-12 w-full appearance-none rounded-full border border-border bg-background pl-14 pr-11 text-sm font-medium text-muted-foreground outline-none transition focus:border-foreground focus:ring-2 focus:ring-foreground/10"
+      />
+
+      {open && (
+        <div className="absolute left-0 right-0 top-[54px] z-50 overflow-hidden rounded-md border border-border bg-card shadow-lg">
+          <div className="border-b border-border bg-secondary px-4 py-2 text-xs font-semibold text-muted-foreground">
+            {placeholder}
+          </div>
+          <div className="max-h-56 overflow-y-auto p-1">
+            {filtered.map((employee) => (
+              <button
+                key={employee.id}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(employee.id);
+                  setSearch("");
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded px-3 py-2 text-left hover:bg-secondary",
+                  value === employee.id && "bg-secondary",
+                )}
+              >
+                <EmployeeAvatar employee={employee} size="sm" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-foreground">{employee.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">Emp ID - {employee.employeeId}</span>
+                </span>
+              </button>
+            ))}
+            {!filtered.length && (
+              <div className="px-4 py-6 text-center text-sm font-medium text-muted-foreground">
+                No employees found.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OptionSearchSelect({
+  options,
+  value,
+  onChange,
+  icon,
+  prefix,
+  className,
+}: {
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  icon?: ReactNode;
+  prefix?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const text = search.trim().toLowerCase();
+    if (!text) return options;
+    return options.filter((option) => option.toLowerCase().includes(text));
+  }, [options, search]);
+
+  return (
+    <div
+      className={cn("relative flex h-10 w-[210px] items-center rounded-md border border-border px-4 text-sm font-medium text-foreground", className)}
+      onBlur={(event) => {
+        const nextFocus = event.relatedTarget;
+        if (!(nextFocus instanceof HTMLElement) || !event.currentTarget.contains(nextFocus)) setOpen(false);
+      }}
+    >
+      {icon}
+      {prefix && !open && <span className="mr-1 shrink-0 text-muted-foreground">{prefix}</span>}
+      <input
+        value={open ? search : value}
+        onChange={(event) => {
+          setSearch(event.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => {
+          setSearch("");
+          setOpen(true);
+        }}
+        className="min-w-0 flex-1 bg-transparent pr-7 outline-none"
+        placeholder="Search"
+      />
+      <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground" />
+
+      {open && (
+        <div className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-md border border-border bg-card shadow-lg">
+          <div className="border-b border-border bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Search
+          </div>
+          <div className="max-h-56 overflow-y-auto p-1">
+            {filtered.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(option);
+                  setSearch("");
+                  setOpen(false);
+                }}
+                className={cn(
+                  "block w-full rounded px-3 py-2 text-left text-sm hover:bg-secondary",
+                  value === option && "bg-secondary font-semibold",
+                )}
+              >
+                {option}
+              </button>
+            ))}
+            {!filtered.length && (
+              <div className="px-3 py-4 text-center text-sm font-medium text-muted-foreground">
+                No options found.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PayrollMonthSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [startYear, setStartYear] = useState(2024);
+  const months = useMemo(() => {
+    const names = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+    return names.map((month, index) => {
+      const year = index < 9 ? startYear : startYear + 1;
+      return `${month}'${String(year).slice(-2)}`;
+    });
+  }, [startYear]);
+
+  return (
+    <div
+      className="relative"
+      onBlur={(event) => {
+        const nextFocus = event.relatedTarget;
+        if (!(nextFocus instanceof HTMLElement) || !event.currentTarget.contains(nextFocus)) setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "flex h-10 w-[256px] items-center gap-2 rounded-md border border-border px-4 text-sm font-medium",
+          open ? "border-foreground ring-2 ring-foreground/10" : "text-muted-foreground hover:bg-secondary",
+        )}
+      >
+        <Calendar className="h-4 w-4 text-muted-foreground" />
+        <span className="text-muted-foreground">Payroll Month:</span>
+        <span className="font-semibold text-foreground">{value}</span>
+        <ChevronDown className={cn("ml-auto h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-12 z-50 w-[278px] rounded-md border border-border bg-card p-3 shadow-lg">
+          <div className="mb-3 flex items-center justify-between">
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setStartYear((year) => year - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <p className="text-lg font-medium text-foreground">
+              {startYear} - {startYear + 1}
+            </p>
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setStartYear((year) => year + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {months.map((month) => (
+              <button
+                key={month}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(month);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "h-10 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  value === month && "bg-secondary text-foreground",
+                )}
+              >
+                {month}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrgModal({
+  type,
+  employees,
+  unassigned,
+  reportees,
+  values,
+  onChange,
+  onClose,
+  onSave,
+}: {
+  type: ModalType;
+  employees: Employee[];
+  unassigned: Employee[];
+  reportees: Employee[];
+  values: { managerId: string; reporteeId: string; transferFromId: string; transferToId: string };
+  onChange: (next: Partial<{ managerId: string; reporteeId: string; transferFromId: string; transferToId: string }>) => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  if (!type) return null;
+
+  const title = type === "top" ? "Set Top Level Manager" : type === "mass" ? "Mass Transfer" : "Assign Manager";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10 pt-20">
+      <div
+        className={cn(
+          "rounded-lg border border-border bg-card shadow-2xl",
+          type === "mass" ? "w-[420px]" : "w-[420px]"
+        )}
+      >
+        <div className="flex h-12 items-center justify-between border-b border-border px-4">
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          <button className="rounded-full p-1 text-muted-foreground hover:bg-secondary" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-6 p-4">
+          {type === "top" && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground">Select Manager</p>
+              <SearchSelect employees={employees} value={values.managerId} onChange={(managerId) => onChange({ managerId })} />
+            </div>
+          )}
+
+          {type === "assign" && (
+            <>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground">Select Reportee</p>
+                <SearchSelect
+                  employees={unassigned.length ? unassigned : employees}
+                  value={values.reporteeId}
+                  onChange={(reporteeId) => onChange({ reporteeId })}
+                />
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground">Select Manager</p>
+                <SearchSelect
+                  employees={employees.filter(
+                    (employee) =>
+                      employee.id !== values.reporteeId &&
+                      !getReporteeIds(employees, values.reporteeId).includes(employee.id),
+                  )}
+                  value={values.managerId}
+                  onChange={(managerId) => onChange({ managerId })}
+                />
+              </div>
+            </>
+          )}
+
+          {type === "mass" && (
+            <>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground">Transfer From</p>
+                <SearchSelect
+                  employees={employees}
+                  value={values.transferFromId}
+                  onChange={(transferFromId) => onChange({ transferFromId, transferToId: "" })}
+                />
+              </div>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">All Reportees</p>
+                <div className="flex h-[292px] flex-col items-center justify-center rounded-sm border border-border bg-background text-center">
+                  {reportees.length ? (
+                    <div className="w-full divide-y divide-border overflow-auto text-left">
+                      {reportees.map((employee) => (
+                        <div key={employee.id} className="flex items-center gap-3 px-4 py-3">
+                          <EmployeeAvatar employee={employee} size="sm" />
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{employee.name}</p>
+                            <p className="text-xs text-muted-foreground">{employee.employeeId}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-border bg-secondary">
+                        <CircleAlert className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">Nothing to show!</p>
+                      <p className="mt-2 max-w-[260px] text-xs font-medium leading-5 text-muted-foreground">
+                        All reportee(s) will show up here once you select the manager.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground">Transfer To</p>
+                <SearchSelect
+                  employees={employees.filter(
+                    (employee) =>
+                      employee.id !== values.transferFromId &&
+                      !getReporteeIds(employees, values.transferFromId).includes(employee.id),
+                  )}
+                  value={values.transferToId}
+                  onChange={(transferToId) => onChange({ transferToId })}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-4 px-4 pb-6">
+          <button className="h-8 rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="h-8 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90" onClick={onSave}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function OrganizationChartPage() {
-  const navigate = useNavigate();
-  const { setViewport, fitView, zoomIn, zoomOut, getNodes } = useReactFlow();
+  const dispatch = useDispatch<AppDispatch>();
   const employees = useSelector((state: RootState) => state.admin.employees);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEmp, setSelectedEmp] = useState<Employee | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-
-  // Persist view mode settings
-  const [viewMode, setViewMode] = useState<"vertical" | "horizontal">(() => {
-    return (localStorage.getItem("orgChart_direction") as any) || "vertical";
+  const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
+  const [nodes, setNodes, onNodesChange] = useNodesState<OrgFlowNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [department, setDepartment] = useState("All");
+  const [payrollMonth, setPayrollMonth] = useState("Apr'25");
+  const [unassignedQuery, setUnassignedQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("vertical");
+  const [isCompact, setIsCompact] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [modal, setModal] = useState<ModalType>(null);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    managerId: "",
+    reporteeId: "",
+    transferFromId: "",
+    transferToId: "",
   });
-  const [isCompact, setIsCompact] = useState(() => {
-    return localStorage.getItem("orgChart_compact") === "true";
+
+  const [topLevelIds, setTopLevelIds] = useState<Set<string>>(() => {
+    const roots = employees.filter((employee) => !employee.reportingManagerId);
+    const rootsWithTeams = roots.filter((employee) => getDirectReportCount(employees, employee.id) > 0);
+    return new Set((rootsWithTeams.length ? rootsWithTeams : roots.slice(0, 1)).map((employee) => employee.id));
   });
 
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(employees.map(e => e.id)));
+  useEffect(() => {
+    setTopLevelIds((prev) => {
+      const next = new Set(Array.from(prev).filter((id) => employees.some((employee) => employee.id === id)));
+      const rootsWithTeams = employees.filter(
+        (employee) => !employee.reportingManagerId && getDirectReportCount(employees, employee.id) > 0,
+      );
+      rootsWithTeams.forEach((employee) => next.add(employee.id));
+      if (!next.size) {
+        const firstRoot = employees.find((employee) => !employee.reportingManagerId);
+        if (firstRoot) next.add(firstRoot.id);
+      }
+      return next;
+    });
+  }, [employees]);
 
-  const onNodeClick = useCallback((emp: Employee) => {
-    setSelectedEmp(emp);
-    setIsDrawerOpen(true);
-  }, []);
+  const chartEmployees = useMemo(
+    () => employees.filter((employee) => employee.reportingManagerId || topLevelIds.has(employee.id)),
+    [employees, topLevelIds],
+  );
+  const unassigned = useMemo(
+    () => employees.filter((employee) => !employee.reportingManagerId && !topLevelIds.has(employee.id)),
+    [employees, topLevelIds],
+  );
+  const departments = useMemo(() => ["All", ...Array.from(new Set(employees.map((employee) => employee.department)))], [employees]);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.map((employee) => employee.id)));
 
-  const toggleExpand = useCallback((id: string) => {
-    setExpandedNodes(prev => {
+  const filteredUnassigned = useMemo(() => {
+    const text = unassignedQuery.trim().toLowerCase();
+    if (!text) return unassigned;
+    return unassigned.filter(
+      (employee) =>
+        employee.name.toLowerCase().includes(text) ||
+        employee.employeeId.toLowerCase().includes(text) ||
+        employee.designation.toLowerCase().includes(text) ||
+        employee.department.toLowerCase().includes(text),
+    );
+  }, [unassigned, unassignedQuery]);
+
+  const searchedEmployee = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    if (!text) return null;
+    return chartEmployees.find(
+      (employee) =>
+        employee.name.toLowerCase().includes(text) ||
+        employee.employeeId.toLowerCase().includes(text) ||
+        employee.designation.toLowerCase().includes(text),
+    );
+  }, [chartEmployees, query]);
+
+  const searchResults = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    if (!text) return [];
+    return chartEmployees
+      .filter(
+        (employee) =>
+          employee.name.toLowerCase().includes(text) ||
+          employee.employeeId.toLowerCase().includes(text) ||
+          employee.designation.toLowerCase().includes(text) ||
+          employee.department.toLowerCase().includes(text),
+      )
+      .slice(0, 8);
+  }, [chartEmployees, query]);
+
+  const filteredEmployees = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    const matchedIds = new Set<string>();
+
+    chartEmployees.forEach((employee) => {
+      const matchesDepartment = department === "All" || employee.department === department;
+      const matchesSearch =
+        !text ||
+        employee.name.toLowerCase().includes(text) ||
+        employee.employeeId.toLowerCase().includes(text) ||
+        employee.designation.toLowerCase().includes(text);
+
+      if (matchesDepartment && matchesSearch) {
+        matchedIds.add(employee.id);
+        getReporteeIds(chartEmployees, employee.id).forEach((id) => matchedIds.add(id));
+      }
+    });
+
+    if (!matchedIds.size) return [];
+
+    for (const id of Array.from(matchedIds)) {
+      let current = chartEmployees.find((employee) => employee.id === id)?.reportingManagerId;
+      while (current) {
+        matchedIds.add(current);
+        current = chartEmployees.find((employee) => employee.id === current)?.reportingManagerId;
+      }
+    }
+
+    return chartEmployees.filter((employee) => matchedIds.has(employee.id));
+  }, [chartEmployees, department, query]);
+
+  const visibleEmployees = useMemo(() => filterVisibleEmployees(filteredEmployees, expanded), [expanded, filteredEmployees]);
+  const transferReportees = useMemo(
+    () => employees.filter((employee) => employee.reportingManagerId === form.transferFromId),
+    [employees, form.transferFromId],
+  );
+
+  const updateManager = useCallback(
+    (reporteeId: string, managerId?: string) => {
+      const reportee = employees.find((employee) => employee.id === reporteeId);
+      if (!reportee) return;
+      if (managerId && getReporteeIds(employees, reporteeId).includes(managerId)) return;
+      dispatch(updateAdminEmployee({ ...reportee, reportingManagerId: managerId }));
+      if (managerId) {
+        setTopLevelIds((prev) => {
+          const next = new Set(prev);
+          next.delete(reporteeId);
+          return next;
+        });
+      }
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.add(reporteeId);
+        if (managerId) next.add(managerId);
+        return next;
+      });
+    },
+    [dispatch, employees],
+  );
+
+  const handleDropReportee = useCallback(
+    (reporteeId: string, managerId: string) => {
+      updateManager(reporteeId, managerId);
+    },
+    [updateManager],
+  );
+
+  const removeFromTree = useCallback(
+    (employeeId: string) => {
+      const employee = employees.find((item) => item.id === employeeId);
+      if (!employee) return;
+
+      dispatch(updateAdminEmployee({ ...employee, reportingManagerId: undefined }));
+      employees
+        .filter((item) => item.reportingManagerId === employeeId)
+        .forEach((reportee) => {
+          dispatch(updateAdminEmployee({ ...reportee, reportingManagerId: undefined }));
+        });
+      setTopLevelIds((prev) => {
+        const next = new Set(prev);
+        next.delete(employeeId);
+        employees
+          .filter((item) => item.reportingManagerId === employeeId)
+          .forEach((reportee) => next.delete(reportee.id));
+        return next;
+      });
+      setHighlightedId((current) => (current === employeeId ? null : current));
+    },
+    [dispatch, employees],
+  );
+
+  const pendingRemoveEmployee = useMemo(
+    () => employees.find((employee) => employee.id === pendingRemoveId) ?? null,
+    [employees, pendingRemoveId],
+  );
+
+  const toggleNode = useCallback((id: string) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -271,352 +842,356 @@ export function OrganizationChartPage() {
     });
   }, []);
 
-  const layout = useCallback(() => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      employees,
-      viewMode === 'vertical' ? 'TB' : 'LR',
-      isCompact
-    );
+  const openEmployee = useCallback((employee: Employee) => {
+    setHighlightedId(employee.id);
+  }, []);
 
-    const finalNodes = layoutedNodes.map(n => ({
-      ...n,
-      data: {
-        ...n.data,
-        isExpanded: expandedNodes.has(n.id),
-        isCompact,
-        onToggleExpand: toggleExpand,
-        onNodeClick
-      }
-    }));
+  const revealEmployee = useCallback(
+    (employee: Employee) => {
+      setDepartment("All");
+      setQuery(employee.name);
+      setHighlightedId(employee.id);
+      setSearchOpen(false);
 
-    setNodes(finalNodes);
-    setEdges(layoutedEdges);
-  }, [expandedNodes, onNodeClick, toggleExpand, viewMode, isCompact]);
-
-  // Persist settings
-  useEffect(() => {
-    localStorage.setItem("orgChart_direction", viewMode);
-    localStorage.setItem("orgChart_compact", String(isCompact));
-  }, [viewMode, isCompact]);
-
-  // Initial Layout & Re-layout on expand/collapse
-  useEffect(() => {
-    layout();
-  }, [layout]);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    if (!term) return;
-
-    const found = employees.find(e =>
-      e.name.toLowerCase().includes(term.toLowerCase()) ||
-      e.employeeId.toLowerCase().includes(term.toLowerCase()) ||
-      e.designation.toLowerCase().includes(term.toLowerCase())
-    );
-
-    if (found) {
-      // Ensure all ancestors are expanded
-      const ancestors: string[] = [];
-      let current = found.reportingManagerId;
-      while (current) {
-        ancestors.push(current);
-        const manager = employees.find(e => e.id === current);
-        current = manager?.reportingManagerId;
-      }
-
-      setExpandedNodes(prev => {
+      setExpanded((prev) => {
         const next = new Set(prev);
-        ancestors.forEach(id => next.add(id));
+        next.add(employee.id);
+        let managerId = employee.reportingManagerId;
+        while (managerId) {
+          next.add(managerId);
+          managerId = chartEmployees.find((item) => item.id === managerId)?.reportingManagerId;
+        }
         return next;
       });
+    },
+    [chartEmployees],
+  );
 
-      const node = nodes.find(n => n.id === found.id);
-      if (node) {
-        setViewport({ x: -node.position.x + window.innerWidth / 2 - 130, y: -node.position.y + 200, zoom: 1 }, { duration: 800 });
-      }
-    }
-  };
+  useEffect(() => {
+    const layout = layoutEmployees(chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, {
+      onToggle: toggleNode,
+      onOpen: openEmployee,
+      onDropReportee: handleDropReportee,
+      onRemoveFromTree: setPendingRemoveId,
+    });
+    setNodes(layout.nodes);
+    setEdges(layout.edges);
+  }, [chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, toggleNode, openEmployee, handleDropReportee, setNodes, setEdges]);
 
-  const expandAll = () => setExpandedNodes(new Set(employees.map(e => e.id)));
-  const collapseAll = () => setExpandedNodes(new Set([employees.find(e => !e.reportingManagerId)?.id || "0"]));
+  useEffect(() => {
+    if (!searchedEmployee) return;
+    setHighlightedId(searchedEmployee.id);
+    const node = nodes.find((item) => item.id === searchedEmployee.id);
+    if (node) setCenter(node.position.x + 100, node.position.y + 40, { zoom: 1, duration: 600 });
+  }, [nodes, searchedEmployee, setCenter]);
 
-  const handleExport = async (type: 'png' | 'pdf') => {
-    const flowElement = document.querySelector(".react-flow__viewport") as HTMLElement;
+  const exportChart = async (type: "png" | "pdf") => {
+    const flowElement = document.querySelector(".react-flow__viewport") as HTMLElement | null;
     if (!flowElement) return;
 
-    setIsExporting(true);
-    try {
-      const dateStr = new Date().toISOString().split('T')[0];
-      const fileName = `organization-chart-${dateStr}`;
+    const dataUrl = await toPng(flowElement, { backgroundColor: "#ffffff", pixelRatio: 2 });
+    const fileName = `organization-chart-${new Date().toISOString().slice(0, 10)}`;
 
-      const dataUrl = await toPng(flowElement, {
-        backgroundColor: "transparent",
-        quality: 1,
-        pixelRatio: 2,
-      });
-
-      if (type === 'png') {
-        const link = document.createElement("a");
-        link.download = `${fileName}.png`;
-        link.href = dataUrl;
-        link.click();
-      } else {
-        const pdf = new jsPDF({
-          orientation: "landscape",
-          unit: "px",
-          format: [flowElement.offsetWidth, flowElement.offsetHeight]
-        });
-        pdf.addImage(dataUrl, "PNG", 0, 0, flowElement.offsetWidth, flowElement.offsetHeight);
-        pdf.save(`${fileName}.pdf`);
-      }
-    } catch (error) {
-      console.error("Export failed:", error);
-      alert("Export failed. Please try again.");
-    } finally {
-      setIsExporting(false);
+    if (type === "png") {
+      const link = document.createElement("a");
+      link.download = `${fileName}.png`;
+      link.href = dataUrl;
+      link.click();
+      return;
     }
+
+    const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [1200, 760] });
+    pdf.addImage(dataUrl, "PNG", 24, 24, 1152, 712);
+    pdf.save(`${fileName}.pdf`);
+  };
+
+  const saveModal = () => {
+    if (modal === "top" && form.managerId) {
+      setTopLevelIds((prev) => new Set(prev).add(form.managerId));
+      updateManager(form.managerId, undefined);
+    }
+    if (modal === "assign" && form.reporteeId && form.managerId) updateManager(form.reporteeId, form.managerId);
+    if (modal === "mass" && form.transferFromId && form.transferToId) {
+      transferReportees.forEach((employee) => updateManager(employee.id, form.transferToId));
+    }
+    setModal(null);
+    setForm({ managerId: "", reporteeId: "", transferFromId: "", transferToId: "" });
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950 overflow-hidden relative">
-
-      {/* --- Top Toolbar --- */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between z-30 shadow-sm sticky top-0">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            <Users className="w-3 h-3" />
-            <span>Employees</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-emerald-500 font-black">Org Chart</span>
-          </div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-3">
-            Organization Chart
-          </h2>
-        </div>
-
-        {/* Search */}
-        <div className="flex-1 max-w-[400px] mx-8 relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-11 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-xs shadow-inner"
-            placeholder="Search by Name, ID, Designation..."
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black px-3 rounded-lg" onClick={expandAll}>EXPAND ALL</Button>
-            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black px-3 rounded-lg" onClick={collapseAll}>COLLAPSE ALL</Button>
+    <div className="flex h-full overflow-hidden bg-background">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex h-[86px] shrink-0 items-center justify-between border-b border-border bg-card px-7">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <span className="text-muted-foreground">Home</span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Employee</span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-semibold text-foreground">Organization Chart</span>
           </div>
 
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => zoomIn()} title="Zoom In"><Plus className="w-4 h-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => zoomOut()} title="Zoom Out"><Minus className="w-4 h-4" /></Button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => fitView()} title="Fit to Screen"><Maximize className="w-4 h-4" /></Button>
-          </div>
-
-          <div className="flex items-center gap-2 ml-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 gap-2 font-bold text-[11px] rounded-xl px-4"
-              onClick={() => handleExport('png')}
-              disabled={isExporting}
-            >
-              {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileImage className="w-3.5 h-3.5 text-emerald-500" />}
-              PNG
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 gap-2 font-bold text-[11px] rounded-xl px-4"
-              onClick={() => handleExport('pdf')}
-              disabled={isExporting}
-            >
-              {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5 text-red-500" />}
-              PDF
-            </Button>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => window.location.reload()}>
-              <RefreshCw className="w-4 h-4 text-slate-400" />
-            </Button>
-            <KebabMenu
-              items={[
-                { label: "Auto-Layout Chart", icon: Layout, onClick: () => { layout(); toast.info("Layout optimized"); } },
-                { label: "Print View", icon: Printer, onClick: () => window.print() },
-                { label: "Verify Hierarchy", icon: ShieldCheck, onClick: () => toast.success("No orphan records found") },
-                {
-                  label: "Clear Cache", icon: Trash2, variant: "destructive", separator: true, onClick: () => {
-                    localStorage.removeItem("orgChart_direction");
-                    localStorage.removeItem("orgChart_compact");
-                    window.location.reload();
-                  }
-                },
-              ]}
+          <div className="flex items-center gap-2">
+            <PayrollMonthSelect value={payrollMonth} onChange={setPayrollMonth} />
+            <OptionSearchSelect
+              options={departments}
+              value={department}
+              onChange={setDepartment}
+              icon={<Users className="mr-2 h-4 w-4 text-muted-foreground" />}
             />
+            <button className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary" onClick={() => fitView()}>
+              <RefreshCw className="h-4 w-4" />
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* --- Main Chart Area --- */}
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          fitView
-          minZoom={0.2}
-          maxZoom={2}
-          className="bg-slate-50 dark:bg-slate-950"
-          defaultEdgeOptions={{
-            type: 'smoothstep',
-            style: { stroke: '#94A3B8', strokeWidth: 2 },
-          }}
-        >
-          <Background color="#94A3B8" gap={20} size={1} opacity={0.2} />
-          <Controls showInteractive={false} position="bottom-right" className="bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl" />
+        <div className="flex h-[112px] shrink-0 items-center justify-between border-b border-border bg-card px-8">
+          <div
+            className="relative w-64"
+            onBlur={(event) => {
+              const nextFocus = event.relatedTarget;
+              if (!(nextFocus instanceof HTMLElement) || !event.currentTarget.contains(nextFocus)) {
+                setSearchOpen(false);
+              }
+            }}
+          >
+            <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setSearchOpen(true);
+              }}
+              onFocus={() => setSearchOpen(true)}
+              placeholder="Search"
+              className="h-9 w-full rounded-full border border-border bg-background px-4 pr-10 text-sm outline-none focus:border-foreground focus:ring-2 focus:ring-foreground/10"
+            />
 
-          <Panel position="top-left" className="m-6 space-y-4">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-3xl shadow-2xl w-[200px] space-y-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Layout className="w-4 h-4 text-emerald-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">View Mode</span>
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                <Button
-                  variant={viewMode === 'vertical' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
-                  onClick={() => setViewMode('vertical')}
-                >
-                  <div className="w-1.5 h-4 bg-emerald-500 rounded-full" /> Vertical Tree
-                </Button>
-                <Button
-                  variant={viewMode === 'horizontal' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
-                  onClick={() => setViewMode('horizontal')}
-                >
-                  <div className="w-4 h-1.5 bg-blue-500 rounded-full" /> Horizontal Tree
-                </Button>
-                <Button
-                  variant={isCompact ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="justify-start h-9 text-[11px] font-bold gap-3 rounded-xl"
-                  onClick={() => setIsCompact(!isCompact)}
-                >
-                  <div className="w-2.5 h-2.5 bg-amber-500 rounded-lg" /> Compact View
-                </Button>
-              </div>
-            </div>
-          </Panel>
-        </ReactFlow>
-      </div>
-
-      {/* --- Employee Detail Drawer --- */}
-      <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetContent className="sm:max-w-[500px] p-0 border-l-0 overflow-y-auto no-scrollbar shadow-2xl bg-white dark:bg-slate-950">
-          <SheetHeader className="p-0 relative">
-            <div className="h-48 bg-gradient-to-br from-slate-900 to-emerald-950 relative overflow-hidden">
-              {/* Decorative Pattern */}
-              <div className="absolute inset-0 opacity-10 pointer-events-none">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-500 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
-              </div>
-
-              <div className="absolute top-6 right-6">
-                <Button variant="ghost" size="icon" className="text-white/40 hover:text-white" onClick={() => setIsDrawerOpen(false)}>
-                  <X className="w-6 h-6" />
-                </Button>
-              </div>
-
-              <div className="absolute -bottom-12 left-8 flex items-end gap-6">
-                <div className="w-32 h-32 rounded-[40px] bg-white dark:bg-slate-900 p-1 shadow-2xl">
-                  {selectedEmp?.avatar ? (
-                    <img src={selectedEmp.avatar} alt="" className="w-full h-full rounded-[36px] object-cover" />
-                  ) : (
-                    <div
-                      className="w-full h-full rounded-[36px] flex items-center justify-center text-white text-3xl font-black"
-                      style={{ backgroundColor: selectedEmp?.avatarColor }}
+            {searchOpen && query.trim() && (
+              <div className="absolute left-0 top-11 z-40 w-[300px] overflow-hidden rounded-md border border-border bg-card shadow-lg">
+                <div className="max-h-72 overflow-y-auto p-1">
+                  {searchResults.map((employee) => (
+                    <button
+                      key={employee.id}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => revealEmployee(employee)}
+                      className="flex w-full items-center gap-3 rounded px-3 py-2.5 text-left hover:bg-secondary"
                     >
-                      {selectedEmp?.initials}
+                      <EmployeeAvatar employee={employee} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-foreground">{employee.name}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {employee.employeeId} - {employee.designation}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                  {!searchResults.length && (
+                    <div className="px-4 py-6 text-center text-sm font-medium text-muted-foreground">
+                      No employees found in the tree.
                     </div>
                   )}
                 </div>
-                <div className="mb-4">
-                  <h3 className="text-2xl font-black text-white leading-none">{selectedEmp?.name}</h3>
-                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-2">{selectedEmp?.employeeId} • {selectedEmp?.designation}</p>
-                </div>
               </div>
-            </div>
-          </SheetHeader>
+            )}
+          </div>
 
-          <div className="pt-20 px-8 pb-10 space-y-10">
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-blue-500" /> {selectedEmp?.department}
-                </p>
-              </div>
-              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joining Date</p>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-emerald-500" /> {selectedEmp?.joiningDate}
-                </p>
-              </div>
+          <div className="flex flex-col items-end gap-8">
+            <div className="flex items-center gap-4">
+              <button className="h-8 rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-secondary" onClick={() => setModal("top")}>
+                Assign Top Level Manager
+              </button>
+              <button className="h-8 rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-secondary" onClick={() => setModal("mass")}>
+                Mass Transfer
+              </button>
+              <button className="h-8 rounded-md bg-foreground px-4 text-sm font-semibold text-primary-foreground hover:bg-foreground/90" onClick={() => setModal("assign")}>
+                Assign Manager
+              </button>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Contact Information</h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center"><Mail className="w-4 h-4 text-blue-600" /></div>
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{selectedEmp?.email}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex rounded-md border border-border">
+                <button
+                  className={cn("flex h-9 w-9 items-center justify-center hover:bg-secondary", viewMode === "vertical" && "bg-foreground text-primary-foreground hover:bg-foreground/90")}
+                  onClick={() => setViewMode("vertical")}
+                  title="Vertical layout"
+                >
+                  <ArrowUpDown className="h-5 w-5" />
+                </button>
+                <button
+                  className={cn("flex h-9 w-9 items-center justify-center hover:bg-secondary", viewMode === "horizontal" && "bg-foreground text-primary-foreground hover:bg-foreground/90")}
+                  onClick={() => setViewMode("horizontal")}
+                  title="Horizontal layout"
+                >
+                  <ArrowLeftRight className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="relative">
+                <button
+                  className="flex h-9 items-center gap-3 rounded-md bg-foreground px-4 text-sm font-semibold text-primary-foreground hover:bg-foreground/90"
+                  onClick={() => setExportOpen((prev) => !prev)}
+                >
+                  <Download className="h-4 w-4" />
+                  Export
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+                {exportOpen && (
+                  <div className="absolute right-0 top-11 z-20 w-32 rounded-md border border-border bg-card p-1 shadow-lg">
+                    <button className="w-full rounded px-3 py-2 text-left text-sm hover:bg-secondary" onClick={() => exportChart("png")}>PNG</button>
+                    <button className="w-full rounded px-3 py-2 text-left text-sm hover:bg-secondary" onClick={() => exportChart("pdf")}>PDF</button>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="w-3.5 h-3.5" /></Button>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center"><Phone className="w-4 h-4 text-green-600" /></div>
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{selectedEmp?.phone}</span>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="w-3.5 h-3.5" /></Button>
-                </div>
+                )}
               </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Quick Actions</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-emerald-100 hover:bg-emerald-50">
-                  <Users className="w-4 h-4 text-emerald-600" /> VIEW PROFILE
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-blue-100 hover:bg-blue-50">
-                  <Edit2 className="w-4 h-4 text-blue-600" /> EDIT EMPLOYEE
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-purple-100 hover:bg-purple-50">
-                  <Send className="w-4 h-4 text-purple-600" /> MESSAGE
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-orange-100 hover:bg-orange-50">
-                  <FileText className="w-4 h-4 text-orange-600" /> PAYROLL
-                </Button>
-              </div>
+              <button className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground" onClick={() => setIsCompact((prev) => !prev)} title="Compact view">
+                <Filter className="h-4 w-4" />
+              </button>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+
+        <div className="relative min-h-0 flex-1">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            fitView
+            minZoom={0.2}
+            maxZoom={1.8}
+            className="bg-background"
+          >
+            <Background color="#E5E7EB" gap={28} size={1} />
+            <Controls position="bottom-right" showInteractive={false} />
+            <Panel position="bottom-right" className="mb-24 mr-2 flex flex-col overflow-hidden rounded-md border border-border bg-card shadow-sm">
+              <button className="flex h-9 w-9 items-center justify-center border-b border-border hover:bg-secondary" onClick={() => fitView()} title="Fit view">
+                <Maximize className="h-4 w-4" />
+              </button>
+              <button className="flex h-9 w-9 items-center justify-center border-b border-border hover:bg-secondary" onClick={() => zoomIn()} title="Zoom in">
+                <span className="text-2xl leading-none">+</span>
+              </button>
+              <button className="flex h-9 w-9 items-center justify-center hover:bg-secondary" onClick={() => zoomOut()} title="Zoom out">
+                <Minimize className="h-4 w-4" />
+              </button>
+            </Panel>
+          </ReactFlow>
+        </div>
+      </div>
+
+      <aside className="flex w-[254px] shrink-0 flex-col border-l border-border bg-card">
+        <div className="flex h-16 items-center gap-3 border-b border-border px-4">
+          <button className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground">
+            <ChevronRight className="h-5 w-5 rotate-180" />
+          </button>
+          <h2 className="text-sm font-semibold text-foreground">
+            Unassigned ({unassignedQuery.trim() ? filteredUnassigned.length : unassigned.length})
+          </h2>
+        </div>
+
+        <div className="space-y-4 p-3">
+          <div className="flex gap-2 rounded-md border border-border bg-secondary px-2.5 py-2 text-xs font-medium leading-5 text-foreground">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Assign manager using drag and drop</span>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={unassignedQuery}
+              onChange={(event) => setUnassignedQuery(event.target.value)}
+              className="h-8 w-full rounded-full border border-border bg-background px-4 pr-9 text-sm outline-none focus:border-foreground focus:ring-2 focus:ring-foreground/10"
+              placeholder="Search"
+            />
+          </div>
+
+          <div className="space-y-3">
+            {filteredUnassigned.map((employee) => (
+              <div
+                key={employee.id}
+                draggable
+                onDragStart={(event) => event.dataTransfer.setData("employee/id", employee.id)}
+                className="flex cursor-grab items-center gap-3 rounded-md border border-dashed border-border bg-background p-3 active:cursor-grabbing hover:bg-secondary"
+              >
+                <EmployeeAvatar employee={employee} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">{employee.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Emp ID - {employee.employeeId}</p>
+                </div>
+                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+            ))}
+            {!filteredUnassigned.length && (
+              <div className="rounded-md border border-dashed border-border p-4 text-center text-xs font-medium text-muted-foreground">
+                {unassigned.length ? "No unassigned employees match your search." : "Every employee is assigned in the chart."}
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      <OrgModal
+        type={modal}
+        employees={employees}
+        unassigned={unassigned}
+        reportees={transferReportees}
+        values={form}
+        onChange={(next) => setForm((prev) => ({ ...prev, ...next }))}
+        onClose={() => setModal(null)}
+        onSave={saveModal}
+      />
+
+      {pendingRemoveEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4">
+          <div className="w-full max-w-[420px] rounded-lg border border-border bg-card shadow-2xl">
+            <div className="flex h-12 items-center justify-between border-b border-border px-4">
+              <h3 className="text-base font-semibold text-foreground">Remove Employee</h3>
+              <button
+                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
+                onClick={() => setPendingRemoveId(null)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div className="flex items-center gap-3 rounded-md border border-border bg-secondary p-3">
+                <EmployeeAvatar employee={pendingRemoveEmployee} size="sm" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{pendingRemoveEmployee.name}</p>
+                  <p className="text-xs text-muted-foreground">Emp ID - {pendingRemoveEmployee.employeeId}</p>
+                </div>
+              </div>
+
+              <p className="text-sm font-medium leading-6 text-muted-foreground">
+                Are you sure you want to remove this employee from the organization chart?
+                The employee will move back to the unassigned drag-and-drop section.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 px-5 pb-5">
+              <button
+                className="h-9 rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-secondary"
+                onClick={() => setPendingRemoveId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="h-9 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90"
+                onClick={() => {
+                  removeFromTree(pendingRemoveEmployee.id);
+                  setPendingRemoveId(null);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Wrapper to provide ReactFlow context
 export function OrganizationChartPageWrapper() {
   return (
     <ReactFlowProvider>
