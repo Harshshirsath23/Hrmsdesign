@@ -17,6 +17,7 @@ import { cn } from "../../../../components/ui/utils";
 import { LetterWizard } from "./LetterManagement/LetterWizard";
 import { LetterHistory } from "./LetterManagement/LetterHistory";
 import { LetterDetails } from "./LetterManagement/LetterDetails";
+import { LetterTemplatePanel } from "./LetterManagement/LetterTemplatePanel";
 import { LetterBatch } from "./LetterManagement/types";
 import { MOCK_HISTORY } from "./LetterManagement/mockData";
 import { Button } from "../../../../components/ui/button";
@@ -34,6 +35,7 @@ export function GenerateLetterPage() {
     return saved ? JSON.parse(saved) : MOCK_HISTORY;
   });
   
+  const [activeTab, setActiveTab] = useState<"generated" | "templates">("generated");
   const [view, setView] = useState<ViewMode>("history");
   const [wizardStep, setWizardStep] = useState(1);
   const [selectedBatch, setSelectedBatch] = useState<LetterBatch | null>(null);
@@ -117,9 +119,33 @@ export function GenerateLetterPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Dynamic Header based on view */}
+      {/* Top Main Tab Bar Switcher (Hidden during letter wizard) */}
       {view !== "wizard" && (
-        <div className="px-8 py-6 border-b border-border bg-card/50 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-20">
+        <div className="bg-card border-b border-border px-8 py-3 flex items-center gap-4 sticky top-0 z-30">
+          <button
+            onClick={() => { setActiveTab("generated"); setView("history"); }}
+            className={cn(
+              "px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
+              activeTab === "generated" ? "bg-secondary text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+            )}
+          >
+            Generated Letters
+          </button>
+          <button
+            onClick={() => setActiveTab("templates")}
+            className={cn(
+              "px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
+              activeTab === "templates" ? "bg-secondary text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+            )}
+          >
+            Letter Templates
+          </button>
+        </div>
+      )}
+
+      {/* Dynamic Header based on view */}
+      {view !== "wizard" && activeTab === "generated" && (
+        <div className="px-8 py-6 border-b border-border bg-card/50 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-xl font-black text-foreground tracking-tight uppercase flex items-center gap-2">
               {view === "history" ? <History className="w-5 h-5 text-primary" /> : <FileText className="w-5 h-5 text-primary" />}
@@ -160,7 +186,7 @@ export function GenerateLetterPage() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto bg-background/50 relative">
         <div className={cn("h-full", view !== "wizard" ? "p-8 max-w-[1600px] mx-auto" : "")}>
-          {view === "wizard" && (
+          {view === "wizard" && activeTab === "generated" && (
             <LetterWizard 
               onCancel={handleWizardCancel} 
               onComplete={handleWizardComplete} 
@@ -170,7 +196,7 @@ export function GenerateLetterPage() {
             />
           )}
 
-          {view === "history" && (
+          {view === "history" && activeTab === "generated" && (
             <LetterHistory 
               onViewDetails={handleViewDetails} 
               onPreview={handlePreview}
@@ -180,11 +206,15 @@ export function GenerateLetterPage() {
             />
           )}
 
-          {view === "details" && selectedBatch && (
+          {view === "details" && selectedBatch && activeTab === "generated" && (
             <LetterDetails 
               batch={selectedBatch} 
               onBack={() => setView("history")} 
             />
+          )}
+
+          {activeTab === "templates" && (
+            <LetterTemplatePanel />
           )}
         </div>
       </div>

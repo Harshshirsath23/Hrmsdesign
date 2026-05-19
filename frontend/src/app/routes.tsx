@@ -45,6 +45,7 @@ const PoliciesFormsPage = lazy(() => import("./pages/admin/employees/setup/Polic
 const EmployeeSegmentPage = lazy(() => import("./pages/admin/employees/setup/EmployeeSegmentPage").then(m => ({ default: m.EmployeeSegmentPage })));
 const EmployeeRolesPage = lazy(() => import("./pages/admin/employees/setup/EmployeeRolesPage").then(m => ({ default: m.EmployeeRolesPage })));
 const EmployeeFilterPage = lazy(() => import("./pages/admin/employees/setup/EmployeeFilterPage").then(m => ({ default: m.EmployeeFilterPage })));
+const FinesDamagesPage = lazy(() => import("./pages/admin/employees/setup/FinesDamagesPage").then(m => ({ default: m.FinesDamagesPage })));
 const OrganizationChartPage = lazy(() => import("./pages/admin/employees/OrganizationChartPage").then(m => ({ default: m.OrganizationChartPageWrapper })));
 
 // Employee module components
@@ -157,12 +158,12 @@ export const router = createBrowserRouter([
             path: "setup",
             Component: EmployeeSetupLayout,
             children: [
-              { index: true, element: <Navigate to="letter-template" replace /> },
-              { path: "letter-template", element: <Suspense fallback={<ManagementSkeleton />}><LetterTemplatePage /></Suspense> },
+              { index: true, element: <Navigate to="policies" replace /> },
               { path: "policies", element: <Suspense fallback={<ManagementSkeleton />}><PoliciesFormsPage /></Suspense> },
               { path: "segment", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeSegmentPage /></Suspense> },
               { path: "roles", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeRolesPage /></Suspense> },
               { path: "filter", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeFilterPage /></Suspense> },
+              { path: "fines-damages", element: <Suspense fallback={<ManagementSkeleton />}><FinesDamagesPage /></Suspense> },
             ]
           },
           { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Employee Reports Module (Coming Soon)</div> },
