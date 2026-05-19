@@ -21,13 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent as DrawerPaneContent,
-  DrawerHeader as DrawerPaneHeader,
-  DrawerTitle as DrawerPaneTitle,
-} from "../../ui/drawer";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
 import { cn } from "../../ui/utils";
@@ -127,35 +120,27 @@ export function ApplicationsHistoryTable({
     setEditLeave(null);
   };
 
-const handleCancelLeave = async (app: LeaveApplicationAPI) => {
-  try {
-    console.log("Cancel leave:", app);
+  const handleCancelLeave = async (app: LeaveApplicationAPI) => {
+    try {
+      console.log("Cancel leave:", app);
+      // await cancelLeaveApplication(app.id)
+      // toast.success("Leave cancelled successfully")
+    } catch (error) {
+      console.error(error);
+      // toast.error("Failed to cancel leave")
+    }
+  };
 
-    // Example API call
-    // await cancelLeaveApplication(app.id)
-
-    // toast.success("Leave cancelled successfully")
-  } catch (error) {
-    console.error(error);
-
-    // toast.error("Failed to cancel leave")
-  }
-};
-
-const handleResubmitLeave = async (app: LeaveApplicationAPI) => {
-  try {
-    console.log("Resubmit leave:", app);
-
-    // Example API call
-    // await resubmitLeaveApplication(app.id)
-
-    // toast.success("Leave resubmitted successfully")
-  } catch (error) {
-    console.error(error);
-
-    // toast.error("Failed to resubmit leave")
-  }
-};
+  const handleResubmitLeave = async (app: LeaveApplicationAPI) => {
+    try {
+      console.log("Resubmit leave:", app);
+      // await resubmitLeaveApplication(app.id)
+      // toast.success("Leave resubmitted successfully")
+    } catch (error) {
+      console.error(error);
+      // toast.error("Failed to resubmit leave")
+    }
+  };
 
   const years = useMemo(() => {
     const y = new Set<number>();
@@ -448,6 +433,7 @@ const handleResubmitLeave = async (app: LeaveApplicationAPI) => {
         )}
       </div>
 
+      {/* ── View details dialog (unchanged) ───────────────────────────── */}
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent className="max-w-md rounded-xl border-border">
           <DialogHeader>
@@ -476,79 +462,113 @@ const handleResubmitLeave = async (app: LeaveApplicationAPI) => {
         </DialogContent>
       </Dialog>
 
-      <Drawer open={!!editLeave} onOpenChange={(open) => !open && setEditLeave(null)} direction="right">
-        <DrawerPaneContent className="max-w-md border-l border-border bg-background">
-          <DrawerPaneHeader className="border-b border-border bg-card sticky top-0 z-10 px-5 py-4">
-            <div className="flex items-center justify-between gap-3">
+      {/* ── Edit leave centered modal (replaces right-side Drawer) ────── */}
+      {!!editLeave && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setEditLeave(null)}
+        >
+          <div
+            className="relative bg-background border border-border rounded-xl shadow-xl flex flex-col w-[92vw] max-w-md max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="border-b border-border bg-card px-5 py-4 flex items-start justify-between gap-3 flex-shrink-0">
               <div>
-                <DrawerPaneTitle className="text-base">Edit pending leave</DrawerPaneTitle>
-                <p className="text-xs text-muted-foreground mt-1">Mock edit flow for pending requests.</p>
+                <p className="text-base font-semibold text-foreground">
+                  Edit pending leave
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Mock edit flow for pending requests.
+                </p>
               </div>
-              <DrawerClose asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </DrawerClose>
+              <button
+                type="button"
+                onClick={() => setEditLeave(null)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-          </DrawerPaneHeader>
 
-          <div className="space-y-4 p-5">
-            <div className="grid gap-4">
-              <label className="space-y-2 text-sm">
-                <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Leave type</span>
-                <select
-                  value={editForm.leaveType}
-                  onChange={(e) => setEditForm((curr) => ({ ...curr, leaveType: e.target.value }))}
-                  className="flat-input h-10 w-full rounded-xl px-3 text-sm"
-                >
-                  {leaveTypeOptions.map((lt) => (
-                    <option key={lt.id} value={lt.id}>
-                      {lt.name} ({lt.code})
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2">
+            {/* Body */}
+            <div className="space-y-4 p-5 overflow-y-auto flex-1">
+              <div className="grid gap-4">
                 <label className="space-y-2 text-sm">
-                  <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From</span>
-                  <Input
-                    type="date"
-                    value={editForm.from_date}
-                    onChange={(e) => setEditForm((curr) => ({ ...curr, from_date: e.target.value }))}
+                  <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                    Leave type
+                  </span>
+                  <select
+                    value={editForm.leaveType}
+                    onChange={(e) =>
+                      setEditForm((curr) => ({ ...curr, leaveType: e.target.value }))
+                    }
+                    className="flat-input h-10 w-full rounded-xl px-3 text-sm"
+                  >
+                    {leaveTypeOptions.map((lt) => (
+                      <option key={lt.id} value={lt.id}>
+                        {lt.name} ({lt.code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-2 text-sm">
+                    <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                      From
+                    </span>
+                    <Input
+                      type="date"
+                      value={editForm.from_date}
+                      onChange={(e) =>
+                        setEditForm((curr) => ({ ...curr, from_date: e.target.value }))
+                      }
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm">
+                    <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                      To
+                    </span>
+                    <Input
+                      type="date"
+                      value={editForm.to_date}
+                      onChange={(e) =>
+                        setEditForm((curr) => ({ ...curr, to_date: e.target.value }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <label className="space-y-2 text-sm">
+                  <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                    Reason
+                  </span>
+                  <Textarea
+                    value={editForm.reason}
+                    onChange={(e) =>
+                      setEditForm((curr) => ({ ...curr, reason: e.target.value }))
+                    }
+                    className="min-h-[120px]"
                   />
                 </label>
-                <label className="space-y-2 text-sm">
-                  <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To</span>
-                  <Input
-                    type="date"
-                    value={editForm.to_date}
-                    onChange={(e) => setEditForm((curr) => ({ ...curr, to_date: e.target.value }))}
-                  />
-                </label>
               </div>
 
-              <label className="space-y-2 text-sm">
-                <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Reason</span>
-                <Textarea
-                  value={editForm.reason}
-                  onChange={(e) => setEditForm((curr) => ({ ...curr, reason: e.target.value }))}
-                  className="min-h-[120px]"
-                />
-              </label>
+              <div className="rounded-xl border border-border bg-secondary/50 p-4 text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground">Request details</p>
+                <p className="mt-2">Applied on: {editLeave?.applied_on}</p>
+                <p>Status: {editLeave?.status}</p>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-secondary/50 p-4 text-sm text-muted-foreground">
-              <p className="font-semibold text-foreground">Request details</p>
-              <p className="mt-2">Applied on: {editLeave?.applied_on}</p>
-              <p>Status: {editLeave?.status}</p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <Button type="button" variant="ghost" size="sm" onClick={() => setEditLeave(null)}>
+            {/* Footer */}
+            <div className="border-t border-border bg-card px-5 py-4 flex flex-wrap items-center justify-end gap-3 flex-shrink-0">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditLeave(null)}
+              >
                 Cancel
               </Button>
               <Button type="button" size="sm" onClick={handleSaveEdit}>
@@ -556,8 +576,8 @@ const handleResubmitLeave = async (app: LeaveApplicationAPI) => {
               </Button>
             </div>
           </div>
-        </DrawerPaneContent>
-      </Drawer>
+        </div>
+      )}
     </div>
   );
 }
