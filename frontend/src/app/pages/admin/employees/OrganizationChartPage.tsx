@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
   Background,
   Controls,
@@ -43,10 +43,10 @@ import type { AppDispatch, RootState } from "@/store";
 import { updateAdminEmployee } from "@/store/slices/adminSlice";
 import type { Employee } from "../../../components/employees/mockData";
 import { cn } from "../../../components/ui/utils";
-
+ 
 type ModalType = "top" | "mass" | "assign" | null;
 type ViewMode = "vertical" | "horizontal";
-
+ 
 type OrgNodeData = Record<string, unknown> & {
   employee: Employee;
   childCount: number;
@@ -59,12 +59,12 @@ type OrgNodeData = Record<string, unknown> & {
   onDropReportee: (reporteeId: string, managerId: string) => void;
   onRemoveFromTree: (employeeId: string) => void;
 };
-
+ 
 type OrgFlowNode = Node<OrgNodeData, "orgNode">;
-
+ 
 function EmployeeAvatar({ employee, size = "md" }: { employee: Employee; size?: "sm" | "md" }) {
   const sizeClass = size === "sm" ? "h-9 w-9" : "h-11 w-11";
-
+ 
   if (employee.avatar) {
     return (
       <img
@@ -74,7 +74,7 @@ function EmployeeAvatar({ employee, size = "md" }: { employee: Employee; size?: 
       />
     );
   }
-
+ 
   return (
     <div
       className={cn(sizeClass, "flex items-center justify-center rounded-full text-xs font-semibold text-white shadow-sm")}
@@ -84,11 +84,11 @@ function EmployeeAvatar({ employee, size = "md" }: { employee: Employee; size?: 
     </div>
   );
 }
-
+ 
 function OrgNode({ data }: NodeProps) {
   const node = data as OrgNodeData;
   const accent = node.isRoot ? "bg-foreground" : "bg-muted-foreground";
-
+ 
   return (
     <div
       onClick={() => node.onOpen(node.employee)}
@@ -110,13 +110,13 @@ function OrgNode({ data }: NodeProps) {
     >
       <div className={cn("absolute inset-y-0 left-0 w-2 rounded-l-md", accent)} />
       <EmployeeAvatar employee={node.employee} size={node.isCompact ? "sm" : "md"} />
-
+ 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-semibold text-foreground">{node.employee.name}</p>
         <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">{node.employee.designation}</p>
         <p className="mt-1 text-[11px] font-medium text-muted-foreground">Emp ID - {node.employee.employeeId}</p>
       </div>
-
+ 
       <button
         type="button"
         onClick={(event) => {
@@ -128,7 +128,7 @@ function OrgNode({ data }: NodeProps) {
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
-
+ 
       {node.childCount > 0 && (
         <button
           type="button"
@@ -142,27 +142,27 @@ function OrgNode({ data }: NodeProps) {
           {node.isExpanded ? node.childCount : "+"}
         </button>
       )}
-
+ 
       <Handle type="target" position={Position.Top} className="opacity-0" />
       <Handle type="source" position={Position.Bottom} className="opacity-0" />
     </div>
   );
 }
-
+ 
 const nodeTypes = { orgNode: OrgNode };
-
+ 
 function getDirectReportCount(employees: Employee[], managerId: string) {
   return employees.filter((employee) => employee.reportingManagerId === managerId).length;
 }
-
+ 
 function getReporteeIds(employees: Employee[], managerId: string) {
   const direct = employees.filter((employee) => employee.reportingManagerId === managerId);
   return direct.flatMap((employee) => [employee.id, ...getReporteeIds(employees, employee.id)]);
 }
-
+ 
 function filterVisibleEmployees(employees: Employee[], expanded: Set<string>) {
   const byId = new Map(employees.map((employee) => [employee.id, employee]));
-
+ 
   return employees.filter((employee) => {
     let managerId = employee.reportingManagerId;
     while (managerId) {
@@ -172,7 +172,7 @@ function filterVisibleEmployees(employees: Employee[], expanded: Set<string>) {
     return true;
   });
 }
-
+ 
 function layoutEmployees(
   allEmployees: Employee[],
   visibleEmployees: Employee[],
@@ -190,12 +190,12 @@ function layoutEmployees(
       reportingManagerId: employee.reportingManagerId || virtualRootId,
     })),
   ];
-
+ 
   const root = d3
     .stratify<any>()
     .id((row) => row.id)
     .parentId((row) => row.reportingManagerId)(rows);
-
+ 
   const nodeWidth = isCompact ? 198 : 232;
   const nodeHeight = isCompact ? 66 : 78;
   const tree = d3.tree().nodeSize(
@@ -203,19 +203,19 @@ function layoutEmployees(
       ? [nodeWidth + 54, nodeHeight + 80]
       : [nodeHeight + 80, nodeWidth + 80],
   );
-
+ 
   tree(root);
-
+ 
   const nodes: OrgFlowNode[] = [];
   const edges: Edge[] = [];
-
+ 
   root.descendants().forEach((item: any) => {
     if (item.data.id === virtualRootId) return;
-
+ 
     const employee = item.data as Employee;
     const x = viewMode === "vertical" ? item.x : item.y;
     const y = viewMode === "vertical" ? item.y : item.x;
-
+ 
     nodes.push({
       id: employee.id,
       type: "orgNode",
@@ -230,7 +230,7 @@ function layoutEmployees(
         ...handlers,
       },
     });
-
+ 
     if (item.parent?.data.id && item.parent.data.id !== virtualRootId) {
       edges.push({
         id: `${item.parent.data.id}-${employee.id}`,
@@ -241,10 +241,10 @@ function layoutEmployees(
       });
     }
   });
-
+ 
   return { nodes, edges };
 }
-
+ 
 function SearchSelect({
   employees,
   value,
@@ -269,7 +269,7 @@ function SearchSelect({
         employee.designation.toLowerCase().includes(text),
     );
   }, [employees, search]);
-
+ 
   return (
     <div
       className="relative"
@@ -293,7 +293,7 @@ function SearchSelect({
         placeholder={placeholder}
         className="h-12 w-full appearance-none rounded-full border border-border bg-background pl-14 pr-11 text-sm font-medium text-muted-foreground outline-none transition focus:border-foreground focus:ring-2 focus:ring-foreground/10"
       />
-
+ 
       {open && (
         <div className="absolute left-0 right-0 top-[54px] z-50 overflow-hidden rounded-md border border-border bg-card shadow-lg">
           <div className="border-b border-border bg-secondary px-4 py-2 text-xs font-semibold text-muted-foreground">
@@ -333,7 +333,7 @@ function SearchSelect({
     </div>
   );
 }
-
+ 
 function OptionSearchSelect({
   options,
   value,
@@ -356,7 +356,7 @@ function OptionSearchSelect({
     if (!text) return options;
     return options.filter((option) => option.toLowerCase().includes(text));
   }, [options, search]);
-
+ 
   return (
     <div
       className={cn("relative flex h-10 w-[210px] items-center rounded-md border border-border px-4 text-sm font-medium text-foreground", className)}
@@ -381,7 +381,7 @@ function OptionSearchSelect({
         placeholder="Search"
       />
       <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground" />
-
+ 
       {open && (
         <div className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-md border border-border bg-card shadow-lg">
           <div className="border-b border-border bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground">
@@ -417,7 +417,7 @@ function OptionSearchSelect({
     </div>
   );
 }
-
+ 
 function PayrollMonthSelect({
   value,
   onChange,
@@ -434,7 +434,7 @@ function PayrollMonthSelect({
       return `${month}'${String(year).slice(-2)}`;
     });
   }, [startYear]);
-
+ 
   return (
     <div
       className="relative"
@@ -456,7 +456,7 @@ function PayrollMonthSelect({
         <span className="font-semibold text-foreground">{value}</span>
         <ChevronDown className={cn("ml-auto h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
-
+ 
       {open && (
         <div className="absolute right-0 top-12 z-50 w-[278px] rounded-md border border-border bg-card p-3 shadow-lg">
           <div className="mb-3 flex items-center justify-between">
@@ -480,7 +480,7 @@ function PayrollMonthSelect({
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-
+ 
           <div className="grid grid-cols-3 gap-2">
             {months.map((month) => (
               <button
@@ -505,7 +505,7 @@ function PayrollMonthSelect({
     </div>
   );
 }
-
+ 
 function OrgModal({
   type,
   employees,
@@ -526,9 +526,9 @@ function OrgModal({
   onSave: () => void;
 }) {
   if (!type) return null;
-
+ 
   const title = type === "top" ? "Set Top Level Manager" : type === "mass" ? "Mass Transfer" : "Assign Manager";
-
+ 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10 pt-20">
       <div
@@ -543,7 +543,7 @@ function OrgModal({
             <X className="h-5 w-5" />
           </button>
         </div>
-
+ 
         <div className="space-y-6 p-4">
           {type === "top" && (
             <div className="space-y-3">
@@ -551,7 +551,7 @@ function OrgModal({
               <SearchSelect employees={employees} value={values.managerId} onChange={(managerId) => onChange({ managerId })} />
             </div>
           )}
-
+ 
           {type === "assign" && (
             <>
               <div className="space-y-3">
@@ -576,7 +576,7 @@ function OrgModal({
               </div>
             </>
           )}
-
+ 
           {type === "mass" && (
             <>
               <div className="space-y-3">
@@ -630,7 +630,7 @@ function OrgModal({
             </>
           )}
         </div>
-
+ 
         <div className="flex justify-end gap-4 px-4 pb-6">
           <button className="h-8 rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-secondary" onClick={onClose}>
             Cancel
@@ -643,7 +643,7 @@ function OrgModal({
     </div>
   );
 }
-
+ 
 export function OrganizationChartPage() {
   const dispatch = useDispatch<AppDispatch>();
   const employees = useSelector((state: RootState) => state.admin.employees);
@@ -667,13 +667,13 @@ export function OrganizationChartPage() {
     transferFromId: "",
     transferToId: "",
   });
-
+ 
   const [topLevelIds, setTopLevelIds] = useState<Set<string>>(() => {
     const roots = employees.filter((employee) => !employee.reportingManagerId);
     const rootsWithTeams = roots.filter((employee) => getDirectReportCount(employees, employee.id) > 0);
     return new Set((rootsWithTeams.length ? rootsWithTeams : roots.slice(0, 1)).map((employee) => employee.id));
   });
-
+ 
   useEffect(() => {
     setTopLevelIds((prev) => {
       const next = new Set(Array.from(prev).filter((id) => employees.some((employee) => employee.id === id)));
@@ -688,7 +688,7 @@ export function OrganizationChartPage() {
       return next;
     });
   }, [employees]);
-
+ 
   const chartEmployees = useMemo(
     () => employees.filter((employee) => employee.reportingManagerId || topLevelIds.has(employee.id)),
     [employees, topLevelIds],
@@ -699,7 +699,7 @@ export function OrganizationChartPage() {
   );
   const departments = useMemo(() => ["All", ...Array.from(new Set(employees.map((employee) => employee.department)))], [employees]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.map((employee) => employee.id)));
-
+ 
   const filteredUnassigned = useMemo(() => {
     const text = unassignedQuery.trim().toLowerCase();
     if (!text) return unassigned;
@@ -711,7 +711,7 @@ export function OrganizationChartPage() {
         employee.department.toLowerCase().includes(text),
     );
   }, [unassigned, unassignedQuery]);
-
+ 
   const searchedEmployee = useMemo(() => {
     const text = query.trim().toLowerCase();
     if (!text) return null;
@@ -722,7 +722,7 @@ export function OrganizationChartPage() {
         employee.designation.toLowerCase().includes(text),
     );
   }, [chartEmployees, query]);
-
+ 
   const searchResults = useMemo(() => {
     const text = query.trim().toLowerCase();
     if (!text) return [];
@@ -736,11 +736,11 @@ export function OrganizationChartPage() {
       )
       .slice(0, 8);
   }, [chartEmployees, query]);
-
+ 
   const filteredEmployees = useMemo(() => {
     const text = query.trim().toLowerCase();
     const matchedIds = new Set<string>();
-
+ 
     chartEmployees.forEach((employee) => {
       const matchesDepartment = department === "All" || employee.department === department;
       const matchesSearch =
@@ -748,15 +748,15 @@ export function OrganizationChartPage() {
         employee.name.toLowerCase().includes(text) ||
         employee.employeeId.toLowerCase().includes(text) ||
         employee.designation.toLowerCase().includes(text);
-
+ 
       if (matchesDepartment && matchesSearch) {
         matchedIds.add(employee.id);
         getReporteeIds(chartEmployees, employee.id).forEach((id) => matchedIds.add(id));
       }
     });
-
+ 
     if (!matchedIds.size) return [];
-
+ 
     for (const id of Array.from(matchedIds)) {
       let current = chartEmployees.find((employee) => employee.id === id)?.reportingManagerId;
       while (current) {
@@ -764,16 +764,16 @@ export function OrganizationChartPage() {
         current = chartEmployees.find((employee) => employee.id === current)?.reportingManagerId;
       }
     }
-
+ 
     return chartEmployees.filter((employee) => matchedIds.has(employee.id));
   }, [chartEmployees, department, query]);
-
+ 
   const visibleEmployees = useMemo(() => filterVisibleEmployees(filteredEmployees, expanded), [expanded, filteredEmployees]);
   const transferReportees = useMemo(
     () => employees.filter((employee) => employee.reportingManagerId === form.transferFromId),
     [employees, form.transferFromId],
   );
-
+ 
   const updateManager = useCallback(
     (reporteeId: string, managerId?: string) => {
       const reportee = employees.find((employee) => employee.id === reporteeId);
@@ -796,19 +796,19 @@ export function OrganizationChartPage() {
     },
     [dispatch, employees],
   );
-
+ 
   const handleDropReportee = useCallback(
     (reporteeId: string, managerId: string) => {
       updateManager(reporteeId, managerId);
     },
     [updateManager],
   );
-
+ 
   const removeFromTree = useCallback(
     (employeeId: string) => {
       const employee = employees.find((item) => item.id === employeeId);
       if (!employee) return;
-
+ 
       dispatch(updateAdminEmployee({ ...employee, reportingManagerId: undefined }));
       employees
         .filter((item) => item.reportingManagerId === employeeId)
@@ -827,12 +827,12 @@ export function OrganizationChartPage() {
     },
     [dispatch, employees],
   );
-
+ 
   const pendingRemoveEmployee = useMemo(
     () => employees.find((employee) => employee.id === pendingRemoveId) ?? null,
     [employees, pendingRemoveId],
   );
-
+ 
   const toggleNode = useCallback((id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -841,18 +841,18 @@ export function OrganizationChartPage() {
       return next;
     });
   }, []);
-
+ 
   const openEmployee = useCallback((employee: Employee) => {
     setHighlightedId(employee.id);
   }, []);
-
+ 
   const revealEmployee = useCallback(
     (employee: Employee) => {
       setDepartment("All");
       setQuery(employee.name);
       setHighlightedId(employee.id);
       setSearchOpen(false);
-
+ 
       setExpanded((prev) => {
         const next = new Set(prev);
         next.add(employee.id);
@@ -866,7 +866,7 @@ export function OrganizationChartPage() {
     },
     [chartEmployees],
   );
-
+ 
   useEffect(() => {
     const layout = layoutEmployees(chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, {
       onToggle: toggleNode,
@@ -877,21 +877,21 @@ export function OrganizationChartPage() {
     setNodes(layout.nodes);
     setEdges(layout.edges);
   }, [chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, toggleNode, openEmployee, handleDropReportee, setNodes, setEdges]);
-
+ 
   useEffect(() => {
     if (!searchedEmployee) return;
     setHighlightedId(searchedEmployee.id);
     const node = nodes.find((item) => item.id === searchedEmployee.id);
     if (node) setCenter(node.position.x + 100, node.position.y + 40, { zoom: 1, duration: 600 });
   }, [nodes, searchedEmployee, setCenter]);
-
+ 
   const exportChart = async (type: "png" | "pdf") => {
     const flowElement = document.querySelector(".react-flow__viewport") as HTMLElement | null;
     if (!flowElement) return;
-
+ 
     const dataUrl = await toPng(flowElement, { backgroundColor: "#ffffff", pixelRatio: 2 });
     const fileName = `organization-chart-${new Date().toISOString().slice(0, 10)}`;
-
+ 
     if (type === "png") {
       const link = document.createElement("a");
       link.download = `${fileName}.png`;
@@ -899,12 +899,12 @@ export function OrganizationChartPage() {
       link.click();
       return;
     }
-
+ 
     const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [1200, 760] });
     pdf.addImage(dataUrl, "PNG", 24, 24, 1152, 712);
     pdf.save(`${fileName}.pdf`);
   };
-
+ 
   const saveModal = () => {
     if (modal === "top" && form.managerId) {
       setTopLevelIds((prev) => new Set(prev).add(form.managerId));
@@ -917,7 +917,7 @@ export function OrganizationChartPage() {
     setModal(null);
     setForm({ managerId: "", reporteeId: "", transferFromId: "", transferToId: "" });
   };
-
+ 
   return (
     <div className="flex h-full overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -929,7 +929,7 @@ export function OrganizationChartPage() {
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="font-semibold text-foreground">Organization Chart</span>
           </div>
-
+ 
           <div className="flex items-center gap-2">
             <PayrollMonthSelect value={payrollMonth} onChange={setPayrollMonth} />
             <OptionSearchSelect
@@ -943,7 +943,7 @@ export function OrganizationChartPage() {
             </button>
           </div>
         </div>
-
+ 
         <div className="flex h-[112px] shrink-0 items-center justify-between border-b border-border bg-card px-8">
           <div
             className="relative w-64"
@@ -965,7 +965,7 @@ export function OrganizationChartPage() {
               placeholder="Search"
               className="h-9 w-full rounded-full border border-border bg-background px-4 pr-10 text-sm outline-none focus:border-foreground focus:ring-2 focus:ring-foreground/10"
             />
-
+ 
             {searchOpen && query.trim() && (
               <div className="absolute left-0 top-11 z-40 w-[300px] overflow-hidden rounded-md border border-border bg-card shadow-lg">
                 <div className="max-h-72 overflow-y-auto p-1">
@@ -995,7 +995,7 @@ export function OrganizationChartPage() {
               </div>
             )}
           </div>
-
+ 
           <div className="flex flex-col items-end gap-8">
             <div className="flex items-center gap-4">
               <button className="h-8 rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-secondary" onClick={() => setModal("top")}>
@@ -1008,7 +1008,7 @@ export function OrganizationChartPage() {
                 Assign Manager
               </button>
             </div>
-
+ 
             <div className="flex items-center gap-3">
               <div className="flex rounded-md border border-border">
                 <button
@@ -1048,7 +1048,7 @@ export function OrganizationChartPage() {
             </div>
           </div>
         </div>
-
+ 
         <div className="relative min-h-0 flex-1">
           <ReactFlow
             nodes={nodes}
@@ -1077,7 +1077,7 @@ export function OrganizationChartPage() {
           </ReactFlow>
         </div>
       </div>
-
+ 
       <aside className="flex w-[254px] shrink-0 flex-col border-l border-border bg-card">
         <div className="flex h-16 items-center gap-3 border-b border-border px-4">
           <button className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground">
@@ -1087,13 +1087,13 @@ export function OrganizationChartPage() {
             Unassigned ({unassignedQuery.trim() ? filteredUnassigned.length : unassigned.length})
           </h2>
         </div>
-
+ 
         <div className="space-y-4 p-3">
           <div className="flex gap-2 rounded-md border border-border bg-secondary px-2.5 py-2 text-xs font-medium leading-5 text-foreground">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>Assign manager using drag and drop</span>
           </div>
-
+ 
           <div className="relative">
             <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -1103,7 +1103,7 @@ export function OrganizationChartPage() {
               placeholder="Search"
             />
           </div>
-
+ 
           <div className="space-y-3">
             {filteredUnassigned.map((employee) => (
               <div
@@ -1128,7 +1128,7 @@ export function OrganizationChartPage() {
           </div>
         </div>
       </aside>
-
+ 
       <OrgModal
         type={modal}
         employees={employees}
@@ -1139,7 +1139,7 @@ export function OrganizationChartPage() {
         onClose={() => setModal(null)}
         onSave={saveModal}
       />
-
+ 
       {pendingRemoveEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4">
           <div className="w-full max-w-[420px] rounded-lg border border-border bg-card shadow-2xl">
@@ -1152,7 +1152,7 @@ export function OrganizationChartPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-
+ 
             <div className="space-y-4 p-5">
               <div className="flex items-center gap-3 rounded-md border border-border bg-secondary p-3">
                 <EmployeeAvatar employee={pendingRemoveEmployee} size="sm" />
@@ -1161,45 +1161,37 @@ export function OrganizationChartPage() {
                   <p className="text-xs text-muted-foreground">Emp ID - {pendingRemoveEmployee.employeeId}</p>
                 </div>
               </div>
-
+ 
               <p className="text-sm font-medium leading-6 text-muted-foreground">
                 Are you sure you want to remove this employee from the organization chart?
                 The employee will move back to the unassigned drag-and-drop section.
               </p>
             </div>
-
-            <div className="space-y-4">
-              <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Quick Actions</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-emerald-100 hover:bg-emerald-50"
-                  onClick={() => selectedEmp && navigate(`/admin/employees/information/${selectedEmp.id}`)}
-                >
-                  <Users className="w-4 h-4 text-emerald-600" /> VIEW PROFILE
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-blue-100 hover:bg-blue-50"
-                  onClick={() => selectedEmp && navigate(`/admin/employees/information/${selectedEmp.id}`)}
-                >
-                  <Edit2 className="w-4 h-4 text-blue-600" /> EDIT EMPLOYEE
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-purple-100 hover:bg-purple-50">
-                  <Send className="w-4 h-4 text-purple-600" /> MESSAGE
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-orange-100 hover:bg-orange-50">
-                  <FileText className="w-4 h-4 text-orange-600" /> PAYROLL
-                </Button>
-              </div>
+ 
+            <div className="flex justify-end gap-3 px-5 pb-5">
+              <button
+                className="h-9 rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-secondary"
+                onClick={() => setPendingRemoveId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="h-9 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90"
+                onClick={() => {
+                  removeFromTree(pendingRemoveEmployee.id);
+                  setPendingRemoveId(null);
+                }}
+              >
+                Remove
+              </button>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      )}
     </div>
   );
 }
-
+ 
 export function OrganizationChartPageWrapper() {
   return (
     <ReactFlowProvider>
