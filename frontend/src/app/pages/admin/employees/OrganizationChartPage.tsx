@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router";
 import {
   ReactFlow,
   Background,
@@ -595,10 +596,18 @@ export function OrganizationChartPage() {
             <div className="space-y-4">
               <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Quick Actions</h4>
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-emerald-100 hover:bg-emerald-50">
+                <Button
+                  variant="outline"
+                  className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-emerald-100 hover:bg-emerald-50"
+                  onClick={() => selectedEmp && navigate(`/admin/employees/information/${selectedEmp.id}`)}
+                >
                   <Users className="w-4 h-4 text-emerald-600" /> VIEW PROFILE
                 </Button>
-                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-blue-100 hover:bg-blue-50">
+                <Button
+                  variant="outline"
+                  className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-blue-100 hover:bg-blue-50"
+                  onClick={() => selectedEmp && navigate(`/admin/employees/information/${selectedEmp.id}`)}
+                >
                   <Edit2 className="w-4 h-4 text-blue-600" /> EDIT EMPLOYEE
                 </Button>
                 <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-purple-100 hover:bg-purple-50">

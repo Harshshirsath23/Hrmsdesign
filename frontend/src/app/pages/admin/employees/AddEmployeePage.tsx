@@ -112,8 +112,13 @@ interface FormState {
   shiftAssignmentId: string;
   assetCategory: string;
   assetCondition: string;
-  assetType: string;
+  assetName: string;
   assetId: string;
+  serialNumber: string;
+  assignDate: string;
+  returnDate: string;
+  assetStatus: string;
+  assetRemarks: string;
   activeTab: "new" | "rehire" | "bulk";
   // NEW FIELDS
   bgcStatus: string;
@@ -274,8 +279,13 @@ const INIT: FormState = {
   shiftAssignmentId: "",
   assetCategory: "",
   assetCondition: "",
-  assetType: "",
+  assetName: "",
   assetId: "",
+  serialNumber: "",
+  assignDate: "",
+  returnDate: "",
+  assetStatus: "Assigned",
+  assetRemarks: "",
   activeTab: "new",
   rehireDate: "",
   rehireRemarks: "",
@@ -1190,6 +1200,8 @@ export function AddEmployeePage() {
         "reportingManager",
         "assetCategory",
         "assetId",
+        "assetName",
+        "assignDate",
       ];
       if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1231,6 +1243,8 @@ export function AddEmployeePage() {
       "reportingManager",
       "assetCategory",
       "assetId",
+      "assetName",
+      "assignDate",
     ];
     if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1264,6 +1278,24 @@ export function AddEmployeePage() {
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 1800));
 
+    // Create the structured assets array if filled
+    const assets = form.assetId && form.assetName
+      ? [
+          {
+            id: `ast-${Date.now()}`,
+            assetName: form.assetName,
+            assetId: form.assetId,
+            assetCategory: form.assetCategory,
+            serialNumber: form.serialNumber,
+            assignedDate: form.assignDate,
+            returnDate: form.returnDate || undefined,
+            assetCondition: form.assetCondition,
+            status: form.assetStatus || "Assigned",
+            remarks: form.assetRemarks || undefined,
+          },
+        ]
+      : [];
+
     // Create the employee object
     const newEmp = normalizeLegacyEmployee({
       ...form,
@@ -1271,7 +1303,7 @@ export function AddEmployeePage() {
       name: `${form.firstName} ${form.lastName}`,
       phone: `${form.phoneCode} ${form.phone}`,
       status: "Active", // Initial status
-      // Add other necessary mappings if any
+      assets,
     });
 
     dispatch(addAdminEmployee(newEmp));
@@ -2046,9 +2078,6 @@ export function AddEmployeePage() {
               </FF>
             </SC>
 
-            {/* ─────────────────────────────────────────────
-                SECTION 9 · ASSET MANAGEMENT
-            ───────────────────────────────────────────── */}
             <SC
               id="s-assets"
               n={7}
@@ -2056,47 +2085,100 @@ export function AddEmployeePage() {
               desc="Company property and equipment assigned to the employee"
               Icon={Monitor}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <FF label="Asset Category" required error={errors.assetCategory}>
-                  <MasterSelect
-                    masterName="AssetCategory"
-                    value={form.assetCategory}
-                    onChange={(v) => set("assetCategory", v)}
-                  />
-                </FF>
+              <FF label="Asset Name" required error={errors.assetName}>
+                <Inp
+                  value={form.assetName}
+                  onChange={(e) => set("assetName", e.target.value)}
+                  placeholder="E.g. MacBook Pro M3"
+                />
+              </FF>
 
-                <FF label="Asset Type / Device Name" required>
-                  <MasterSelect
-                    masterName="AssetType"
-                    value={form.assetType}
-                    onChange={(v) => set("assetType", v)}
-                  />
-                </FF>
+              <FF label="Asset ID" required error={errors.assetId}>
+                <Inp
+                  value={form.assetId}
+                  onChange={(e) => set("assetId", e.target.value)}
+                  placeholder="E.g. AST-2024-001"
+                  icon={<Hash size={13} />}
+                />
+              </FF>
 
-                <FF label="Asset ID / Asset Code" required error={errors.assetId}>
-                  <Inp
-                    value={form.assetId}
-                    onChange={(e) => set("assetId", e.target.value)}
-                    placeholder="E.g. AST-2024-001"
-                    icon={<Hash size={13} />}
-                  />
-                </FF>
+              <FF label="Asset Category" required error={errors.assetCategory}>
+                <Sel
+                  value={form.assetCategory}
+                  onChange={(e) => set("assetCategory", e.target.value)}
+                  ph="Select category"
+                  opts={[
+                    { v: "Laptop", l: "Laptop" },
+                    { v: "Mobile", l: "Mobile" },
+                    { v: "Monitor", l: "Monitor" },
+                    { v: "Accessories", l: "Accessories" },
+                    { v: "Other", l: "Other" },
+                  ]}
+                />
+              </FF>
 
-                <FF label="Asset Condition">
-                  <MasterSelect
-                    masterName="AssetCondition"
-                    value={form.assetCondition}
-                    onChange={(v) => set("assetCondition", v)}
-                  />
-                </FF>
-              </div>
+              <FF label="Serial Number" error={errors.serialNumber}>
+                <Inp
+                  value={form.serialNumber}
+                  onChange={(e) => set("serialNumber", e.target.value)}
+                  placeholder="E.g. C02X1234YYYY"
+                />
+              </FF>
 
-              <div className="mt-8 flex items-start gap-3 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
-                <AlertCircle size={14} className="text-blue-500 mt-0.5 shrink-0" />
-                <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed font-medium">
-                  Assigning an asset here will automatically update the inventory status. For bulk asset assignment or peripheral tracking, please use the <strong>Asset Inventory Dashboard</strong> after saving the employee profile.
-                </p>
-              </div>
+              <FF label="Assign Date" required error={errors.assignDate}>
+                <Inp
+                  type="date"
+                  value={form.assignDate}
+                  onChange={(e) => set("assignDate", e.target.value)}
+                  className="cursor-pointer"
+                />
+              </FF>
+
+              <FF label="Return Date" error={errors.returnDate}>
+                <Inp
+                  type="date"
+                  value={form.returnDate}
+                  onChange={(e) => set("returnDate", e.target.value)}
+                  className="cursor-pointer"
+                />
+              </FF>
+
+              <FF label="Asset Condition" error={errors.assetCondition}>
+                <Sel
+                  value={form.assetCondition}
+                  onChange={(e) => set("assetCondition", e.target.value)}
+                  ph="Select condition"
+                  opts={[
+                    { v: "New", l: "New" },
+                    { v: "Good", l: "Good" },
+                    { v: "Fair", l: "Fair" },
+                    { v: "Poor", l: "Poor" },
+                    { v: "Damaged", l: "Damaged" },
+                  ]}
+                />
+              </FF>
+
+              <FF label="Status" required error={errors.assetStatus}>
+                <Sel
+                  value={form.assetStatus}
+                  onChange={(e) => set("assetStatus", e.target.value)}
+                  opts={[
+                    { v: "Assigned", l: "Assigned" },
+                    { v: "Returned", l: "Returned" },
+                    { v: "Lost", l: "Lost" },
+                    { v: "Under Repair", l: "Under Repair" },
+                  ]}
+                />
+              </FF>
+
+              <FF label="Remarks" span2 error={errors.assetRemarks}>
+                <textarea
+                  value={form.assetRemarks}
+                  onChange={(e) => set("assetRemarks", e.target.value)}
+                  placeholder="Add any internal remarks regarding the asset..."
+                  className="flat-input w-full min-h-[80px] p-3 text-sm resize-none"
+                />
+              </FF>
             </SC>
 
             {/* ─────────────────────────────────────────────
