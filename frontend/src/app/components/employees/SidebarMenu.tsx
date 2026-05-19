@@ -8,10 +8,9 @@ import {
   LogOut,
   Key,
   FileText,
-  DollarSign,
+  IndianRupee,
   GraduationCap,
   ShieldCheck,
-  ClipboardList,
   Monitor,
 } from "lucide-react";
 
@@ -29,8 +28,7 @@ export type SidebarSection =
   | "assets"
   | "access"
   | "documents"
-  | "salary"
-  | "requests";
+  | "salary";
 
 interface MenuItem {
   id: SidebarSection;
@@ -52,8 +50,7 @@ const menuItems: MenuItem[] = [
   { id: "assets", label: "Asset Management", icon: Monitor },
   { id: "access", label: "Access Card Details", icon: Key },
   { id: "documents", label: "Employee Documents", icon: FileText },
-  { id: "salary", label: "Employee Salary", icon: DollarSign },
-  { id: "requests", label: "Profile Update Requests", icon: ClipboardList },
+  { id: "salary", label: "Employee Salary", icon: IndianRupee },
 ];
 
 interface SidebarMenuProps {

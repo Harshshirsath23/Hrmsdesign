@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Monitor, Plus } from "lucide-react";
 import { Employee, AssetEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
@@ -12,39 +12,125 @@ interface Props {
   employee: Employee;
 }
 
+const STATUS_OPTIONS = [
+  { value: "Assigned", label: "Assigned" },
+  { value: "Returned", label: "Returned" },
+  { value: "Lost", label: "Lost" },
+  { value: "Under Repair", label: "Under Repair" },
+];
+
+const CONDITION_OPTIONS = [
+  { value: "New", label: "New" },
+  { value: "Good", label: "Good" },
+  { value: "Fair", label: "Fair" },
+  { value: "Poor", label: "Poor" },
+  { value: "Damaged", label: "Damaged" },
+];
+
+const CATEGORY_OPTIONS = [
+  { value: "Laptop", label: "Laptop" },
+  { value: "Mobile", label: "Mobile" },
+  { value: "Monitor", label: "Monitor" },
+  { value: "Accessories", label: "Accessories" },
+  { value: "Other", label: "Other" },
+];
+
+function emptyAsset(): AssetEntry {
+  return {
+    id: `ast-${Date.now()}`,
+    assetName: "",
+    assetId: "",
+    assetCategory: "",
+    serialNumber: "",
+    assignedDate: "",
+    returnDate: "",
+    assetCondition: "",
+    status: "Assigned",
+    remarks: "",
+  };
+}
+
+function validateAssets(assets: AssetEntry[]): Record<number, Record<string, string>> {
+  const errors: Record<number, Record<string, string>> = {};
+  assets.forEach((a, idx) => {
+    const row: Record<string, string> = {};
+    if (!a.assetName.trim()) row.assetName = "Asset name is required";
+    if (!a.assetId.trim()) row.assetId = "Asset ID is required";
+    if (!a.assetCategory.trim()) row.assetCategory = "Category is required";
+    if (!a.assignedDate) row.assignedDate = "Assign date is required";
+    if (a.returnDate && a.assignedDate && a.returnDate < a.assignedDate) {
+      row.returnDate = "Return date cannot be before assign date";
+    }
+    if (!a.status.trim()) row.status = "Status is required";
+    if (Object.keys(row).length) errors[idx] = row;
+  });
+  return errors;
+}
+
 export function AssetManagement({ employee }: Props) {
-  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const { handleAdminSave } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
-  const [assets, setAssets] = useState<AssetEntry[]>(employee.assets || []);
+  const baseline = useMemo(() => employee.assets || [], [employee.assets]);
+  const [assets, setAssets] = useState<AssetEntry[]>(baseline);
+  const [errors, setErrors] = useState<Record<number, Record<string, string>>>({});
+
+  const addAsset = () => {
+    setAssets((rows) => [...rows, emptyAsset()]);
+  };
+
+  const startEdit = () => {
+    setAssets(baseline.length ? [...baseline] : [emptyAsset()]);
+    setErrors({});
+    setIsEditing(true);
+  };
+
+  const startEditAndAdd = () => {
+    setAssets([...baseline, emptyAsset()]);
+    setErrors({});
+    setIsEditing(true);
+  };
 
   const handleSave = async () => {
-    const updated = { ...employee, assets };
-    const ok = await handleAdminSave("Asset Management", employee, updated);
-    if (ok) setIsEditing(false);
+    const nextErrors = validateAssets(assets);
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      return;
+    }
+    const ok = await handleAdminSave("Asset Management", employee, { ...employee, assets });
+    if (ok) {
+      setErrors({});
+      setIsEditing(false);
+    }
   };
 
   const handleCancel = () => {
-    setAssets(employee.assets || []);
+    setAssets(baseline);
+    setErrors({});
     setIsEditing(false);
   };
 
-  const addAsset = () => {
-    setAssets((rows) => [
-      ...rows,
-      {
-        id: `ast-${Date.now()}`,
-        assetName: "",
-        assetId: "",
-        assetCategory: "",
-        serialNumber: "",
-        assignedDate: "",
-        returnDate: "",
-        assetCondition: "",
-        status: "Assigned",
-        remarks: "",
-      },
-    ]);
+  const updateAsset = (idx: number, patch: Partial<AssetEntry>) => {
+    setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+    setErrors((prev) => {
+      if (!prev[idx]) return prev;
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
   };
+
+  const displayAssets = isEditing ? assets : baseline;
+
+  const addButton = (
+    <button
+      type="button"
+      onClick={() => (isEditing ? addAsset() : startEditAndAdd())}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+    >
+      <Plus className="w-3.5 h-3.5" />
+      Add Asset
+    </button>
+  );
 
   return (
     <div className="space-y-5 pb-24">
@@ -57,122 +143,100 @@ export function AssetManagement({ employee }: Props) {
         title="Asset Management"
         icon={Monitor}
         isEditing={isEditing}
-        onEdit={() => setIsEditing(true)}
+        onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={
-          isEditing ? (
-            <button
-              type="button"
-              onClick={addAsset}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Asset
-            </button>
-          ) : null
-        }
+        headerExtra={addButton}
       >
-        {!assets.length ? (
-          <EmptyStateCard icon={Monitor} title="No assets assigned" />
+        {!displayAssets.length ? (
+          <EmptyStateCard icon={Monitor} title="No assets assigned" description="Use Add Asset to record asset details." />
         ) : (
           <div className="space-y-6">
-            {assets.map((a, idx) => (
-              <div key={a.id} className="rounded-2xl border border-border bg-secondary/10 p-6 space-y-6">
+            {displayAssets.map((a, idx) => (
+              <div key={a.id} className="rounded-2xl border border-border bg-secondary/10 p-6 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   <ProfileInfoField
                     label="Asset Name"
                     value={a.assetName}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetName: v } : r)))
-                    }
+                    error={errors[idx]?.assetName}
+                    onChange={(v) => updateAsset(idx, { assetName: v })}
                   />
                   <ProfileInfoField
                     label="Asset ID"
                     value={a.assetId}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetId: v } : r)))
-                    }
+                    error={errors[idx]?.assetId}
+                    onChange={(v) => updateAsset(idx, { assetId: v })}
                   />
                   <ProfileInfoField
                     label="Asset Category"
                     value={a.assetCategory}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetCategory: v } : r)))
-                    }
+                    type="select"
+                    options={CATEGORY_OPTIONS}
+                    error={errors[idx]?.assetCategory}
+                    onChange={(v) => updateAsset(idx, { assetCategory: v })}
                   />
-                  
                   <ProfileInfoField
                     label="Serial Number"
                     value={a.serialNumber}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, serialNumber: v } : r)))
-                    }
+                    onChange={(v) => updateAsset(idx, { serialNumber: v })}
                   />
                   <ProfileInfoField
-                    label="Assigned Date"
+                    label="Assign Date"
                     value={a.assignedDate}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assignedDate: v } : r)))
-                    }
                     type="date"
+                    error={errors[idx]?.assignedDate}
+                    onChange={(v) => updateAsset(idx, { assignedDate: v })}
                   />
                   <ProfileInfoField
                     label="Return Date"
                     value={a.returnDate || ""}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, returnDate: v } : r)))
-                    }
                     type="date"
+                    error={errors[idx]?.returnDate}
+                    onChange={(v) => updateAsset(idx, { returnDate: v })}
                   />
-
                   <ProfileInfoField
                     label="Asset Condition"
                     value={a.assetCondition}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, assetCondition: v } : r)))
-                    }
+                    type="select"
+                    options={CONDITION_OPTIONS}
+                    onChange={(v) => updateAsset(idx, { assetCondition: v })}
                   />
                   <ProfileInfoField
                     label="Status"
                     value={a.status}
                     editing={isEditing}
-                    onChange={(v) =>
-                      setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, status: v } : r)))
-                    }
+                    type="select"
+                    options={STATUS_OPTIONS}
+                    error={errors[idx]?.status}
+                    onChange={(v) => updateAsset(idx, { status: v })}
                   />
-                  <div className="hidden lg:block"></div>
-
-                  <div className="lg:col-span-3">
+                  <div className="hidden lg:block" aria-hidden />
+                  <div className="sm:col-span-2 lg:col-span-3">
                     <ProfileInfoField
                       label="Remarks"
                       value={a.remarks || ""}
                       editing={isEditing}
-                      onChange={(v) =>
-                        setAssets((rows) => rows.map((r, i) => (i === idx ? { ...r, remarks: v } : r)))
-                      }
                       type="textarea"
+                      onChange={(v) => updateAsset(idx, { remarks: v })}
                     />
                   </div>
                 </div>
-                {isEditing && (
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      className="text-xs font-black text-foreground uppercase tracking-widest hover:underline"
-                      onClick={() => setAssets((rows) => rows.filter((_, i) => i !== idx))}
-                    >
-                      Delete asset
-                    </button>
-                  </div>
-                )}
+                {isEditing && displayAssets.length > 1 ? (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-destructive hover:underline"
+                    onClick={() => setAssets((rows) => rows.filter((_, i) => i !== idx))}
+                  >
+                    Remove asset
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>

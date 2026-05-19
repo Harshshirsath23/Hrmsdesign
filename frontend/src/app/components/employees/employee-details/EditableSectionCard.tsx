@@ -87,7 +87,7 @@ export function EditableSectionCard({
           )}
 
           <div className="flex items-center gap-2">
-            {!isEditing && headerExtra}
+            {headerExtra}
             {isEditing ? (
               <>
                 <button

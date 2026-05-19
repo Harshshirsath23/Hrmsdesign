@@ -1,25 +1,19 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { 
   FileText, 
-  FileSpreadsheet, 
-  Image as ImageIcon, 
   Megaphone, 
   Send, 
   ShieldCheck, 
   Handshake, 
-  HardDrive 
 } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 
 const TABS = [
   { label: "Generate Letter", path: "/admin/employees/management/generate-letter", icon: FileText },
-  { label: "Excel Import", path: "/admin/employees/management/excel-import", icon: FileSpreadsheet },
-  { label: "Bulk Photo Upload", path: "/admin/employees/management/photo-upload", icon: ImageIcon },
   { label: "Bulletin Board", path: "/admin/employees/management/bulletin-board", icon: Megaphone },
   { label: "Mass Communication", path: "/admin/employees/management/communication", icon: Send },
   { label: "Identity Verification", path: "/admin/employees/management/verification", icon: ShieldCheck },
   { label: "Contract Details", path: "/admin/employees/management/contracts", icon: Handshake },
-  { label: "Data Drive", path: "/admin/employees/management/data-drive", icon: HardDrive },
 ];
 
 export function EmployeeManagementLayout() {

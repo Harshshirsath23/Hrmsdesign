@@ -210,14 +210,6 @@ export function BankDetails({ employee }: Props) {
           setEditedData(employee);
           setIsEditing(false);
         }}
-        headerExtra={
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
-          >
-            <Plus size={12} /> Add
-          </button>
-        }
       >
         <div className="bg-foreground text-primary-foreground rounded-lg p-6 mb-5">
           <div className="flex justify-between items-start mb-4">
@@ -281,14 +273,6 @@ export function BankDetails({ employee }: Props) {
           setEditedData(employee);
           setIsEditing(false);
         }}
-        headerExtra={
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
-          >
-            <Plus size={12} /> Add
-          </button>
-        }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
           <InfoRow label="PAN Number" value={editedData.panNumber || ""} mono isEditing={isEditing} onChange={(v) => handleUpdate("panNumber", v)} />
@@ -309,14 +293,6 @@ export function BankDetails({ employee }: Props) {
             setPfDraft(employee.pfDetails || pfDraft);
             setPfEdit(false);
           }}
-          headerExtra={
-            <button
-              onClick={() => setPfEdit(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
-            >
-              <Plus size={12} /> Add
-            </button>
-          }
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="PF Number" value={pfDraft.pfNumber} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfNumber: v }))} />
@@ -343,14 +319,6 @@ export function BankDetails({ employee }: Props) {
             setEsiDraft(employee.esiDetails || esiDraft);
             setEsiEdit(false);
           }}
-          headerExtra={
-            <button
-              onClick={() => setEsiEdit(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary text-primary"
-            >
-              <Plus size={12} /> Add
-            </button>
-          }
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="ESI Number" value={esiDraft.esiNumber} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiNumber: v }))} />

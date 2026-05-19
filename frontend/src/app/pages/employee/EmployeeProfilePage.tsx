@@ -9,12 +9,9 @@ import { fetchRequests, createRequest } from "../../../store/slices/requestSlice
 import { MyRequestsTable } from "../../components/employee/MyRequestsTable";
 import { EmployeeNotificationPanel } from "../../components/ui/EmployeeNotificationPanel";
 import { EssProfileHeaderCard } from "../../components/employee/EssProfileHeaderCard";
-import {
-  EMPLOYEE_DOCUMENT_KEYS,
-  EmployeeDocumentKey,
-  EmployeeDocumentMeta,
-} from "../../components/employees/mockData";
-import { Download, Eye, FileText, Trash2 } from "lucide-react";
+import { EmployeeDocumentMeta } from "../../components/employees/mockData";
+import { EmployeeDocumentsGrid } from "../../modules/employees/documentTypes/EmployeeDocumentsGrid";
+import { selectActiveDocumentTypes } from "../../../store/slices/documentTypesSlice";
 import { EmployeeProfile, SectionKey } from "../../modules/ess/types";
 import {
   detectDuplicateValues,
@@ -500,169 +497,28 @@ function SkillsCertificationsSection({
   );
 }
 
-const DOC_LABELS: Record<EmployeeDocumentKey, string> = {
-  panCard: "PAN Card",
-  aadhaarCard: "Aadhaar Card",
-  resume: "Resume",
-  offerLetter: "Offer Letter",
-  joiningDocuments: "Joining Documents",
-  educationalCertificates: "Educational Certificates",
-  salarySlips: "Salary Slips",
-  experienceLetters: "Experience Letters",
-  passport: "Passport",
-  visa: "Visa",
-  taxDocuments: "Tax Documents",
-  insuranceDocuments: "Insurance Documents",
-  relievingLetter: "Relieving Letter",
-  appraisalLetters: "Appraisal Letters",
-  incrementLetters: "Increment Letters",
-};
-
-const DOC_MAX_BYTES = 8 * 1024 * 1024;
-const DOC_ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
-
-function validateEmployeeDocFile(file: File): string | null {
-  const okExt = /\.(pdf|doc|docx|jpg|jpeg|png)$/i.test(file.name);
-  if (!okExt) return "Only PDF, DOC, DOCX, JPG, or PNG files are allowed.";
-  if (file.size > DOC_MAX_BYTES) return "File must be 8 MB or smaller.";
-  return null;
-}
-
 function DocumentsRepositorySection({
   docs,
   readOnly,
   onChange,
 }: {
-  docs: Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>;
+  docs: Partial<Record<string, EmployeeDocumentMeta>>;
   readOnly: boolean;
-  onChange: (next: Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>) => void;
+  onChange: (next: Partial<Record<string, EmployeeDocumentMeta>>) => void;
 }) {
-  const [progress, setProgress] = useState<Record<string, number>>({});
-  const [err, setErr] = useState<string | null>(null);
-
-  const readFile = (file: File, key: EmployeeDocumentKey) => {
-    const e = validateEmployeeDocFile(file);
-    if (e) {
-      setErr(e);
-      return;
-    }
-    setErr(null);
-    setProgress((p) => ({ ...p, [key]: 10 }));
-    const reader = new FileReader();
-    reader.onprogress = (ev) => {
-      if (ev.lengthComputable) {
-        setProgress((p) => ({ ...p, [key]: Math.round((ev.loaded / ev.total) * 90) + 10 }));
-      }
-    };
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      onChange({
-        ...docs,
-        [key]: {
-          fileName: file.name,
-          dataUrl,
-          uploadedAt: new Date().toISOString(),
-          sizeBytes: file.size,
-        },
-      });
-      setProgress((p) => ({ ...p, [key]: 100 }));
-      setTimeout(() => setProgress((p) => ({ ...p, [key]: 0 })), 600);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const download = (key: EmployeeDocumentKey) => {
-    const m = docs[key];
-    if (!m?.dataUrl || !m.fileName) return;
-    const a = document.createElement("a");
-    a.href = m.dataUrl;
-    a.download = m.fileName;
-    a.click();
-  };
-
-  const remove = (key: EmployeeDocumentKey) => {
-    const n = { ...docs };
-    delete n[key];
-    onChange(n);
-  };
+  const allTypes = useSelector(selectActiveDocumentTypes);
+  const documentTypes = useMemo(
+    () => (readOnly ? allTypes : allTypes.filter((t) => t.allowEmployeeEdit)),
+    [allTypes, readOnly]
+  );
 
   return (
-    <div className="space-y-3">
-      {err ? <p className="text-sm text-destructive">{err}</p> : null}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {EMPLOYEE_DOCUMENT_KEYS.map((key) => {
-          const meta = docs[key];
-          const pct = progress[key] || 0;
-          return (
-            <div key={key} className="rounded-lg border border-border bg-background p-3 flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                  {DOC_LABELS[key]}
-                </p>
-                {meta?.dataUrl ? (
-                  <div className="flex gap-1 flex-shrink-0">
-                    <button
-                      type="button"
-                      className="p-1.5 rounded-md border border-border hover:bg-secondary"
-                      title="Preview"
-                      onClick={() => window.open(meta.dataUrl, "_blank")}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="p-1.5 rounded-md border border-border hover:bg-secondary"
-                      title="Download"
-                      onClick={() => download(key)}
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                    {!readOnly ? (
-                      <button
-                        type="button"
-                        className="p-1.5 rounded-md border border-border text-destructive hover:bg-destructive/10"
-                        title="Delete"
-                        onClick={() => remove(key)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-              {meta?.fileName ? (
-                <p className="text-xs text-muted-foreground truncate">{meta.fileName}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">No file uploaded</p>
-              )}
-              {pct > 0 && pct < 100 ? (
-                <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-                </div>
-              ) : null}
-              {!readOnly ? (
-                <label className="mt-auto">
-                  <span className="inline-flex items-center justify-center w-full py-2 rounded-lg border border-dashed border-border text-xs font-semibold cursor-pointer hover:bg-secondary/50">
-                    {meta ? "Replace file" : "Upload"}
-                  </span>
-                  <input
-                    type="file"
-                    accept={DOC_ACCEPT}
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) readFile(f, key);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <EmployeeDocumentsGrid
+      documentTypes={documentTypes}
+      docs={docs}
+      isEditing={!readOnly}
+      onChange={onChange}
+    />
   );
 }
 
@@ -1277,7 +1133,7 @@ export function EmployeeProfilePage() {
     if (sectionKey === "documentsRepository") {
       return (
         <DocumentsRepositorySection
-          docs={(sectionData as Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>) || {}}
+          docs={(sectionData as Partial<Record<string, EmployeeDocumentMeta>>) || {}}
           readOnly={isReadOnly}
           onChange={(d) => setDraft(d)}
         />
