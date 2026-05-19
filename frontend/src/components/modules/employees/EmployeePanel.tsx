@@ -10,7 +10,7 @@ import { BulkUploadModal } from './BulkUploadModal';
 import { useEmployeeList } from '@hooks/useEmployees';
 import type { EmployeeListItem } from '@hooks/useEmployees';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AdminSectionMenu, GenerateLetterPage, ExcelImportPage } from './admin';
+import { AdminSectionMenu, GenerateLetterPage } from './admin';
 
 /* ================================================================== */
 /*  Admin: Employee Directory (Enhanced)                              */
@@ -237,9 +237,6 @@ function AdminSection() {
   const renderAdminPage = () => {
     switch (selectedAdminPage) {
       case 'generate-letter':
-        return <GenerateLetterPage />;
-      case 'excel-import':
-        return <ExcelImportPage />;
       default:
         return <GenerateLetterPage />;
     }

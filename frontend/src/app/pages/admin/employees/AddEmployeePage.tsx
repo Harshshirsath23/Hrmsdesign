@@ -1200,6 +1200,8 @@ export function AddEmployeePage() {
         "reportingManager",
         "assetCategory",
         "assetId",
+        "assetName",
+        "assignDate",
       ];
       if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1241,6 +1243,8 @@ export function AddEmployeePage() {
       "reportingManager",
       "assetCategory",
       "assetId",
+      "assetName",
+      "assignDate",
     ];
     if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1274,6 +1278,24 @@ export function AddEmployeePage() {
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 1800));
 
+    // Create the structured assets array if filled
+    const assets = form.assetId && form.assetName
+      ? [
+          {
+            id: `ast-${Date.now()}`,
+            assetName: form.assetName,
+            assetId: form.assetId,
+            assetCategory: form.assetCategory,
+            serialNumber: form.serialNumber,
+            assignedDate: form.assignDate,
+            returnDate: form.returnDate || undefined,
+            assetCondition: form.assetCondition,
+            status: form.assetStatus || "Assigned",
+            remarks: form.assetRemarks || undefined,
+          },
+        ]
+      : [];
+
     // Create the employee object
     const newEmp = normalizeLegacyEmployee({
       ...form,
@@ -1281,7 +1303,7 @@ export function AddEmployeePage() {
       name: `${form.firstName} ${form.lastName}`,
       phone: `${form.phoneCode} ${form.phone}`,
       status: "Active", // Initial status
-      // Add other necessary mappings if any
+      assets,
     });
 
     dispatch(addAdminEmployee(newEmp));
@@ -2056,9 +2078,6 @@ export function AddEmployeePage() {
               </FF>
             </SC>
 
-            {/* ─────────────────────────────────────────────
-                SECTION 9 · ASSET MANAGEMENT
-            ───────────────────────────────────────────── */}
             <SC
               id="s-assets"
               n={7}
@@ -2066,88 +2085,100 @@ export function AddEmployeePage() {
               desc="Company property and equipment assigned to the employee"
               Icon={Monitor}
             >
-              <div className="sm:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <FF label="Asset Name" required>
-                  <Inp
-                    value={form.assetName}
-                    onChange={(e) => set("assetName", e.target.value)}
-                    placeholder="E.g. MacBook Pro 16"
-                  />
-                </FF>
+              <FF label="Asset Name" required error={errors.assetName}>
+                <Inp
+                  value={form.assetName}
+                  onChange={(e) => set("assetName", e.target.value)}
+                  placeholder="E.g. MacBook Pro M3"
+                />
+              </FF>
 
-                <FF label="Asset ID" required error={errors.assetId}>
-                  <Inp
-                    value={form.assetId}
-                    onChange={(e) => set("assetId", e.target.value)}
-                    placeholder="E.g. AST-2024-001"
-                    icon={<Hash size={13} />}
-                  />
-                </FF>
+              <FF label="Asset ID" required error={errors.assetId}>
+                <Inp
+                  value={form.assetId}
+                  onChange={(e) => set("assetId", e.target.value)}
+                  placeholder="E.g. AST-2024-001"
+                  icon={<Hash size={13} />}
+                />
+              </FF>
 
-                <FF label="Asset Category" required error={errors.assetCategory}>
-                  <MasterSelect
-                    masterName="AssetCategory"
-                    value={form.assetCategory}
-                    onChange={(v) => set("assetCategory", v)}
-                  />
-                </FF>
+              <FF label="Asset Category" required error={errors.assetCategory}>
+                <Sel
+                  value={form.assetCategory}
+                  onChange={(e) => set("assetCategory", e.target.value)}
+                  ph="Select category"
+                  opts={[
+                    { v: "Laptop", l: "Laptop" },
+                    { v: "Mobile", l: "Mobile" },
+                    { v: "Monitor", l: "Monitor" },
+                    { v: "Accessories", l: "Accessories" },
+                    { v: "Other", l: "Other" },
+                  ]}
+                />
+              </FF>
 
-                <FF label="Serial Number">
-                  <Inp
-                    value={form.serialNumber}
-                    onChange={(e) => set("serialNumber", e.target.value)}
-                    placeholder="Device Serial Number"
-                  />
-                </FF>
+              <FF label="Serial Number" error={errors.serialNumber}>
+                <Inp
+                  value={form.serialNumber}
+                  onChange={(e) => set("serialNumber", e.target.value)}
+                  placeholder="E.g. C02X1234YYYY"
+                />
+              </FF>
 
-                <FF label="Assign Date">
-                  <Inp
-                    type="date"
-                    value={form.assignDate}
-                    onChange={(e) => set("assignDate", e.target.value)}
-                  />
-                </FF>
+              <FF label="Assign Date" required error={errors.assignDate}>
+                <Inp
+                  type="date"
+                  value={form.assignDate}
+                  onChange={(e) => set("assignDate", e.target.value)}
+                  className="cursor-pointer"
+                />
+              </FF>
 
-                <FF label="Return Date">
-                  <Inp
-                    type="date"
-                    value={form.returnDate}
-                    onChange={(e) => set("returnDate", e.target.value)}
-                  />
-                </FF>
+              <FF label="Return Date" error={errors.returnDate}>
+                <Inp
+                  type="date"
+                  value={form.returnDate}
+                  onChange={(e) => set("returnDate", e.target.value)}
+                  className="cursor-pointer"
+                />
+              </FF>
 
-                <FF label="Asset Condition">
-                  <MasterSelect
-                    masterName="AssetCondition"
-                    value={form.assetCondition}
-                    onChange={(v) => set("assetCondition", v)}
-                  />
-                </FF>
+              <FF label="Asset Condition" error={errors.assetCondition}>
+                <Sel
+                  value={form.assetCondition}
+                  onChange={(e) => set("assetCondition", e.target.value)}
+                  ph="Select condition"
+                  opts={[
+                    { v: "New", l: "New" },
+                    { v: "Good", l: "Good" },
+                    { v: "Fair", l: "Fair" },
+                    { v: "Poor", l: "Poor" },
+                    { v: "Damaged", l: "Damaged" },
+                  ]}
+                />
+              </FF>
 
-                <FF label="Status">
-                  <Sel
-                    value={form.assetStatus}
-                    onChange={(e) => set("assetStatus", e.target.value)}
-                    opts={[
-                      { v: "Assigned", l: "Assigned" },
-                      { v: "Returned", l: "Returned" },
-                      { v: "Lost", l: "Lost" },
-                      { v: "Damaged", l: "Damaged" },
-                    ]}
-                  />
-                </FF>
+              <FF label="Status" required error={errors.assetStatus}>
+                <Sel
+                  value={form.assetStatus}
+                  onChange={(e) => set("assetStatus", e.target.value)}
+                  opts={[
+                    { v: "Assigned", l: "Assigned" },
+                    { v: "Returned", l: "Returned" },
+                    { v: "Lost", l: "Lost" },
+                    { v: "Under Repair", l: "Under Repair" },
+                  ]}
+                />
+              </FF>
 
-                <div className="md:col-span-2 lg:col-span-4">
-                  <FF label="Remarks">
-                    <Inp
-                      value={form.assetRemarks}
-                      onChange={(e) => set("assetRemarks", e.target.value)}
-                      placeholder="Additional notes about the asset"
-                    />
-                  </FF>
-                </div>
-              </div>
-
+              <FF label="Remarks" span2 error={errors.assetRemarks}>
+                <textarea
+                  value={form.assetRemarks}
+                  onChange={(e) => set("assetRemarks", e.target.value)}
+                  placeholder="Add any internal remarks regarding the asset..."
+                  className="flat-input w-full min-h-[80px] p-3 text-sm resize-none"
+                />
+              </FF>
             </SC>
 
             {/* ─────────────────────────────────────────────

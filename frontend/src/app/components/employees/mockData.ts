@@ -81,10 +81,8 @@ export interface EsiDetails {
 
 export interface AccessCardEntry {
   id: string;
-  employeeId?: string;
+  employeeId: string;
   cardNumber: string;
-  fromDate: string;
-  toDate: string;
 }
 
 export const EMPLOYEE_DOCUMENT_KEYS = [
@@ -244,7 +242,7 @@ export interface Employee {
   pfDetails?: PfDetails;
   esiDetails?: EsiDetails;
   accessCards?: AccessCardEntry[];
-  employeeDocuments?: Partial<Record<EmployeeDocumentKey, EmployeeDocumentMeta>>;
+  employeeDocuments?: Partial<Record<string, EmployeeDocumentMeta>>;
 
   workExperience: WorkExperienceEntry[];
 
@@ -565,6 +563,9 @@ const _legacyEmployees: Record<string, unknown>[] = [
         remarks: "Company issued",
       },
     ],
+    accessCards: [
+      { id: "acc-1", employeeId: "EMP-001", cardNumber: "AC-BLR-45210" },
+    ],
   },
   {
     id: "2",
@@ -640,6 +641,42 @@ const _legacyEmployees: Record<string, unknown>[] = [
     pf: 7800,
     tds: 7200,
     netSalary: 90000,
+    nominees: [
+      {
+        id: "nom-2",
+        nomineeName: "Mohan Nair",
+        relationship: "Father",
+        dateOfBirth: "1960-09-20",
+        contactNumber: "+91 98765 10002",
+        address: "12, Bandra West, Turner Road, Mumbai",
+        sharePercentage: "50",
+      },
+      {
+        id: "nom-3",
+        nomineeName: "Latha Nair",
+        relationship: "Mother",
+        dateOfBirth: "1963-02-28",
+        contactNumber: "+91 98765 10003",
+        address: "12, Bandra West, Turner Road, Mumbai",
+        sharePercentage: "50",
+      },
+    ],
+    accessCards: [
+      { id: "acc-2", employeeId: "EMP-002", cardNumber: "AC-MUM-78421" },
+    ],
+    assets: [
+      {
+        id: "ast-2",
+        assetName: "Dell Latitude 5540",
+        assetId: "AST-LAP-002",
+        assetCategory: "Laptop",
+        serialNumber: "SN-DELL-5540-002",
+        assignedDate: "2020-06-15",
+        assetCondition: "Good",
+        status: "Assigned",
+        remarks: "HR department laptop",
+      },
+    ],
   },
   {
     id: "3",
@@ -722,6 +759,43 @@ const _legacyEmployees: Record<string, unknown>[] = [
     pf: 10800,
     tds: 15000,
     netSalary: 124200,
+    nominees: [
+      {
+        id: "nom-4",
+        nomineeName: "Anita Mehta",
+        relationship: "Spouse",
+        dateOfBirth: "1991-06-25",
+        contactNumber: "+91 98765 20001",
+        address: "78, Vasant Kunj Phase 2, New Delhi",
+        sharePercentage: "70",
+      },
+      {
+        id: "nom-5",
+        nomineeName: "Rahul Mehta",
+        relationship: "Son",
+        dateOfBirth: "2018-03-15",
+        contactNumber: "",
+        address: "78, Vasant Kunj Phase 2, New Delhi",
+        sharePercentage: "30",
+      },
+    ],
+    accessCards: [
+      { id: "acc-3", employeeId: "EMP-003", cardNumber: "AC-DEL-99102" },
+      { id: "acc-3b", employeeId: "EMP-003", cardNumber: "AC-DEL-PARK-12" },
+    ],
+    assets: [
+      {
+        id: "ast-3",
+        assetName: "iPhone 15 Pro",
+        assetId: "AST-MOB-003",
+        assetCategory: "Mobile",
+        serialNumber: "SN-IPH15-003",
+        assignedDate: "2023-01-10",
+        assetCondition: "New",
+        status: "Assigned",
+        remarks: "Official mobile",
+      },
+    ],
   },
   {
     id: "4",
@@ -790,6 +864,18 @@ const _legacyEmployees: Record<string, unknown>[] = [
     pf: 6600,
     tds: 5000,
     netSalary: 78400,
+    nominees: [
+      {
+        id: "nom-6",
+        nomineeName: "Kavitha Krishnan",
+        relationship: "Mother",
+        dateOfBirth: "1968-11-05",
+        contactNumber: "+91 98765 40001",
+        address: "15, Anna Nagar, Chennai",
+        sharePercentage: "100",
+      },
+    ],
+    accessCards: [{ id: "acc-4", employeeId: "EMP-004", cardNumber: "AC-CHN-33018" }],
   },
   {
     id: "5",
@@ -1136,6 +1222,7 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
         address: String(n.address ?? ""),
         sharePercentage: String(n.sharePercentage ?? ""),
         idProofFileName: n.idProofFileName as string | undefined,
+        idProofDataUrl: n.idProofDataUrl as string | undefined,
       }))
     : undefined;
 
@@ -1238,10 +1325,8 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
   const acRaw = (e.accessCards ?? []) as Record<string, unknown>[];
   const accessCards: AccessCardEntry[] = acRaw.map((c, i) => ({
     id: String(c.id ?? `acc-${e.id}-${i}`),
-    employeeId: String(c.employeeId ?? ""),
+    employeeId: String(c.employeeId ?? e.employeeId ?? ""),
     cardNumber: String(c.cardNumber ?? ""),
-    fromDate: String(c.fromDate ?? ""),
-    toDate: String(c.toDate ?? ""),
   }));
 
   const employeeDocuments =

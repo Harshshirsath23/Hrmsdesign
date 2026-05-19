@@ -8,112 +8,12 @@ import {
   Clock,
   Briefcase,
   Banknote,
-  Users,
   Paperclip,
-  BarChart3,
   Lock,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import type { ImporterTypeGroup, MasterField, AdminMenuItem } from '@types/admin';
-
-/* ================================================================== */
-/*  Importer Types - Grouped by Category                              */
-/* ================================================================== */
-
-export const IMPORTER_TYPES: ImporterTypeGroup[] = [
-  {
-    groupName: 'Address',
-    items: [
-      { id: 'addr-perm', name: 'Permanent Address', description: 'Employee permanent addresses' },
-      { id: 'addr-contact', name: 'Contact Address', description: 'Employee contact addresses' },
-      { id: 'addr-present', name: 'Present Address', description: 'Employee present addresses' },
-    ],
-  },
-  {
-    groupName: 'Attendance',
-    items: [
-      { id: 'att-muster', name: 'Muster', description: 'Attendance muster records' },
-      { id: 'att-exception', name: 'Exception', description: 'Attendance exceptions' },
-      { id: 'att-swipes', name: 'Swipes', description: 'Biometric swipes' },
-      { id: 'att-shift', name: 'Shift Roster', description: 'Shift roster assignments' },
-      { id: 'att-override', name: 'Override', description: 'Manual attendance overrides' },
-      { id: 'att-regularization', name: 'Regularization', description: 'Attendance regularization' },
-    ],
-  },
-  {
-    groupName: 'Employee Core',
-    items: [
-      { id: 'emp-add', name: 'Add Employee', description: 'Basic employee information' },
-      { id: 'emp-basic', name: 'Basic Employee Information', description: 'Core employee data' },
-      { id: 'emp-bank', name: 'Employee Bank Details', description: 'Bank account details' },
-      { id: 'emp-contract', name: 'Employee Contract Details', description: 'Contract information' },
-      { id: 'emp-prev', name: 'Previous Employment', description: 'Previous work history' },
-      { id: 'emp-family', name: 'Family Details', description: 'Family member information' },
-      { id: 'emp-role', name: 'Employee Role', description: 'Role assignments' },
-      { id: 'emp-pf', name: 'Employee PF/ESI Details', description: 'PF and ESI information' },
-      { id: 'emp-resignation', name: 'Employee Resignation', description: 'Resignation records' },
-    ],
-  },
-  {
-    groupName: 'Payroll',
-    items: [
-      { id: 'pay-salary', name: 'Salary', description: 'Salary records' },
-      { id: 'pay-override', name: 'Salary Overrides', description: 'Salary adjustments' },
-      { id: 'pay-claims', name: 'Claims', description: 'Employee claims' },
-      { id: 'pay-overtime', name: 'Overtime', description: 'Overtime records' },
-      { id: 'pay-arrears', name: 'Arrears', description: 'Salary arrears' },
-      { id: 'pay-statement', name: 'Salary Statement', description: 'Payroll statements' },
-    ],
-  },
-  {
-    groupName: 'Leave',
-    items: [
-      { id: 'leave-holiday', name: 'Holiday List', description: 'Holiday calendar' },
-      { id: 'leave-trans', name: 'Leave Transactions', description: 'Leave ledger entries' },
-      { id: 'leave-weekdays', name: 'Week Days', description: 'Working week configuration' },
-    ],
-  },
-  {
-    groupName: 'Income Tax / IT Declarations',
-    items: [
-      { id: 'it-form24q', name: 'Form24Q', description: 'Form 24Q TDS data' },
-      { id: 'it-rent', name: 'Rent Proof', description: 'Rent proof documents' },
-      { id: 'it-house', name: 'House Property', description: 'House property details' },
-      { id: 'it-plan', name: 'IT Declaration Plan', description: 'IT declaration plans' },
-    ],
-  },
-  {
-    groupName: 'Loans / LIC / PF',
-    items: [
-      { id: 'loan-details', name: 'Loan Details', description: 'Loan information' },
-      { id: 'loan-lic', name: 'LIC Importer', description: 'LIC policy details' },
-      { id: 'loan-pf', name: 'PF Contribution', description: 'PF contributions' },
-    ],
-  },
-  {
-    groupName: 'Workflow',
-    items: [
-      { id: 'workflow-reviewer', name: 'Reviewer Types', description: 'Approval reviewer setup' },
-    ],
-  },
-  {
-    groupName: 'Payments',
-    items: [
-      { id: 'pay-cheque', name: 'Cheque/Cash Statement', description: 'Payment statements' },
-    ],
-  },
-  {
-    groupName: 'Advanced',
-    items: [
-      { id: 'adv-reversal', name: 'Reversal', description: 'Transaction reversals' },
-      { id: 'adv-resettlement', name: 'Resettlement', description: 'Resettlement records' },
-      { id: 'adv-fbp', name: 'FBP', description: 'Final Bill Processing' },
-      { id: 'adv-controls', name: 'Salary Processing Controls', description: 'Payroll controls' },
-      { id: 'adv-repository', name: 'Payroll Repository', description: 'Payroll data repository' },
-    ],
-  },
-];
+import type { MasterField, AdminMenuItem } from '@types/admin';
 
 /* ================================================================== */
 /*  Master Fields - All Possible Fields for Import Mapping            */
@@ -220,22 +120,6 @@ export const ADMIN_MENU_ITEMS: Array<{
     description: 'Generate official letters for employees',
   },
   {
-    id: 'excel-import',
-    label: 'Excel Import',
-    icon: BarChart3,
-    route: '/admin/employee/admin/excel-import',
-    disabled: false,
-    description: 'Bulk import employee data from Excel',
-  },
-  {
-    id: 'bulk-photo',
-    label: 'Bulk Photo Upload',
-    icon: Users,
-    route: '/admin/employee/admin/bulk-photo',
-    disabled: true,
-    description: 'Upload multiple employee photos',
-  },
-  {
     id: 'bulletin',
     label: 'Bulletin Board',
     icon: Paperclip,
@@ -266,14 +150,6 @@ export const ADMIN_MENU_ITEMS: Array<{
     route: '/admin/employee/admin/contract-details',
     disabled: true,
     description: 'Manage employee contracts',
-  },
-  {
-    id: 'data-drive',
-    label: 'Data Drive',
-    icon: Paperclip,
-    route: '/admin/employee/admin/data-drive',
-    disabled: true,
-    description: 'Access employee data repository',
   },
 ];
 

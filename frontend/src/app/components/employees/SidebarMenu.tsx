@@ -8,11 +8,10 @@ import {
   LogOut,
   Key,
   FileText,
-  ClipboardList,
-  Monitor,
   IndianRupee,
   GraduationCap,
   ShieldCheck,
+  Monitor,
 } from "lucide-react";
 
 export type SidebarSection =

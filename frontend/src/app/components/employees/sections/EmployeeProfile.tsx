@@ -628,15 +628,7 @@ export function EmployeeProfile({ employee }: Props) {
                       {label}
                     </label>
                   ))}
-                  {langEdit ? (
-                    <button
-                      type="button"
-                      className="ml-auto text-xs font-bold text-destructive hover:underline"
-                      onClick={() => setLanguages((rows) => rows.filter((_, i) => i !== idx))}
-                    >
-                      Remove
-                    </button>
-                  ) : null}
+
                 </div>
               </div>
             ))}

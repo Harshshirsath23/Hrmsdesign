@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ShieldCheck, Plus } from "lucide-react";
 import { Employee, InsuranceEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
@@ -13,38 +13,60 @@ interface Props {
   employee: Employee;
 }
 
+function emptyPolicy(): InsuranceEntry {
+  return {
+    id: `ins-${Date.now()}`,
+    insuranceProvider: "",
+    policyNumber: "",
+    coverageType: "",
+    coverageAmount: "",
+    validTill: "",
+    dependentsCovered: "",
+  };
+}
+
 export function InsuranceDetails({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
-  const [insurance, setInsurance] = useState<InsuranceEntry[]>(employee.insurance || []);
+  const baseline = useMemo(() => employee.insurance || [], [employee.insurance]);
+  const [insurance, setInsurance] = useState<InsuranceEntry[]>(baseline);
+
+  const isEditable = employee.editableSections?.includes("insurance-details");
+
+  const addPolicy = () => setInsurance((rows) => [...rows, emptyPolicy()]);
+
+  const startEdit = () => {
+    setInsurance(baseline.length ? [...baseline] : []);
+    setIsEditing(true);
+  };
+
+  const startEditAndAdd = () => {
+    setInsurance([...baseline, emptyPolicy()]);
+    setIsEditing(true);
+  };
 
   const handleSave = async () => {
-    const updated = { ...employee, insurance };
-    const ok = await handleAdminSave("Insurance Details", employee, updated);
+    const ok = await handleAdminSave("Insurance Details", employee, { ...employee, insurance });
     if (ok) setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setInsurance(employee.insurance || []);
+    setInsurance(baseline);
     setIsEditing(false);
   };
 
-  const isEditable = employee.editableSections?.includes("insurance-details");
+  const display = isEditing ? insurance : baseline;
 
-  const addPolicy = () => {
-    setInsurance((rows) => [
-      ...rows,
-      {
-        id: `ins-${Date.now()}`,
-        insuranceProvider: "",
-        policyNumber: "",
-        coverageType: "",
-        coverageAmount: "",
-        validTill: "",
-        dependentsCovered: "",
-      },
-    ]);
-  };
+  const addButton = (
+    <button
+      type="button"
+      onClick={() => (isEditing ? addPolicy() : startEditAndAdd())}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+    >
+      <Plus className="w-3.5 h-3.5" />
+      Add Policy
+    </button>
+  );
 
   return (
     <div className="space-y-5 pb-24">
@@ -61,30 +83,16 @@ export function InsuranceDetails({ employee }: Props) {
         onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "insurance-details", v)}
         requestStatus={employee.editRequestStatus}
         isEditing={isEditing}
-        onEdit={() => setIsEditing(true)}
+        onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={
-          <button
-            type="button"
-            onClick={() => {
-              if (!isEditing) {
-                setIsEditing(true);
-              }
-              addPolicy();
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Policy
-          </button>
-        }
+        headerExtra={addButton}
       >
-        {!insurance.length ? (
-          <EmptyStateCard icon={ShieldCheck} title="No insurance policies" />
+        {!display.length ? (
+          <EmptyStateCard icon={ShieldCheck} title="No insurance policies" description="Use Add Policy to add a policy." />
         ) : (
           <div className="space-y-6">
-            {insurance.map((pol, idx) => (
+            {display.map((pol, idx) => (
               <div key={pol.id} className="rounded-2xl border border-border bg-secondary/10 p-6 space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <ProfileInfoField
@@ -143,22 +151,22 @@ export function InsuranceDetails({ employee }: Props) {
                       dataUrl={pol.documentDataUrl}
                       editing={isEditing}
                       onFileChange={(name, data) =>
-                        setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, documentFileName: name, documentDataUrl: data } : r)))
+                        setInsurance((rows) =>
+                          rows.map((r, i) => (i === idx ? { ...r, documentFileName: name, documentDataUrl: data } : r))
+                        )
                       }
                     />
                   </div>
                 </div>
-                {isEditing && (
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      className="text-xs font-black text-foreground uppercase tracking-widest hover:underline"
-                      onClick={() => setInsurance((rows) => rows.filter((_, i) => i !== idx))}
-                    >
-                      Delete policy
-                    </button>
-                  </div>
-                )}
+                {isEditing && display.length > 1 ? (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-destructive hover:underline"
+                    onClick={() => setInsurance((rows) => rows.filter((_, i) => i !== idx))}
+                  >
+                    Remove policy
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>

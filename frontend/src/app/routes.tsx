@@ -34,13 +34,10 @@ import { OffboardingPage } from "./pages/admin/employees/offboarding/Offboarding
 
 // Management Pages (Lazy Loaded)
 const GenerateLetterPage = lazy(() => import("./pages/admin/employees/management/GenerateLetterPage").then(m => ({ default: m.GenerateLetterPage })));
-const ExcelImportPage = lazy(() => import("./pages/admin/employees/management/ExcelImportPage").then(m => ({ default: m.ExcelImportPage })));
-const BulkPhotoUploadPage = lazy(() => import("./pages/admin/employees/management/BulkPhotoUploadPage").then(m => ({ default: m.BulkPhotoUploadPage })));
 const BulletinBoardPage = lazy(() => import("./pages/admin/employees/management/BulletinBoardPage").then(m => ({ default: m.BulletinBoardPage })));
 const MassCommunicationPage = lazy(() => import("./pages/admin/employees/management/MassCommunicationPage").then(m => ({ default: m.MassCommunicationPage })));
 const IdentityVerificationPage = lazy(() => import("./pages/admin/employees/management/IdentityVerificationPage").then(m => ({ default: m.IdentityVerificationPage })));
 const ContractDetailsPage = lazy(() => import("./pages/admin/employees/management/ContractDetailsPage").then(m => ({ default: m.ContractDetailsPage })));
-const DataDrivePage = lazy(() => import("./pages/admin/employees/management/DataDrivePage").then(m => ({ default: m.DataDrivePage })));
 
 // Setup Pages (Lazy Loaded)
 const LetterTemplatePage = lazy(() => import("./pages/admin/employees/setup/LetterTemplatePage").then(m => ({ default: m.LetterTemplatePage })));
@@ -48,6 +45,7 @@ const PoliciesFormsPage = lazy(() => import("./pages/admin/employees/setup/Polic
 const EmployeeSegmentPage = lazy(() => import("./pages/admin/employees/setup/EmployeeSegmentPage").then(m => ({ default: m.EmployeeSegmentPage })));
 const EmployeeRolesPage = lazy(() => import("./pages/admin/employees/setup/EmployeeRolesPage").then(m => ({ default: m.EmployeeRolesPage })));
 const EmployeeFilterPage = lazy(() => import("./pages/admin/employees/setup/EmployeeFilterPage").then(m => ({ default: m.EmployeeFilterPage })));
+const FinesDamagesPage = lazy(() => import("./pages/admin/employees/setup/FinesDamagesPage").then(m => ({ default: m.FinesDamagesPage })));
 const OrganizationChartPage = lazy(() => import("./pages/admin/employees/OrganizationChartPage").then(m => ({ default: m.OrganizationChartPageWrapper })));
 
 // Employee module components
@@ -138,6 +136,7 @@ export const router = createBrowserRouter([
           //   ],
           // },
           { path: "add", Component: AddEmployeePage },
+          { path: "import", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
           { path: "information/:id", Component: InformationLayout },
           {
             path: "management",
@@ -145,28 +144,27 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="generate-letter" replace /> },
               { path: "generate-letter", element: <Suspense fallback={<ManagementSkeleton />}><GenerateLetterPage /></Suspense> },
-              { path: "excel-import", element: <Suspense fallback={<ManagementSkeleton />}><ExcelImportPage /></Suspense> },
-              { path: "photo-upload", element: <Suspense fallback={<ManagementSkeleton />}><BulkPhotoUploadPage /></Suspense> },
               { path: "bulletin-board", element: <Suspense fallback={<ManagementSkeleton />}><BulletinBoardPage /></Suspense> },
               { path: "communication", element: <Suspense fallback={<ManagementSkeleton />}><MassCommunicationPage /></Suspense> },
               { path: "verification", element: <Suspense fallback={<ManagementSkeleton />}><IdentityVerificationPage /></Suspense> },
               { path: "contracts", element: <Suspense fallback={<ManagementSkeleton />}><ContractDetailsPage /></Suspense> },
-              { path: "data-drive", element: <Suspense fallback={<ManagementSkeleton />}><DataDrivePage /></Suspense> },
+              { path: "excel-import", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
+              { path: "photo-upload", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
+              { path: "data-drive", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
             ]
           },
           {
             path: "setup",
             Component: EmployeeSetupLayout,
             children: [
-              { index: true, element: <Navigate to="letter-template" replace /> },
-              { path: "letter-template", element: <Suspense fallback={<ManagementSkeleton />}><LetterTemplatePage /></Suspense> },
+              { index: true, element: <Navigate to="policies" replace /> },
               { path: "policies", element: <Suspense fallback={<ManagementSkeleton />}><PoliciesFormsPage /></Suspense> },
               { path: "segment", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeSegmentPage /></Suspense> },
               { path: "roles", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeRolesPage /></Suspense> },
               { path: "filter", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeFilterPage /></Suspense> },
+              { path: "fines-damages", element: <Suspense fallback={<ManagementSkeleton />}><FinesDamagesPage /></Suspense> },
             ]
           },
-          { path: "import", element: <Navigate to="/admin/employees/management/excel-import" replace /> },
           { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Employee Reports Module (Coming Soon)</div> },
           { path: "org-chart", element: <Suspense fallback={<div className="p-8 text-center animate-pulse font-bold text-slate-400">Loading Org Chart...</div>}><OrganizationChartPage /></Suspense> },
           { path: "offboarding", Component: OffboardingPage },

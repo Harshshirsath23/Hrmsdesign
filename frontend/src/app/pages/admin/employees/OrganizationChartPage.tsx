@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router";
 import {
   Background,
   Controls,
@@ -1168,26 +1168,34 @@ export function OrganizationChartPage() {
               </p>
             </div>
 
-            <div className="flex justify-end gap-3 px-5 pb-5">
-              <button
-                className="h-9 rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-secondary"
-                onClick={() => setPendingRemoveId(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="h-9 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90"
-                onClick={() => {
-                  removeFromTree(pendingRemoveEmployee.id);
-                  setPendingRemoveId(null);
-                }}
-              >
-                Remove
-              </button>
+            <div className="space-y-4">
+              <h4 className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em]">Quick Actions</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-emerald-100 hover:bg-emerald-50"
+                  onClick={() => selectedEmp && navigate(`/admin/employees/information/${selectedEmp.id}`)}
+                >
+                  <Users className="w-4 h-4 text-emerald-600" /> VIEW PROFILE
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-blue-100 hover:bg-blue-50"
+                  onClick={() => selectedEmp && navigate(`/admin/employees/information/${selectedEmp.id}`)}
+                >
+                  <Edit2 className="w-4 h-4 text-blue-600" /> EDIT EMPLOYEE
+                </Button>
+                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-purple-100 hover:bg-purple-50">
+                  <Send className="w-4 h-4 text-purple-600" /> MESSAGE
+                </Button>
+                <Button variant="outline" className="h-12 gap-2 font-bold text-[11px] rounded-2xl border-orange-100 hover:bg-orange-50">
+                  <FileText className="w-4 h-4 text-orange-600" /> PAYROLL
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
