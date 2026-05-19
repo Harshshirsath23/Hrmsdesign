@@ -5,23 +5,16 @@ import {
   Clock,
   CalendarDays,
   Wallet,
-  Coffee,
   FileText,
   Bell,
   LogOut,
   Building2,
   ChevronRight,
-  ChevronDown,
   Menu,
   UserRoundCog,
   Sun,
   Moon,
-  PenLine,
-  FileStack,
-  Scale,
-  Palmtree,
   Users,
-  ScrollText,
   BarChart3,
   CheckCircle2,
   UserCheck,
@@ -44,16 +37,6 @@ const NAV_ITEMS = [
   { icon: Building, label: "Organization Chart", path: "/manager/org-chart" },
 ];
 
-const LEAVE_ITEMS = [
-  { icon: LayoutDashboard, label: "Leave Dashboard", path: "/manager/leaves/dashboard" },
-  { icon: PenLine, label: "Apply Leave", path: "/manager/leaves/apply" },
-  { icon: FileStack, label: "My Applications", path: "/manager/leaves/applications" },
-  { icon: Scale, label: "Leave Balance", path: "/manager/leaves/balance" },
-  { icon: Palmtree, label: "Holiday Calendar", path: "/manager/leaves/holidays" },
-  { icon: Users, label: "Team Calendar", path: "/manager/leaves/team" },
-  { icon: ScrollText, label: "Leave Policy", path: "/manager/leaves/policy" },
-  { icon: Bell, label: "Notifications", path: "/manager/leaves/notifications" },
-];
 
 export function ManagerLayout() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -63,9 +46,6 @@ export function ManagerLayout() {
   const location = useLocation();
 
   const [collapsed, setCollapsed] = useState(false);
-  const [leaveOpen, setLeaveOpen] = useState(
-    location.pathname.startsWith("/manager/leaves")
-  );
 
   if (!isAuthenticated || user?.role !== "manager") {
     return <Navigate to="/login" replace />;
@@ -148,61 +128,32 @@ export function ManagerLayout() {
           {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
             const active = isActive(path);
 
-            if (path === "/employee/leaves") {
+            if (path === "/manager/leaves") {
               return (
-                <div key={path}>
-                  <button
-                    onClick={() => setLeaveOpen((p) => !p)}
-                    title={collapsed ? label : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                      transition-all duration-150 relative
-                      ${active
-                        ? "bg-secondary text-foreground font-semibold"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      }
-                      ${collapsed ? "justify-center" : ""}`}
-                  >
-                    {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
-                    )}
-
-                    <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-
-                    {!collapsed && (
-                      <>
-                        <span>My Leaves</span>
-
-                        <ChevronDown
-                          className={`w-4 h-4 ml-auto transition-transform duration-200 ${leaveOpen ? "rotate-180" : ""
-                            }`}
-                        />
-                      </>
-                    )}
-                  </button>
-
-                  {!collapsed && leaveOpen && (
-                    <div className="mt-1 ml-4 space-y-1 border-l border-border pl-3">
-                      {LEAVE_ITEMS.map(({ icon: SubIcon, label, path }) => {
-                        const subActive = location.pathname === path;
-
-                        return (
-                          <button
-                            key={path}
-                            onClick={() => navigate(path)}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all
-                              ${subActive
-                                ? "bg-secondary text-foreground font-semibold"
-                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                              }`}
-                          >
-                            <SubIcon className="w-4 h-4 flex-shrink-0" />
-                            <span>{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                <button
+                  key={path}
+                  onClick={() => navigate(path)}
+                  title={collapsed ? label : undefined}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                    transition-all duration-150 relative
+                    ${active
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    }
+                    ${collapsed ? "justify-center" : ""}`}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
                   )}
-                </div>
+
+                  <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+
+                  {!collapsed && <span>{label}</span>}
+
+                  {!collapsed && active && (
+                    <ChevronRight className="w-3.5 h-3.5 ml-auto text-muted-foreground" />
+                  )}
+                </button>
               );
             }
 
@@ -326,7 +277,7 @@ export function ManagerLayout() {
 
             <button
               type="button"
-              onClick={() => navigate("/employee/leaves/notifications")}
+              onClick={() => navigate("/manager/leaves/notifications")}
               className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border
                 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               title="Notifications"

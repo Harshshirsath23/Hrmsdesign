@@ -60,7 +60,6 @@ import { ManagerDashboard } from "./pages/manager/ManagerDashboard";
 import { ManagerAttendancePage } from "./pages/manager/ManagerAttendancePage";
 import { ManagerTeamAttendancePage } from "./pages/manager/ManagerTeamAttendancePage";
 import { ManagerLeavesLayout } from "./pages/manager/leaves/ManagerLeavesLayout";
-import { ManagerLeaveDashboardPage } from "./pages/manager/leaves/ManagerLeaveDashboardPage";
 import { ManagerLeaveApplyPage } from "./pages/manager/leaves/ManagerLeaveApplyPage";
 import { ManagerLeaveApplicationsPage } from "./pages/manager/leaves/ManagerLeaveApplicationsPage";
 import { ManagerLeaveBalancePage } from "./pages/manager/leaves/ManagerLeaveBalancePage";
@@ -187,8 +186,9 @@ export const router = createBrowserRouter([
         path: "leaves",
         Component: ManagerLeavesLayout,
         children: [
-          { index: true, element: <Navigate to="dashboard" replace /> },
-          { path: "dashboard", Component: ManagerLeaveDashboardPage },
+          { index: true, element: <Navigate to="apply" replace /> },
+          { path: "dashboard", element: <Navigate to="/manager/leaves/apply" replace /> },
+          { path: "dashboard-redirect", element: <Navigate to="/manager/leaves/apply" replace /> },
           { path: "apply", Component: ManagerLeaveApplyPage },
           { path: "applications", Component: ManagerLeaveApplicationsPage },
           { path: "balance", Component: ManagerLeaveBalancePage },
