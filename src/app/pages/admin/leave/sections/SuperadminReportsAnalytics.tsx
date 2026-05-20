@@ -22,7 +22,7 @@ export function SuperadminReportsAnalytics() {
       <div className="flat-card bg-card p-5 flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Reports & Analytics</h2>
-          <p className="text-xs text-muted-foreground mt-1">Leave trends, utilization and approval performance.</p>
+          {/* <p className="text-xs text-muted-foreground mt-1">Leave trends, utilization and approval performance.</p> */}
         </div>
         <select value={range} onChange={(e) => setRange(e.target.value as "30" | "90" | "365")} className="flat-input px-3 py-2 text-sm">
           <option value="30">Last 30 days</option>

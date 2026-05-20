@@ -58,9 +58,9 @@ export function MasterLayout() {
           <Settings2 className="h-4 w-4" />
           <h1 className="text-lg font-semibold tracking-tight">Masters Management</h1>
         </div>
-        <p className="mt-1 text-xs text-neutral-400">
+        {/* <p className="mt-1 text-xs text-neutral-400">
           Super Admin console for configuration masters across HRMS domains.
-        </p>
+        </p> */}
       </div>
 
       <div className="flat-card bg-card p-3">

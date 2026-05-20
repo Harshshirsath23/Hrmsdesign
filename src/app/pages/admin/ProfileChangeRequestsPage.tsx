@@ -43,7 +43,7 @@ export function ProfileChangeRequestsPage() {
       <div className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Profile Change Requests</h2>
-          <p className="text-sm text-muted-foreground">Review employee-submitted profile updates and approve or reject.</p>
+          {/* <p className="text-sm text-muted-foreground">Review employee-submitted profile updates and approve or reject.</p> */}
         </div>
         <div className="flex items-center gap-2">
           {(["all", "pending", "approved", "rejected"] as const).map((status) => (

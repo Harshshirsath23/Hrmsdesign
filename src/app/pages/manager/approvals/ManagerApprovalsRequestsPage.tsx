@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
@@ -366,6 +364,19 @@ export default function ManagerApprovalsRequestsPage() {
   const [remarks, setRemarks] = useState("");
   const [remarksError, setRemarksError] = useState("");
   const [showOnlyPending, setShowOnlyPending] = useState(true);
+  const [workflowType, setWorkflowType] = useState("Multi-level approval");
+  const [showDelegateModal, setShowDelegateModal] = useState(false);
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
+  const [currentDelegate, setCurrentDelegate] = useState({
+    delegateName: "Priya Patel",
+    effectiveFrom: "2026-05-19",
+    reason: "Annual leave coverage",
+  });
+  const [delegateFormData, setDelegateFormData] = useState({
+    delegateName: "Priya Patel",
+    effectiveFrom: "2026-05-19",
+    reason: "",
+  });
 
   // Toast Notification State
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -575,16 +586,31 @@ export default function ManagerApprovalsRequestsPage() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Approvals Inbox</h1>
           <p className="mt-1 text-sm text-muted-foreground">Review and take action on requests submitted by your team.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground mr-2">
-            <input 
-              type="checkbox" 
-              checked={showOnlyPending} 
-              onChange={(e) => setShowOnlyPending(e.target.checked)}
-              className="h-4 w-4 rounded border-border bg-card accent-primary focus:ring-primary"
-            />
-            Show only Pending
-          </label>
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            value={workflowType}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "Delegate Approval Authority") {
+                setDelegateFormData({
+                  delegateName: currentDelegate.delegateName,
+                  effectiveFrom: currentDelegate.effectiveFrom,
+                  reason: "",
+                });
+                setShowDelegateModal(true);
+              } else if (value === "Approval Workflow Configuration") {
+                setShowWorkflowModal(true);
+              }
+              setWorkflowType("Multi-level approval");
+            }}
+            className="h-9 rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+            title="Configure approval workflow and delegation"
+          >
+            <option value="Multi-level approval" className="bg-card text-foreground">Approval Configuration</option>
+            <option value="Delegate Approval Authority" className="bg-card text-foreground">Delegate Approval Authority</option>
+            <option value="Approval Workflow Configuration" className="bg-card text-foreground">Approval Workflow Configuration</option>
+          </select>
+          
           <Button variant="outline" size="sm" onClick={() => setRows([...rows])}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
@@ -595,6 +621,8 @@ export default function ManagerApprovalsRequestsPage() {
           </Button>
         </div>
       </div>
+
+
 
       {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -1043,6 +1071,165 @@ export default function ManagerApprovalsRequestsPage() {
           )}
         </DrawerContent>
       </Drawer>
+
+      {/* Delegate Authority Modal */}
+      {showDelegateModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-in fade-in">
+          <div className="bg-card border border-border rounded-lg w-full max-w-md mx-4 shadow-2xl animate-in slide-in-from-bottom-5">
+            <div className="border-b border-border bg-card px-6 py-4">
+              <h2 className="text-lg font-semibold text-foreground">Delegate Approval Authority</h2>
+              <p className="text-xs text-muted-foreground mt-1">Assign your approvals to another manager during your absence.</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Current Delegate Info */}
+              <div className="rounded-lg border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Current Delegate</p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Name</p>
+                    <p className="text-sm font-medium text-foreground mt-1">{currentDelegate.delegateName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Effective From</p>
+                    <p className="text-sm font-medium text-foreground mt-1">{formatDate(currentDelegate.effectiveFrom)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Delegate Form */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground">Edit Delegate</h3>
+                
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Delegate To *</label>
+                  <select
+                    value={delegateFormData.delegateName}
+                    onChange={(e) => setDelegateFormData({...delegateFormData, delegateName: e.target.value})}
+                    className="mt-2 w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="Priya Patel">Priya Patel - Manager</option>
+                    <option value="Rohit Sharma">Rohit Sharma - Manager</option>
+                    <option value="Radha Singh">Radha Singh - Manager</option>
+                    <option value="Riya Menon">Riya Menon - Manager</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Effective From *</label>
+                  <input
+                    type="date"
+                    value={delegateFormData.effectiveFrom}
+                    onChange={(e) => setDelegateFormData({...delegateFormData, effectiveFrom: e.target.value})}
+                    className="mt-2 w-full h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Reason (Optional)</label>
+                  <textarea
+                    value={delegateFormData.reason}
+                    onChange={(e) => setDelegateFormData({...delegateFormData, reason: e.target.value})}
+                    rows={3}
+                    placeholder="E.g., On leave, medical emergency, etc."
+                    className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-border bg-card px-6 py-4 flex items-center gap-3 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setShowDelegateModal(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => {
+                setCurrentDelegate({
+                  delegateName: delegateFormData.delegateName,
+                  effectiveFrom: delegateFormData.effectiveFrom,
+                  reason: delegateFormData.reason || currentDelegate.reason,
+                });
+                showToast(`Delegation updated to ${delegateFormData.delegateName}`, "success");
+                setShowDelegateModal(false);
+              }}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Workflow Modal */}
+      {showWorkflowModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center animate-in fade-in">
+          <div className="bg-card border border-border rounded-lg w-full max-w-2xl mx-4 shadow-2xl max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom-5">
+            <div className="border-b border-border bg-card px-6 py-4 sticky top-0">
+              <h2 className="text-lg font-semibold text-foreground">Approval Workflow Configuration</h2>
+              <p className="text-xs text-muted-foreground mt-1">Workflow configured by admin - Read only view</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Workflow Type */}
+              <div className="rounded-lg border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Workflow Type</p>
+                <p className="text-sm font-medium text-foreground">Multi-level Approval</p>
+              </div>
+
+              {/* Approval Steps */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Approval Steps</p>
+                <div className="space-y-3">
+                  {[
+                    { step: 1, level: "Manager Review", approvers: "Direct Manager", duration: "2 days", condition: "Auto-escalate if not approved" },
+                    { step: 2, level: "HR Review", approvers: "HR Manager", duration: "1 day", condition: "Parallel review" },
+                    { step: 3, level: "Finance Sign-off", approvers: "Finance Lead", duration: "1 day", condition: "For leave requests > 5 days" }
+                  ].map((item) => (
+                    <div key={item.step} className="relative pl-8 pb-4 border-l-2 border-primary/30">
+                      <div className="absolute -left-[13px] top-0 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">
+                        {item.step}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground">{item.level}</h4>
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          <p><span className="font-medium text-foreground">Approvers:</span> {item.approvers}</p>
+                          <p><span className="font-medium text-foreground">SLA:</span> {item.duration}</p>
+                          <p><span className="font-medium text-foreground">Condition:</span> {item.condition}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Auto Approval Settings */}
+              <div className="rounded-lg border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Auto-Approval Rules</p>
+                <ul className="space-y-2 text-sm text-foreground">
+                  <li className="flex items-center gap-2"><span className="text-emerald-500">✓</span> Leave ≤ 1 day: Auto-approve if balance available</li>
+                  <li className="flex items-center gap-2"><span className="text-emerald-500">✓</span> Attendance: Manual review required</li>
+                  <li className="flex items-center gap-2"><span className="text-amber-500">⊘</span> Escalation: Yes, after 3 days pending</li>
+                </ul>
+              </div>
+
+              {/* Notification Settings */}
+              <div className="rounded-lg border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Notifications</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li>• Email notification on new approval request</li>
+                  <li>• Reminder on SLA breach (1 day before)</li>
+                  <li>• SMS alert for High priority requests</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="border-t border-border bg-card px-6 py-4 sticky bottom-0">
+              <p className="text-xs text-muted-foreground mb-3">To edit workflow configuration, contact your administrator.</p>
+              <Button size="sm" className="w-full" onClick={() => setShowWorkflowModal(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

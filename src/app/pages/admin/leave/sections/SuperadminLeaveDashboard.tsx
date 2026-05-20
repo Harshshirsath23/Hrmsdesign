@@ -47,7 +47,7 @@ export function SuperadminLeaveDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="flat-card bg-card p-6 lg:col-span-2">
           <h2 className="text-base font-semibold text-foreground">Leave Distribution by Department</h2>
-          <p className="text-xs text-muted-foreground mt-1">Live view of submitted and approved requests</p>
+          {/* <p className="text-xs text-muted-foreground mt-1">Live view of submitted and approved requests</p> */}
           <div className="mt-5 space-y-3">
             {Object.entries(
               activeRows.reduce<Record<string, number>>((acc, row) => {
@@ -65,7 +65,7 @@ export function SuperadminLeaveDashboard() {
 
         <div className="flat-card bg-card p-6">
           <h2 className="text-base font-semibold text-foreground">Command Center Alerts</h2>
-          <p className="text-xs text-muted-foreground mt-1">Escalations, special requests and workflow health</p>
+          {/* <p className="text-xs text-muted-foreground mt-1">Escalations, special requests and workflow health</p> */}
           <div className="mt-5 space-y-3">
             {[
               { icon: Briefcase, label: "Comp Off Pending", value: metrics.compOffPending },

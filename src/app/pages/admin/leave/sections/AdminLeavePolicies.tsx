@@ -7,9 +7,9 @@ export function AdminLeavePolicies({ onAddNewPolicy }: { onAddNewPolicy?: () => 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold text-foreground">Leave Policy Management</h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            {/* <p className="text-sm text-muted-foreground mt-1">
               Manage policy rules, accrual logic, carry-forward, eligibility, and workflow settings.
-            </p>
+            </p> */}
           </div>
           <button
             type="button"

@@ -52,9 +52,9 @@ export function AdminLeaveTypeMaster({ onAddNewLeaveType }: { onAddNewLeaveType?
         <div className="px-6 py-4 border-b border-border flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Leave Type Master</h2>
-            <p className="text-xs text-muted-foreground mt-1">
+            {/* <p className="text-xs text-muted-foreground mt-1">
               Configure leave types, constraints, and payroll applicability.
-            </p>
+            </p> */}
           </div>
           <button
             type="button"
