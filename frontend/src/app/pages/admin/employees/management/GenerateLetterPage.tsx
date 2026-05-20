@@ -73,6 +73,12 @@ export function GenerateLetterPage() {
     }
   };
 
+  const handleEditBatch = (batch: LetterBatch) => {
+    setInitialData({ ...batch });
+    setWizardStep(batch.currentStep && batch.currentStep > 1 ? batch.currentStep : 1);
+    setView("wizard");
+  };
+
   const handlePreview = (batch: LetterBatch) => {
     setSelectedBatch(batch);
     setIsPreviewing(true);
@@ -211,6 +217,7 @@ export function GenerateLetterPage() {
               onRepublish={handleRepublish}
               onDuplicate={handleDuplicate}
               onDeleteBatch={handleDeleteBatch}
+              onEditBatch={handleEditBatch}
               batches={batches}
             />
           )}

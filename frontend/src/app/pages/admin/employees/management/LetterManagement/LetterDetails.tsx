@@ -36,8 +36,7 @@ import {
 } from "../../../../../components/ui/table";
 import { LetterBatch } from "./types";
 import { employees } from "../../../../../components/employees/mockData";
-import { format } from "date-fns";
-import { cn } from "../../../../../components/ui/utils";
+import { cn, safeFormatDate } from "../../../../../components/ui/utils";
 
 interface LetterDetailsProps {
   batch: LetterBatch;
@@ -49,21 +48,21 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
   const selectedEmployees = employees.filter(e => recipientIds.includes(e.id));
 
   const handleDeleteRecipient = (empId: string, empName: string) => {
-    if (confirm(`Are you sure you want to remove \${empName} from this letter batch?`)) {
+    if (confirm(`Are you sure you want to remove ${empName} from this letter batch?`)) {
       setRecipientIds(prev => prev.filter(id => id !== empId));
-      toast.success(`\${empName} has been removed from this batch.`);
+      toast.success(`${empName} has been removed from this batch.`);
     }
   };
 
   const handleDownloadPDF = (empName: string) => {
     const element = document.createElement("a");
-    const file = new Blob([`Mock PDF Letter for recipient: \${empName}\nBatch: \${batch.subject}\nType: \${batch.letterType}`], { type: 'text/plain' });
+    const file = new Blob([`Mock PDF Letter for recipient: ${empName}\nBatch: ${batch.subject}\nType: ${batch.letterType}`], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = `\${empName.replace(/\\s+/g, "_")}_Letter.pdf`;
+    element.download = `${empName.replace(/\s+/g, "_")}_Letter.pdf`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    toast.success(`Download started for \${empName}`);
+    toast.success(`Download started for ${empName}`);
   };
 
   return (
@@ -87,7 +86,7 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
               </Badge>
             </div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-              Batch ID: {batch.id} • Created on {format(new Date(batch.createdAt), "dd MMM yyyy")}
+              Batch ID: {batch.id} • Created on {safeFormatDate(batch.createdAt, "dd MMM yyyy")}
             </p>
           </div>
         </div>
@@ -106,9 +105,9 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <InfoCard label="Letter Type" value={batch.letterType} Icon={FileText} />
-            <InfoCard label="Effective Date" value={format(new Date(batch.effectiveDate), "dd MMM yyyy")} Icon={Calendar} />
+            <InfoCard label="Effective Date" value={safeFormatDate(batch.effectiveDate, "dd MMM yyyy")} Icon={Calendar} />
             <InfoCard label="Workflow" value={batch.approvalWorkflow} Icon={Shield} />
-            <InfoCard label="Publish Date" value={format(new Date(batch.publishDate), "dd MMM yyyy")} Icon={Clock} />
+            <InfoCard label="Publish Date" value={safeFormatDate(batch.publishDate, "dd MMM yyyy")} Icon={Clock} />
           </div>
 
           {/* Employee List */}
@@ -227,7 +226,7 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
               <TimelineItem 
                 title="Batch Created" 
                 user={batch.createdBy} 
-                time={format(new Date(batch.createdAt), "dd MMM, hh:mm a")} 
+                time={safeFormatDate(batch.createdAt, "dd MMM, hh:mm a")} 
                 status="completed"
                 Icon={Plus}
               />
