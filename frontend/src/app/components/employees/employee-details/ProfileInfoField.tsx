@@ -19,13 +19,13 @@ export function ProfileInfoField({
   editing,
   onChange,
   type = "text",
-  options = [],
+  options,
   readOnly = false,
   placeholder,
   className,
   error,
 }: ProfileInfoFieldProps) {
-  const selectOptions = options
+  const selectOptions = options?.length
     ? options.some((option) => option.value === value) || !value
       ? options
       : [{ value, label: value }, ...options]

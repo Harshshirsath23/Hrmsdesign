@@ -15,6 +15,20 @@ interface Props {
   disableEdit?: boolean;
 }
 
+const ESI_TYPE_OPTIONS = [
+  { value: "Employee State Insurance", label: "Employee State Insurance" },
+];
+
+const PF_TYPE_OPTIONS = [
+  { value: "EPF (Employee Provident Fund)", label: "EPF (Employee Provident Fund)" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
+
+
 function StatSectionCard({
   title,
   icon: Icon,
@@ -146,7 +160,6 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
   const taxRegimeOptions = useMasterOptions("TaxRegime");
   const pfSchemeOptions = useMasterOptions("PfScheme");
   const esiSchemeOptions = useMasterOptions("EsiScheme");
-  const bankStatusOptions = useMasterOptions("BankStatus");
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
   const [pfEdit, setPfEdit] = useState(false);
@@ -334,7 +347,13 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="PF Number" value={pfDraft.pfNumber} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfNumber: v }))} />
-            <ProfileInfoField label="PF Type" value={pfDraft.pfType} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfType: v }))} options={pfSchemeOptions} />
+            <ProfileInfoField
+              label="PF Type"
+              value={pfDraft.pfType}
+              editing={pfEdit}
+              onChange={(v) => setPfDraft((d) => ({ ...d, pfType: v }))}
+              options={pfSchemeOptions.length ? pfSchemeOptions : PF_TYPE_OPTIONS}
+            />
             <ProfileInfoField
               label="Monthly Contribution"
               value={pfDraft.monthlyContribution}
@@ -343,7 +362,13 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
             />
             <ProfileInfoField label="Employee Share" value={pfDraft.employeeShare} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, employeeShare: v }))} />
             <ProfileInfoField label="Employer Share" value={pfDraft.employerShare} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, employerShare: v }))} />
-            <ProfileInfoField label="Status" value={pfDraft.status} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, status: v }))} options={bankStatusOptions} />
+            <ProfileInfoField
+              label="Status"
+              value={pfDraft.status}
+              editing={pfEdit}
+              onChange={(v) => setPfDraft((d) => ({ ...d, status: v }))}
+              options={STATUS_OPTIONS}
+            />
           </div>
         </StatSectionCard>
 
@@ -360,7 +385,13 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="ESI Number" value={esiDraft.esiNumber} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiNumber: v }))} />
-            <ProfileInfoField label="ESI Type" value={esiDraft.esiType} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiType: v }))} options={esiSchemeOptions} />
+            <ProfileInfoField
+              label="ESI Type"
+              value={esiDraft.esiType}
+              editing={esiEdit}
+              onChange={(v) => setEsiDraft((d) => ({ ...d, esiType: v }))}
+              options={esiSchemeOptions.length ? esiSchemeOptions : ESI_TYPE_OPTIONS}
+            />
             <ProfileInfoField
               label="Employee Contribution"
               value={esiDraft.employeeContribution}
@@ -374,7 +405,13 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               onChange={(v) => setEsiDraft((d) => ({ ...d, employerContribution: v }))}
             />
             <ProfileInfoField label="Dispensary" value={esiDraft.dispensary} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, dispensary: v }))} />
-            <ProfileInfoField label="Status" value={esiDraft.status} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, status: v }))} options={bankStatusOptions} />
+            <ProfileInfoField
+              label="Status"
+              value={esiDraft.status}
+              editing={esiEdit}
+              onChange={(v) => setEsiDraft((d) => ({ ...d, status: v }))}
+              options={STATUS_OPTIONS}
+            />
           </div>
         </StatSectionCard>
       </div>
