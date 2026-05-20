@@ -1,20 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  User,
+  GraduationCap,
+  Users,
+  Heart,
+  Shield,
+  Landmark,
+  Globe,
+  Briefcase,
+  IndianRupee,
+  Monitor,
+  CreditCard,
+  FileText,
+  ClipboardList,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { ESS_SECTIONS } from "../../modules/ess/data";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../../store";
-import { fetchEmployeeData, saveEssProfileWithAdminSync } from "../../../store/slices/employeeSlice";
+import {
+  fetchEmployeeData,
+  saveEssProfileWithAdminSync,
+} from "../../../store/slices/employeeSlice";
 import { addNotification } from "../../../store/slices/notificationSlice";
 import { fetchRequests, createRequest } from "../../../store/slices/requestSlice";
-import { MyRequestsTable } from "../../components/employee/MyRequestsTable";
-import { EmployeeNotificationPanel } from "../../components/ui/EmployeeNotificationPanel";
 import { EssProfileHeaderCard } from "../../components/employee/EssProfileHeaderCard";
 import { EmployeeDocumentMeta } from "../../components/employees/mockData";
 import { EmployeeDocumentsGrid } from "../../modules/employees/documentTypes/EmployeeDocumentsGrid";
 import { selectActiveDocumentTypes } from "../../../store/slices/documentTypesSlice";
 import { EmployeeProfile, SectionKey } from "../../modules/ess/types";
 import {
-  detectDuplicateValues,
   isEqualPayload,
   maskSensitive,
   validateAadhaar,
@@ -22,13 +36,62 @@ import {
   validatePan,
 } from "../../modules/ess/utils";
 
-type BannerState = { type: "success" | "error"; message: string } | null;
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// Field label map — extended with all new fields
-// ---------------------------------------------------------------------------
+type BannerState = { type: "success" | "error"; message: string } | null;
+type TabMode = "edit" | "multi-add" | "view-only" | "requests" | "combined";
+type TabGroup =
+  | "Personal Information"
+  | "Financial & Legal"
+  | "Career"
+  | "Assets & Access"
+  | "Requests";
+
+interface TabSection {
+  key: string;
+  label: string;
+  group: TabGroup;
+  mode: TabMode;
+  storeKey?: string;
+  icon: React.ElementType;
+}
+
+// ─── Section Config (13 tabs) ────────────────────────────────────────────────
+
+const TAB_SECTIONS: TabSection[] = [
+  { key: "employeeProfile",   label: "Employee Profile",   group: "Personal Information", mode: "combined",   icon: User },
+  { key: "educationDetails",  label: "Education Details",  group: "Personal Information", mode: "multi-add",  icon: GraduationCap },
+  { key: "familyDetails",     label: "Family Details",     group: "Personal Information", mode: "multi-add",  icon: Users },
+  { key: "nomineeDetails",    label: "Nominee Details",    group: "Financial & Legal",    mode: "multi-add",  icon: Heart },
+  { key: "insuranceDetails",  label: "Insurance Details",  group: "Financial & Legal",    mode: "multi-add",  icon: Shield },
+  { key: "bankPfEsi",         label: "Bank / PF / ESI",    group: "Financial & Legal",    mode: "view-only",  icon: Landmark,     storeKey: "bankAndStatutoryDetails" },
+  { key: "passportVisa",      label: "Passport & Visa",    group: "Financial & Legal",    mode: "edit",       icon: Globe,        storeKey: "passportAndVisa" },
+  { key: "workExperience",    label: "Work Experience",    group: "Career",               mode: "multi-add",  icon: Briefcase,    storeKey: "previousEmployment" },
+  { key: "employeeSalary",    label: "Employee Salary",    group: "Career",               mode: "view-only",  icon: IndianRupee },
+  { key: "assetManagement",   label: "Asset Management",   group: "Assets & Access",      mode: "view-only",  icon: Monitor,      storeKey: "assetsAndIT" },
+  { key: "accessCardDetails", label: "Access Card Details",group: "Assets & Access",      mode: "view-only",  icon: CreditCard },
+  { key: "employeeDocuments", label: "Employee Documents", group: "Assets & Access",      mode: "edit",       icon: FileText,     storeKey: "documentsRepository" },
+  { key: "myRequest",         label: "My Request",         group: "Requests",             mode: "requests",   icon: ClipboardList },
+];
+
+
+// ─── Store Key Mapping ───────────────────────────────────────────────────────
+
+const STORE_KEY_MAP: Record<string, string> = {
+  bankPfEsi: "bankAndStatutoryDetails",
+  passportVisa: "passportAndVisa",
+  workExperience: "previousEmployment",
+  assetManagement: "assetsAndIT",
+  employeeDocuments: "documentsRepository",
+};
+
+function getStoreKey(sectionKey: string): string {
+  return STORE_KEY_MAP[sectionKey] ?? sectionKey;
+}
+
+// ─── Field Labels ────────────────────────────────────────────────────────────
+
 const FORM_LABELS: Record<string, string> = {
-  // Profile Information
   employeeId: "Employee ID",
   employeeCode: "Employee Code",
   salutation: "Salutation",
@@ -36,7 +99,6 @@ const FORM_LABELS: Record<string, string> = {
   middleName: "Middle Name",
   lastName: "Last Name",
   preferredName: "Preferred Name",
-  profilePhoto: "Profile Photo",
   officialEmail: "Official Email",
   personalEmail: "Personal Email",
   workMobile: "Work Mobile",
@@ -45,9 +107,6 @@ const FORM_LABELS: Record<string, string> = {
   extensionNumber: "Extension Number",
   username: "Username",
   bio: "Bio / About",
-  signatureUpload: "Signature Upload",
-
-  // Personal Details
   dateOfBirth: "Date of Birth",
   actualDateOfBirth: "Actual Date of Birth",
   gender: "Gender",
@@ -65,8 +124,8 @@ const FORM_LABELS: Record<string, string> = {
   fatherName: "Father Name",
   motherName: "Mother Name",
   spouseName: "Spouse Name",
-
-  // Contact & Address
+  panNumber: "PAN Number",
+  aadhaarNumber: "Aadhaar Number",
   addressLine1: "Address Line 1",
   addressLine2: "Address Line 2",
   landmark: "Landmark",
@@ -80,8 +139,6 @@ const FORM_LABELS: Record<string, string> = {
   emergencyContactName: "Emergency Contact Name",
   emergencyContactRelation: "Emergency Contact Relation",
   emergencyContactNumber: "Emergency Contact Number",
-
-  // Employment
   department: "Department",
   subDepartment: "Sub Department",
   designation: "Designation",
@@ -98,8 +155,6 @@ const FORM_LABELS: Record<string, string> = {
   reportingManager: "Reporting Manager",
   functionalManager: "Functional Manager",
   hrPartner: "HR Partner",
-
-  // Bank & Statutory
   bankName: "Bank Name",
   branchName: "Branch Name",
   ifscCode: "IFSC Code",
@@ -107,25 +162,17 @@ const FORM_LABELS: Record<string, string> = {
   accountHolderName: "Account Holder Name",
   accountType: "Account Type",
   isPrimary: "Primary Account",
-  panNumber: "PAN Number",
-  aadhaarNumber: "Aadhaar Number",
   uanNumber: "UAN Number",
   esicNumber: "ESIC Number",
   pfNumber: "PF Number",
   professionalTaxNumber: "Professional Tax Number",
-  passportNumber: "Passport Number",
   taxRegime: "Tax Regime",
-
-  // Nominee
   nomineeName: "Nominee Name",
   relationship: "Relationship",
   sharePercentage: "Share Percentage (%)",
   contactNumber: "Contact Number",
   address: "Address",
-  sameAsCurrentAddress: "Same as Current Address",
-  sameAsPermanentAddress: "Same as Permanent Address",
-
-  // Passport & Visa
+  passportNumber: "Passport Number",
   passportHolderName: "Passport Holder Name",
   issueDate: "Issue Date",
   expiryDate: "Expiry Date",
@@ -140,15 +187,12 @@ const FORM_LABELS: Record<string, string> = {
   visaIssueDate: "Visa Issue Date",
   visaExpiryDate: "Visa Expiry Date",
   visaStatus: "Visa Status",
-
-  // Previous Employment
   companyName: "Company Name",
+  jobTitle: "Job Title",
   totalExperience: "Total Experience",
   hrContact: "HR Contact",
   reasonForLeaving: "Reason for Leaving",
   currentlyWorking: "Currently Working",
-
-  // Education
   qualification: "Qualification",
   degree: "Degree",
   specialization: "Specialization",
@@ -159,83 +203,63 @@ const FORM_LABELS: Record<string, string> = {
   grade: "Grade",
   courseType: "Course Type",
   duration: "Duration",
-
-  // Skills
-  skillName: "Skill Name",
-  skillCategory: "Skill Category",
-  skillLevel: "Skill Level",
-  experienceInSkill: "Experience in Skill",
-
-  // Certifications
-  certificationName: "Certification Name",
-  issuingOrganization: "Issuing Organization",
-  licenseNumber: "License Number",
-  validFrom: "Valid From",
-  validTill: "Valid Till",
-  credentialUrl: "Credential URL",
-
-  // Assets
   assetTag: "Asset Tag",
   assetName: "Asset Name",
   assetType: "Asset Type",
   deviceSerialNumber: "Device Serial Number",
-  softwareLicenses: "Software Licenses",
   assignedDate: "Assigned Date",
   dueDate: "Due Date",
   assetCondition: "Asset Condition",
   remarks: "Remarks",
-
-  // Family
   familyMemberName: "Family Member Name",
   occupation: "Occupation",
   dependentStatus: "Dependent Status",
   emergencyContact: "Emergency Contact",
-
-  // Emergency & Medical
-  medicalConditions: "Medical Conditions",
-  allergies: "Allergies",
-  doctorName: "Doctor Name",
-  insuranceProvider: "Insurance Provider",
-  insurancePolicyNumber: "Insurance Policy Number",
-
-  // Insurance
   policyNumber: "Policy Number",
   provider: "Provider",
   policyType: "Policy Type",
   coverageAmount: "Coverage Amount",
   endDate: "End Date",
-
-  // Language
   language: "Language",
   proficiencyLevel: "Proficiency Level",
   canRead: "Can Read",
   canSpeak: "Can Speak",
   canWrite: "Can Write",
-
-  // Social
-  linkedin: "LinkedIn",
-  github: "GitHub",
-  portfolioWebsite: "Portfolio Website",
-  personalWebsite: "Personal Website",
 };
 
-// ---------------------------------------------------------------------------
-// Extended ESS_SECTIONS — sections not already in the original data file
-// ---------------------------------------------------------------------------
-const EXTRA_SECTIONS = [
-  { key: "passportAndVisa", label: "Passport & Visa Details", editable: true, optional: true },
-  { key: "previousEmployment", label: "Previous Employment / Work Experience", editable: true, optional: true },
-  { key: "educationDetails", label: "Education Details", editable: true, optional: true },
-  { key: "skillsAndCertifications", label: "Skills & Certifications", editable: true, optional: true },
-  { key: "documentsRepository", label: "Documents Repository", editable: true, optional: true },
-  { key: "familyDetails", label: "Family Details", editable: true, optional: true },
-  { key: "emergencyAndMedical", label: "Emergency & Medical Information", editable: true, optional: true },
-  { key: "socialProfiles", label: "Social & Professional Profiles", editable: true, optional: true },
-] as const;
+// ─── Mock Data (View-Only Sections) ─────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// Field component
-// ---------------------------------------------------------------------------
+const MOCK_SALARY = {
+  grade: "L3 – Senior Engineer",
+  ctcAnnual: "₹18,00,000",
+  basicMonthly: "₹60,000",
+  hraMonthly: "₹30,000",
+  specialAllowanceMonthly: "₹33,333",
+  pfDeductionMonthly: "₹7,200",
+  professionalTaxMonthly: "₹200",
+  netMonthlyTakeHome: "₹1,16,133",
+  lastIncrementDate: "01 Apr 2025",
+  lastIncrementPercent: "15%",
+  nextReviewDate: "01 Apr 2026",
+  paymentMode: "Bank Transfer",
+  salaryStructure: "Regular",
+};
+
+const MOCK_ACCESS_CARD = {
+  cardNumber: "CARD-2024-EMP-00142",
+  cardType: "Proximity Card (RFID)",
+  issuedOn: "02 Jan 2024",
+  validTill: "31 Dec 2025",
+  status: "Active",
+  accessZones: ["Main Office", "Server Room", "Cafeteria", "Parking – Zone A"],
+  lastUsed: "Today, 09:23 AM",
+  lastLocation: "Main Entrance",
+  issuerName: "Security & IT Dept",
+};
+
+
+// ─── Shared Field Component ──────────────────────────────────────────────────
+
 function Field({
   fieldKey,
   value,
@@ -255,24 +279,19 @@ function Field({
     : fieldKey.toLowerCase().includes("url") ||
       fieldKey.toLowerCase().includes("website") ||
       fieldKey.toLowerCase().includes("linkedin") ||
-      fieldKey.toLowerCase().includes("github") ||
-      fieldKey.toLowerCase().includes("portfolio")
+      fieldKey.toLowerCase().includes("github")
     ? "url"
     : fieldKey.toLowerCase().includes("date") ||
-      fieldKey.toLowerCase().includes("from") ||
-      fieldKey.toLowerCase().includes("till") ||
       fieldKey === "joiningDate" ||
       fieldKey === "confirmationDate"
     ? "date"
-    : fieldKey.toLowerCase().includes("number") ||
-      fieldKey === "sharePercentage" ||
-      fieldKey === "coverageAmount"
-    ? "text"
     : "text";
 
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        {label}
+      </span>
       {isBoolean ? (
         <input
           type="checkbox"
@@ -287,340 +306,205 @@ function Field({
           value={readOnly ? maskSensitive(fieldKey, stringValue) : stringValue}
           disabled={readOnly}
           onChange={(e) => onChange(e.target.value)}
-          className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground disabled:bg-secondary disabled:text-muted-foreground"
+          className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground disabled:bg-secondary disabled:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
         />
       )}
     </label>
   );
 }
 
-// ---------------------------------------------------------------------------
-// DynamicListEditor
-// ---------------------------------------------------------------------------
+// ─── Dynamic List Editor (multi-entry) ──────────────────────────────────────
+
 function DynamicListEditor({
   rows,
   onChange,
   readOnly,
+  emptyTemplate,
 }: {
   rows: Record<string, unknown>[];
   onChange: (rows: Record<string, unknown>[]) => void;
   readOnly: boolean;
+  emptyTemplate?: Record<string, unknown>;
 }) {
-  const columns = rows[0] ? Object.keys(rows[0]).filter((k) => k !== "id") : [];
+  const template = emptyTemplate ?? rows[0];
+  const columns = template ? Object.keys(template).filter((k) => k !== "id") : [];
 
   return (
     <div className="space-y-3">
       {rows.map((row, rowIndex) => (
         <div
           key={String(row.id ?? rowIndex)}
-          className="rounded-lg border border-border p-3 grid grid-cols-1 md:grid-cols-2 gap-3"
+          className="rounded-xl border border-border bg-background/50 p-4"
         >
-          {columns.map((col) => (
-            <Field
-              key={`${rowIndex}-${col}`}
-              fieldKey={col}
-              value={row[col]}
-              readOnly={readOnly}
-              onChange={(v) => {
-                const next = [...rows];
-                next[rowIndex] = { ...next[rowIndex], [col]: v };
-                onChange(next);
-              }}
-            />
-          ))}
-          {!readOnly && (
-            <button
-              type="button"
-              onClick={() => onChange(rows.filter((_, i) => i !== rowIndex))}
-              className="h-10 px-3 rounded-lg border border-border text-sm text-foreground hover:bg-secondary"
-            >
-              Remove Row
-            </button>
-          )}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Entry {rowIndex + 1}
+            </span>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onChange(rows.filter((_, i) => i !== rowIndex))}
+                className="text-xs px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {columns.map((col) => (
+              <Field
+                key={`${rowIndex}-${col}`}
+                fieldKey={col}
+                value={row[col]}
+                readOnly={readOnly}
+                onChange={(v) => {
+                  const next = [...rows];
+                  next[rowIndex] = { ...next[rowIndex], [col]: v };
+                  onChange(next);
+                }}
+              />
+            ))}
+          </div>
         </div>
       ))}
       {!readOnly && (
         <button
           type="button"
           onClick={() => {
-            const base = rows[0] ?? {};
-            const newRow = Object.keys(base).reduce((acc, key) => {
-              if (key === "id") return { ...acc, id: `${Date.now()}` };
-              if (typeof base[key] === "boolean") return { ...acc, [key]: false };
-              return { ...acc, [key]: "" };
-            }, {} as Record<string, unknown>);
+            const base = template ?? {};
+            const newRow = Object.keys(base).reduce(
+              (acc, key) => {
+                if (key === "id") return { ...acc, id: `${Date.now()}` };
+                if (typeof base[key] === "boolean") return { ...acc, [key]: false };
+                return { ...acc, [key]: "" };
+              },
+              {} as Record<string, unknown>
+            );
             onChange([...rows, newRow]);
           }}
-          className="h-10 px-4 rounded-lg bg-foreground text-primary-foreground text-sm font-medium"
+          className="w-full h-10 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
         >
-          Add Row
+          + Add New Entry
         </button>
+      )}
+      {readOnly && rows.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-6">No entries added yet.</p>
       )}
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// FileUploadField — lightweight upload placeholder (wires to your storage layer)
-// ---------------------------------------------------------------------------
-function FileUploadField({
-  label,
-  readOnly,
-}: {
-  label: string;
-  readOnly: boolean;
-}) {
+// ─── File Upload Field ───────────────────────────────────────────────────────
+
+function FileUploadField({ label, readOnly }: { label: string; readOnly: boolean }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        {label}
+      </span>
       <input
         type="file"
         disabled={readOnly}
-        className="text-sm text-foreground file:mr-3 file:h-8 file:rounded file:border file:border-border file:bg-secondary file:px-3 file:text-xs file:font-medium disabled:opacity-50"
+        className="text-sm text-foreground file:mr-3 file:h-8 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:text-xs file:font-medium disabled:opacity-50"
       />
     </label>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Passport & Visa section renderer
-// ---------------------------------------------------------------------------
-function PassportVisaSection({
-  data,
-  readOnly,
-  onChange,
-}: {
-  data: Record<string, unknown>;
-  readOnly: boolean;
-  onChange: (v: Record<string, unknown>) => void;
-}) {
-  const passportFields = [
-    "passportNumber",
-    "passportHolderName",
-    "issueDate",
-    "expiryDate",
-    "placeOfIssue",
-    "countryOfIssue",
-    "passportCategory",
-    "passportStatus",
-  ];
-  const visaFields = [
-    "visaType",
-    "visaNumber",
-    "visaCountry",
-    "visaSponsor",
-    "visaIssueDate",
-    "visaExpiryDate",
-    "visaStatus",
-  ];
+// ─── View-Only Info Row ──────────────────────────────────────────────────────
 
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Passport Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {passportFields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={readOnly}
-              onChange={(v) => onChange({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Visa Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {visaFields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={readOnly}
-              onChange={(v) => onChange({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      </div>
-      {!readOnly && (
-        <div className="rounded-lg border border-border p-3 space-y-3">
-          <p className="text-sm font-semibold text-foreground">Uploads</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <FileUploadField label="Passport Front" readOnly={readOnly} />
-            <FileUploadField label="Passport Back" readOnly={readOnly} />
-            <FileUploadField label="Visa Copy" readOnly={readOnly} />
-          </div>
-        </div>
-      )}
+    <div className="flex flex-col gap-0.5 py-2 border-b border-border/60 last:border-0">
+      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+        {label}
+      </span>
+      <span className="text-sm font-medium text-foreground">{value || "—"}</span>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Skills & Certifications section renderer
-// ---------------------------------------------------------------------------
-function SkillsCertificationsSection({
-  data,
-  readOnly,
-  onChange,
+// ─── Section Access Badge ────────────────────────────────────────────────────
+
+function AccessBadge({ mode }: { mode: TabMode }) {
+  if (mode === "view-only") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-secondary border border-border text-muted-foreground uppercase tracking-wider">
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+          />
+        </svg>
+        View Only
+      </span>
+    );
+  }
+  if (mode === "multi-add") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-foreground/8 border border-foreground/15 text-foreground uppercase tracking-wider">
+        + Multiple Entries
+      </span>
+    );
+  }
+  if (mode === "edit" || mode === "combined") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-foreground/8 border border-foreground/15 text-foreground uppercase tracking-wider">
+        ✎ Editable
+      </span>
+    );
+  }
+  return null;
+}
+
+// ─── Sub-Section Card (used inside Employee Profile combined tab) ─────────────
+
+function SubSectionCard({
+  title,
+  children,
+  onEdit,
+  isEditing,
+  isPending,
 }: {
-  data: { skills: Record<string, unknown>[]; certifications: Record<string, unknown>[] };
-  readOnly: boolean;
-  onChange: (v: typeof data) => void;
+  title: string;
+  children: React.ReactNode;
+  onEdit?: () => void;
+  isEditing?: boolean;
+  isPending?: boolean;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Skills</p>
-        <DynamicListEditor
-          rows={data.skills}
-          readOnly={readOnly}
-          onChange={(rows) => onChange({ ...data, skills: rows })}
-        />
-      </div>
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Certifications</p>
-        <DynamicListEditor
-          rows={data.certifications}
-          readOnly={readOnly}
-          onChange={(rows) => onChange({ ...data, certifications: rows })}
-        />
-        {!readOnly && (
-          <div className="mt-3">
-            <FileUploadField label="Certification Document" readOnly={readOnly} />
-          </div>
+    <div
+      className={`rounded-xl border p-5 space-y-4 transition-all ${
+        isEditing ? "border-foreground/30 bg-card" : "border-border bg-card"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-foreground">{title}</h3>
+        {onEdit && !isEditing && (
+          <button
+            onClick={onEdit}
+            disabled={isPending}
+            className="h-8 px-3 rounded-lg bg-secondary border border-border text-xs font-bold text-foreground hover:bg-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Edit
+          </button>
+        )}
+        {isEditing && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-foreground text-primary-foreground uppercase tracking-wider">
+            Editing
+          </span>
         )}
       </div>
+      {children}
     </div>
   );
 }
 
-function DocumentsRepositorySection({
-  docs,
-  readOnly,
-  onChange,
-}: {
-  docs: Partial<Record<string, EmployeeDocumentMeta>>;
-  readOnly: boolean;
-  onChange: (next: Partial<Record<string, EmployeeDocumentMeta>>) => void;
-}) {
-  const allTypes = useSelector(selectActiveDocumentTypes);
-  const documentTypes = useMemo(
-    () => (readOnly ? allTypes : allTypes.filter((t) => t.allowEmployeeEdit)),
-    [allTypes, readOnly]
-  );
+// ─── Employee Profile Combined Section ──────────────────────────────────────
 
-  return (
-    <EmployeeDocumentsGrid
-      documentTypes={documentTypes}
-      docs={docs}
-      isEditing={!readOnly}
-      onChange={onChange}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Address sub-section renderer (reused for current / permanent)
-// ---------------------------------------------------------------------------
-const ADDRESS_FIELDS = [
-  "addressLine1",
-  "addressLine2",
-  "landmark",
-  "city",
-  "state",
-  "country",
-  "pincode",
-  "startDate",
-  "toDate",
-];
-
-function AddressesSection({
-  data,
-  readOnly,
-  onChange,
-}: {
-  data: Record<string, Record<string, unknown>>;
-  readOnly: boolean;
-  onChange: (v: Record<string, Record<string, unknown>>) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      {Object.entries(data)
-        .filter(([addrType]) => addrType !== "temporary")
-        .map(([addrType, values]) => (
-          <div key={addrType} className="rounded-lg border border-border p-3">
-            <p className="text-sm font-semibold text-foreground capitalize mb-3">{addrType} Address</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {ADDRESS_FIELDS.map((f) => (
-                <Field
-                  key={`${addrType}-${f}`}
-                  fieldKey={f}
-                  value={values[f] ?? ""}
-                  readOnly={readOnly}
-                  onChange={(v) => {
-                    if (readOnly) return;
-                    onChange({ ...data, [addrType]: { ...data[addrType], [f]: v } });
-                  }}
-                />
-              ))}
-              {addrType === "current" && (
-                <Field
-                  fieldKey="sameAsPermanent"
-                  value={values["sameAsPermanent"] ?? false}
-                  readOnly={readOnly}
-                  onChange={(v) => {
-                    if (readOnly) return;
-                    onChange({ ...data, [addrType]: { ...data[addrType], sameAsPermanent: v } });
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        ))}
-
-      {/* Communication Details */}
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Communication Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[
-            "emergencyContactName",
-            "emergencyContactRelation",
-            "emergencyContactNumber",
-            "alternateMobileNumber",
-          ].map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={(data["communication"] ?? {})[f] ?? ""}
-              readOnly={readOnly}
-              onChange={(v) => {
-                if (readOnly) return;
-                onChange({ ...data, communication: { ...(data["communication"] ?? {}), [f]: v } });
-              }}
-            />
-          ))}
-        </div>
-      </div>
-      
-      <div className="mt-8">
-        <h2 className="text-lg font-bold text-foreground mb-4">My Requests</h2>
-        <MyRequestsTable />
-      </div>
-      
-      <EmployeeNotificationPanel />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Profile section renderer — adds new fields not in original
-// ---------------------------------------------------------------------------
-const ORIGINAL_PROFILE_FIELDS = [
-  "employeeId",
-  "employeeCode",
+const PROFILE_BASIC_FIELDS = [
   "salutation",
   "firstName",
   "middleName",
@@ -632,44 +516,9 @@ const ORIGINAL_PROFILE_FIELDS = [
   "personalMobile",
   "alternateMobileNumber",
   "extensionNumber",
-  "username",
   "bio",
 ];
 
-function ProfileSection({
-  data,
-  readOnly,
-  onChange,
-}: {
-  data: Record<string, unknown>;
-  readOnly: boolean;
-  onChange: (v: Record<string, unknown>) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {ORIGINAL_PROFILE_FIELDS.map((f) => (
-          <Field
-            key={f}
-            fieldKey={f}
-            value={data[f] ?? ""}
-            readOnly={readOnly}
-            onChange={(v) => onChange({ ...data, [f]: v })}
-          />
-        ))}
-      </div>
-      {!readOnly && (
-        <p className="text-xs text-muted-foreground">
-          Profile photo is updated from the summary card at the top of this page.
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Personal Details — adds motherName, caste, casteCategory
-// ---------------------------------------------------------------------------
 const PERSONAL_DETAIL_FIELDS = [
   "dateOfBirth",
   "actualDateOfBirth",
@@ -690,51 +539,897 @@ const PERSONAL_DETAIL_FIELDS = [
   "spouseName",
 ];
 
-// ---------------------------------------------------------------------------
-// Employment — adds subDepartment, gradeBand, joiningDate, confirmationDate, probationStatus, employeeStatus
-// ---------------------------------------------------------------------------
-const EMPLOYMENT_FIELDS = [
-  "department",
-  "subDepartment",
-  "designation",
-  "employmentType",
-  "employeeCategory",
-  "gradeBand",
-  "workLocation",
-  "shift",
-  "joiningDate",
-  "confirmationDate",
-  "probationStatus",
-  "noticePeriod",
-  "employeeStatus",
-  "reportingManager",
-  "functionalManager",
-  "hrPartner",
+const ADDRESS_FIELDS = [
+  "addressLine1",
+  "addressLine2",
+  "landmark",
+  "city",
+  "state",
+  "country",
+  "pincode",
 ];
 
-// ---------------------------------------------------------------------------
-// Main Page
-// ---------------------------------------------------------------------------
+function EmployeeProfileCombined({
+  profile,
+  personalDetails,
+  addresses,
+  editingSection,
+  draft,
+  onEditProfile,
+  onEditPersonal,
+  onEditAddress,
+  setDraft,
+  pendingSections,
+}: {
+  profile: Record<string, unknown>;
+  personalDetails: Record<string, unknown>;
+  addresses: Record<string, Record<string, unknown>>;
+  editingSection: SectionKey | null;
+  draft: unknown;
+  onEditProfile: () => void;
+  onEditPersonal: () => void;
+  onEditAddress: () => void;
+  setDraft: (v: unknown) => void;
+  pendingSections: string[];
+}) {
+  const profileData = editingSection === "profile" ? (draft as Record<string, unknown>) : profile;
+  const personalData =
+    editingSection === "personalDetails"
+      ? (draft as Record<string, unknown>)
+      : personalDetails;
+  const addrData =
+    editingSection === "addresses"
+      ? (draft as Record<string, Record<string, unknown>>)
+      : addresses;
 
-function getDifferences(oldObj: any, newObj: any, prefix = ''): any[] {
-  let diffs: any[] = [];
+  return (
+    <div className="space-y-4">
+      {/* Basic Information */}
+      <SubSectionCard
+        title="Basic Information"
+        onEdit={onEditProfile}
+        isEditing={editingSection === "profile"}
+        isPending={pendingSections.includes("profile")}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {PROFILE_BASIC_FIELDS.map((f) => (
+            <Field
+              key={f}
+              fieldKey={f}
+              value={profileData[f] ?? ""}
+              readOnly={editingSection !== "profile"}
+              onChange={(v) => setDraft({ ...(profileData as object), [f]: v })}
+            />
+          ))}
+        </div>
+        {editingSection === "profile" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-border">
+            <FileUploadField label="Profile Photo" readOnly={false} />
+            <FileUploadField label="Signature Upload" readOnly={false} />
+          </div>
+        )}
+      </SubSectionCard>
+
+      {/* Personal Details */}
+      <SubSectionCard
+        title="Personal Details"
+        onEdit={onEditPersonal}
+        isEditing={editingSection === "personalDetails"}
+        isPending={pendingSections.includes("personalDetails")}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {PERSONAL_DETAIL_FIELDS.map((f) => (
+            <Field
+              key={f}
+              fieldKey={f}
+              value={personalData[f] ?? ""}
+              readOnly={editingSection !== "personalDetails"}
+              onChange={(v) => setDraft({ ...(personalData as object), [f]: v })}
+            />
+          ))}
+        </div>
+      </SubSectionCard>
+
+      {/* Address Details */}
+      <SubSectionCard
+        title="Address & Emergency Contact"
+        onEdit={onEditAddress}
+        isEditing={editingSection === "addresses"}
+        isPending={pendingSections.includes("addresses")}
+      >
+        <div className="space-y-4">
+          {Object.entries(addrData)
+            .filter(([type]) => type !== "temporary")
+            .map(([addrType, values]) => (
+              <div key={addrType}>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 capitalize">
+                  {addrType} Address
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {ADDRESS_FIELDS.map((f) => (
+                    <Field
+                      key={`${addrType}-${f}`}
+                      fieldKey={f}
+                      value={values[f] ?? ""}
+                      readOnly={editingSection !== "addresses"}
+                      onChange={(v) => {
+                        if (editingSection !== "addresses") return;
+                        setDraft({
+                          ...(addrData as object),
+                          [addrType]: { ...addrData[addrType], [f]: v },
+                        });
+                      }}
+                    />
+                  ))}
+                  {addrType === "current" && (
+                    <Field
+                      fieldKey="sameAsPermanent"
+                      value={values["sameAsPermanent"] ?? false}
+                      readOnly={editingSection !== "addresses"}
+                      onChange={(v) => {
+                        if (editingSection !== "addresses") return;
+                        setDraft({
+                          ...(addrData as object),
+                          [addrType]: { ...addrData[addrType], sameAsPermanent: v },
+                        });
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          {/* Emergency Contact */}
+          <div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+              Emergency Contact
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {["emergencyContactName", "emergencyContactRelation", "emergencyContactNumber"].map(
+                (f) => (
+                  <Field
+                    key={f}
+                    fieldKey={f}
+                    value={(addrData["communication"] ?? {})[f] ?? ""}
+                    readOnly={editingSection !== "addresses"}
+                    onChange={(v) => {
+                      if (editingSection !== "addresses") return;
+                      setDraft({
+                        ...(addrData as object),
+                        communication: {
+                          ...(addrData["communication"] ?? {}),
+                          [f]: v,
+                        },
+                      });
+                    }}
+                  />
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </SubSectionCard>
+    </div>
+  );
+}
+
+// ─── Passport & Visa Section ─────────────────────────────────────────────────
+
+const PASSPORT_FIELDS = [
+  "passportNumber",
+  "passportHolderName",
+  "issueDate",
+  "expiryDate",
+  "placeOfIssue",
+  "countryOfIssue",
+  "passportCategory",
+  "passportStatus",
+];
+const VISA_FIELDS = [
+  "visaType",
+  "visaNumber",
+  "visaCountry",
+  "visaSponsor",
+  "visaIssueDate",
+  "visaExpiryDate",
+  "visaStatus",
+];
+
+function PassportVisaSection({
+  data,
+  readOnly,
+  onChange,
+}: {
+  data: Record<string, unknown>;
+  readOnly: boolean;
+  onChange: (v: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border p-4">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Passport Details
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {PASSPORT_FIELDS.map((f) => (
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={readOnly}
+              onChange={(v) => onChange({ ...data, [f]: v })}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="rounded-xl border border-border p-4">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Visa Details
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {VISA_FIELDS.map((f) => (
+            <Field
+              key={f}
+              fieldKey={f}
+              value={data[f] ?? ""}
+              readOnly={readOnly}
+              onChange={(v) => onChange({ ...data, [f]: v })}
+            />
+          ))}
+        </div>
+      </div>
+      {!readOnly && (
+        <div className="rounded-xl border border-border p-4 space-y-3">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Uploads
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <FileUploadField label="Passport Front" readOnly={false} />
+            <FileUploadField label="Passport Back" readOnly={false} />
+            <FileUploadField label="Visa Copy" readOnly={false} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Bank / PF / ESI (View Only) ─────────────────────────────────────────────
+
+function BankPfEsiSection({ data }: { data: Record<string, unknown> }) {
+  const bankAccounts = (data?.bankAccounts ?? []) as Record<string, unknown>[];
+  const statutoryFields = [
+    { label: "PAN Number", key: "panNumber" },
+    { label: "Aadhaar Number", key: "aadhaarNumber" },
+    { label: "UAN Number", key: "uanNumber" },
+    { label: "ESIC Number", key: "esicNumber" },
+    { label: "PF Number", key: "pfNumber" },
+    { label: "Professional Tax No.", key: "professionalTaxNumber" },
+    { label: "Tax Regime", key: "taxRegime" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border p-4 space-y-1">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Bank Accounts
+        </p>
+        {bankAccounts.length === 0 && (
+          <p className="text-sm text-muted-foreground">No bank accounts on record.</p>
+        )}
+        {bankAccounts.map((acc, i) => (
+          <div
+            key={i}
+            className="rounded-lg bg-secondary/60 px-4 py-3 flex flex-wrap gap-x-6 gap-y-1.5"
+          >
+            <InfoRow label="Bank" value={String(acc.bankName ?? "")} />
+            <InfoRow label="Account No." value={maskSensitive("accountNumber", String(acc.accountNumber ?? ""))} />
+            <InfoRow label="IFSC" value={String(acc.ifscCode ?? "")} />
+            <InfoRow label="Type" value={String(acc.accountType ?? "")} />
+            {Boolean(acc.isPrimary) && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-foreground text-primary-foreground uppercase tracking-wider self-start mt-1">
+                Primary
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="rounded-xl border border-border p-4">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Statutory Details
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0.5">
+          {statutoryFields.map(({ label, key }) => (
+            <InfoRow key={key} label={label} value={maskSensitive(key, String(data[key] ?? ""))} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Employee Salary (View Only) ─────────────────────────────────────────────
+
+function EmployeeSalarySection() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border p-5">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Compensation Overview
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { label: "Pay Grade", value: MOCK_SALARY.grade },
+            { label: "Annual CTC", value: MOCK_SALARY.ctcAnnual },
+            { label: "Net Monthly Take-Home", value: MOCK_SALARY.netMonthlyTakeHome },
+            { label: "Last Increment", value: `${MOCK_SALARY.lastIncrementDate} (${MOCK_SALARY.lastIncrementPercent})` },
+            { label: "Next Review", value: MOCK_SALARY.nextReviewDate },
+            { label: "Payment Mode", value: MOCK_SALARY.paymentMode },
+          ].map(({ label, value }) => (
+            <div key={label} className="space-y-1">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
+              <p className="text-sm font-semibold text-foreground">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border p-5">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Monthly Breakdown
+        </p>
+        <div className="space-y-1">
+          {[
+            { label: "Basic Pay", value: MOCK_SALARY.basicMonthly, type: "earning" },
+            { label: "HRA", value: MOCK_SALARY.hraMonthly, type: "earning" },
+            { label: "Special Allowance", value: MOCK_SALARY.specialAllowanceMonthly, type: "earning" },
+            { label: "PF Deduction", value: `– ${MOCK_SALARY.pfDeductionMonthly}`, type: "deduction" },
+            { label: "Professional Tax", value: `– ${MOCK_SALARY.professionalTaxMonthly}`, type: "deduction" },
+          ].map(({ label, value, type }) => (
+            <div
+              key={label}
+              className="flex items-center justify-between py-2 border-b border-border/60 last:border-0"
+            >
+              <span className="text-sm text-foreground">{label}</span>
+              <span
+                className={`text-sm font-semibold ${
+                  type === "deduction" ? "text-destructive" : "text-foreground"
+                }`}
+              >
+                {value}
+              </span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between py-2.5 mt-1 bg-secondary rounded-lg px-3">
+            <span className="text-sm font-bold text-foreground">Net Take-Home</span>
+            <span className="text-sm font-bold text-foreground">{MOCK_SALARY.netMonthlyTakeHome}</span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center">
+        Salary details are maintained by HR. Contact HR to raise a revision query.
+      </p>
+    </div>
+  );
+}
+
+// ─── Access Card Details (View Only) ─────────────────────────────────────────
+
+function AccessCardSection() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border p-5">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+              Card Number
+            </p>
+            <p className="text-base font-bold text-foreground font-mono">
+              {MOCK_ACCESS_CARD.cardNumber}
+            </p>
+          </div>
+          <span
+            className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider border ${
+              MOCK_ACCESS_CARD.status === "Active"
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                : "bg-destructive/10 text-destructive border-destructive/20"
+            }`}
+          >
+            {MOCK_ACCESS_CARD.status}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+          <InfoRow label="Card Type" value={MOCK_ACCESS_CARD.cardType} />
+          <InfoRow label="Issued On" value={MOCK_ACCESS_CARD.issuedOn} />
+          <InfoRow label="Valid Till" value={MOCK_ACCESS_CARD.validTill} />
+          <InfoRow label="Issuing Authority" value={MOCK_ACCESS_CARD.issuerName} />
+          <InfoRow label="Last Used" value={MOCK_ACCESS_CARD.lastUsed} />
+          <InfoRow label="Last Location" value={MOCK_ACCESS_CARD.lastLocation} />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border p-5">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          Access Zones
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {MOCK_ACCESS_CARD.accessZones.map((zone) => (
+            <span
+              key={zone}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground"
+            >
+              {zone}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center">
+        For card replacement or zone access changes, raise a request with the IT/Security team.
+      </p>
+    </div>
+  );
+}
+
+// ─── Asset Management (View Only) ────────────────────────────────────────────
+
+function AssetManagementSection({ data }: { data: Record<string, unknown>[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="py-10 text-center">
+        <p className="text-sm text-muted-foreground">No assets assigned to you currently.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {data.map((asset, i) => (
+        <div key={i} className="rounded-xl border border-border p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                {String(asset.assetName || asset.assetType || `Asset ${i + 1}`)}
+              </p>
+              <p className="text-xs text-muted-foreground font-mono">{String(asset.assetTag || "")}</p>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-secondary border border-border text-muted-foreground uppercase">
+              {String(asset.assetCondition || "—")}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
+            <InfoRow label="Serial No." value={String(asset.deviceSerialNumber || "—")} />
+            <InfoRow label="Assigned" value={String(asset.assignedDate || "—")} />
+            <InfoRow label="Due Date" value={String(asset.dueDate || "—")} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Employee Documents Section ───────────────────────────────────────────────
+
+function EmployeeDocumentsSection({
+  docs,
+  readOnly,
+  onChange,
+}: {
+  docs: Partial<Record<string, EmployeeDocumentMeta>>;
+  readOnly: boolean;
+  onChange: (next: Partial<Record<string, EmployeeDocumentMeta>>) => void;
+}) {
+  const allTypes = useSelector(selectActiveDocumentTypes);
+  // In edit mode restrict to employee-editable types; in view mode show everything
+  const documentTypes = useMemo(
+    () => (readOnly ? allTypes : allTypes.filter((t) => t.allowEmployeeEdit)),
+    [allTypes, readOnly]
+  );
+  return (
+    <EmployeeDocumentsGrid
+      documentTypes={documentTypes}
+      docs={docs}
+      isEditing={!readOnly}
+      onChange={onChange}
+    />
+  );
+}
+
+// ─── My Request Section (Full Redesign) ──────────────────────────────────────
+
+function MyRequestSection({
+  requests,
+  onCreateRequest,
+  pendingSections,
+}: {
+  requests: {
+    id: string;
+    section: string;
+    sectionLabel: string;
+    status: string;
+    createdAt?: string;
+    changes?: { fieldLabel: string; oldValue: unknown; newValue: unknown }[];
+  }[];
+  onCreateRequest: (section: string, description: string) => void;
+  pendingSections: string[];
+}) {
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formSection, setFormSection] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+
+  const counts = useMemo(() => {
+    const total = requests.length;
+    const pending = requests.filter((r) => r.status === "pending").length;
+    const approved = requests.filter((r) => r.status === "approved").length;
+    const rejected = requests.filter((r) => r.status === "rejected").length;
+    return { total, pending, approved, rejected };
+  }, [requests]);
+
+  const filtered = useMemo(() => {
+    if (filter === "all") return requests;
+    return requests.filter((r) => r.status === filter);
+  }, [requests, filter]);
+
+  const handleSubmit = () => {
+    if (!formSection) return;
+    onCreateRequest(formSection, formDescription);
+    setShowForm(false);
+    setFormSection("");
+    setFormDescription("");
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total", value: counts.total, tone: "neutral" },
+          { label: "Pending", value: counts.pending, tone: "warning" },
+          { label: "Approved", value: counts.approved, tone: "success" },
+          { label: "Rejected", value: counts.rejected, tone: "danger" },
+        ].map(({ label, value, tone }) => (
+          <div
+            key={label}
+            className="rounded-xl border border-border bg-card px-4 py-3 space-y-1"
+          >
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              {label}
+            </p>
+            <p
+              className={`text-xl font-bold ${
+                tone === "warning"
+                  ? "text-amber-600"
+                  : tone === "success"
+                  ? "text-emerald-600"
+                  : tone === "danger"
+                  ? "text-destructive"
+                  : "text-foreground"
+              }`}
+            >
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter + Action Bar */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
+          {(["all", "pending", "approved", "rejected"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold capitalize transition-all ${
+                filter === f
+                  ? "bg-card text-foreground shadow-sm border border-border"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="h-8 px-4 rounded-lg bg-foreground text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity"
+        >
+          {showForm ? "Cancel" : "+ Raise Request"}
+        </button>
+      </div>
+
+      {/* New Request Form */}
+      {showForm && (
+        <div className="rounded-xl border border-foreground/20 bg-card p-5 space-y-4">
+          <h4 className="text-sm font-bold text-foreground">Raise a New Edit Request</h4>
+          <div className="space-y-3">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Section to Update
+              </span>
+              <select
+                value={formSection}
+                onChange={(e) => setFormSection(e.target.value)}
+                className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              >
+                <option value="">— Select a section —</option>
+                {TAB_SECTIONS.filter(
+                  (s) => s.mode !== "view-only" && s.mode !== "requests"
+                ).map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Describe the Change
+              </span>
+              <textarea
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                rows={3}
+                placeholder="Describe what needs to be updated and why..."
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-foreground/20"
+              />
+            </label>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={handleSubmit}
+                disabled={!formSection}
+                className="h-9 px-5 rounded-lg bg-foreground text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Submit Request
+              </button>
+              <button
+                onClick={() => setShowForm(false)}
+                className="h-9 px-4 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-secondary transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending warning */}
+      {pendingSections.length > 0 && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-700 font-medium">
+          {pendingSections.length} section(s) have pending approval requests and cannot be edited
+          until resolved.
+        </div>
+      )}
+
+      {/* Request List */}
+      {filtered.length === 0 ? (
+        <div className="py-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            {filter === "all"
+              ? 'No requests submitted yet. Use the "+ Raise Request" button to create one.'
+              : `No ${filter} requests found.`}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((req) => {
+            const isExpanded = expandedId === req.id;
+            const statusStyle =
+              req.status === "approved"
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                : req.status === "rejected"
+                ? "bg-destructive/10 text-destructive border-destructive/20"
+                : "bg-amber-500/10 text-amber-600 border-amber-500/20";
+
+            return (
+              <div
+                key={req.id}
+                className="rounded-xl border border-border bg-card overflow-hidden"
+              >
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : req.id)}
+                  className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-secondary/40 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                      <svg
+                        className="w-4 h-4 text-muted-foreground"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {req.sectionLabel}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {req.createdAt
+                          ? new Date(req.createdAt).toLocaleString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${statusStyle} ${
+                        req.status === "pending" ? "animate-pulse" : ""
+                      }`}
+                    >
+                      {req.status}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-muted-foreground transition-transform ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-border pt-3 space-y-2">
+                    {req.changes && req.changes.length > 0 ? (
+                      <>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                          Field Changes
+                        </p>
+                        {req.changes.map((change, ci) => (
+                          <div
+                            key={ci}
+                            className="rounded-lg bg-secondary/60 px-3 py-2 text-xs space-y-1"
+                          >
+                            <p className="font-bold text-foreground">{change.fieldLabel}</p>
+                            <div className="flex gap-4">
+                              <span className="text-muted-foreground">
+                                Before:{" "}
+                                <span className="text-foreground">
+                                  {String(change.oldValue || "—")}
+                                </span>
+                              </span>
+                              <span className="text-muted-foreground">
+                                After:{" "}
+                                <span className="font-semibold text-foreground">
+                                  {String(change.newValue || "—")}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        No field-level change details available.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Education Entries Template ──────────────────────────────────────────────
+
+const EDUCATION_TEMPLATE = {
+  id: "",
+  qualification: "",
+  degree: "",
+  specialization: "",
+  institutionName: "",
+  boardUniversity: "",
+  passingYear: "",
+  percentageCgpa: "",
+  grade: "",
+  courseType: "",
+  duration: "",
+};
+
+const FAMILY_TEMPLATE = {
+  id: "",
+  familyMemberName: "",
+  relationship: "",
+  dateOfBirth: "",
+  gender: "",
+  bloodGroup: "",
+  contactNumber: "",
+  occupation: "",
+  dependentStatus: "",
+  emergencyContact: false,
+};
+
+const NOMINEE_TEMPLATE = {
+  id: "",
+  nomineeName: "",
+  relationship: "",
+  dateOfBirth: "",
+  sharePercentage: "",
+  contactNumber: "",
+  address: "",
+};
+
+const INSURANCE_TEMPLATE = {
+  id: "",
+  policyNumber: "",
+  provider: "",
+  policyType: "",
+  coverageAmount: "",
+  startDate: "",
+  endDate: "",
+  nomineeName: "",
+};
+
+const WORK_EXP_TEMPLATE = {
+  id: "",
+  companyName: "",
+  jobTitle: "",
+  startDate: "",
+  endDate: "",
+  totalExperience: "",
+  reasonForLeaving: "",
+  currentlyWorking: false,
+  hrContact: "",
+};
+
+// ─── getDifferences helper ────────────────────────────────────────────────────
+
+function getDifferences(oldObj: unknown, newObj: unknown, prefix = ""): { fieldName: string; fieldLabel: string; oldValue: unknown; newValue: unknown }[] {
+  let diffs: { fieldName: string; fieldLabel: string; oldValue: unknown; newValue: unknown }[] = [];
   if (!oldObj || !newObj) return diffs;
-  for (let key in newObj) {
+  for (const key in newObj as Record<string, unknown>) {
     const fullKey = prefix ? `${prefix}.${key}` : key;
-    if (typeof newObj[key] === 'object' && newObj[key] !== null && !Array.isArray(newObj[key])) {
-      diffs = diffs.concat(getDifferences(oldObj[key] || {}, newObj[key], fullKey));
-    } else if (Array.isArray(newObj[key])) {
-      if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
-        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: 'List Changed', newValue: 'List Changed' });
+    const nv = (newObj as Record<string, unknown>)[key];
+    const ov = (oldObj as Record<string, unknown>)[key];
+    if (typeof nv === "object" && nv !== null && !Array.isArray(nv)) {
+      diffs = diffs.concat(getDifferences(ov ?? {}, nv, fullKey));
+    } else if (Array.isArray(nv)) {
+      if (JSON.stringify(ov) !== JSON.stringify(nv)) {
+        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: "List Changed", newValue: "List Changed" });
       }
     } else {
-      if (oldObj[key] !== newObj[key]) {
-        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: oldObj[key], newValue: newObj[key] });
+      if (ov !== nv) {
+        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: ov, newValue: nv });
       }
     }
   }
   return diffs;
 }
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+const DIRECT_SYNC_SECTIONS = new Set<SectionKey>([
+  "profile",
+  "personalDetails",
+  "addresses",
+  "nomineeDetails",
+  "languageDetails",
+]);
 
 export function EmployeeProfilePage() {
   const { user } = useAuth();
@@ -742,36 +1437,31 @@ export function EmployeeProfilePage() {
   const dispatch = useDispatch<AppDispatch>();
   const profile = useSelector((state: RootState) => state.employee.profile);
   const status = useSelector((state: RootState) => state.employee.status);
-  const requests = useSelector((state: RootState) => state.requests.requests);
+  const requestsState = useSelector((state: RootState) => state.requests.requests);
 
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
-  const [draft, setDraft] = useState<any>(null);
+  const [draft, setDraft] = useState<unknown>(null);
   const [banner, setBanner] = useState<BannerState>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("profile");
+  const [activeTab, setActiveTab] = useState("employeeProfile");
 
-  const uniqueSections = useMemo(() => {
-    const combined = [...ESS_SECTIONS, ...EXTRA_SECTIONS];
-    const seen = new Set();
-    const result = combined.filter((section) => {
-      if (seen.has(section.key)) return false;
-      seen.add(section.key);
-      return true;
-    }).map(s => {
-      if (s.key === "assets") {
-        return { ...s, label: "Assets" };
-      }
-      return s;
-    });
+  const pendingSections = useMemo(
+    () => Array.from(new Set(requestsState.filter((r) => r.status === "pending").map((r) => r.section))),
+    [requestsState]
+  );
 
-    result.push({ key: "requests", label: "My Requests", editable: false, optional: false });
-    result.push({ key: "notifications", label: "Notifications Hub", editable: false, optional: false });
-    return result;
-  }, []);
-
-  const pendingSections = useMemo(() => {
-    return Array.from(new Set(requests.filter(r => r.status === 'pending').map(r => r.section)));
-  }, [requests]);
+  const formattedRequests = useMemo(
+    () =>
+      requestsState.map((r) => ({
+        id: r.id,
+        section: r.section,
+        sectionLabel: r.sectionLabel ?? r.section,
+        status: r.status,
+        createdAt: r.createdAt,
+        changes: r.changes ?? [],
+      })),
+    [requestsState]
+  );
 
   useEffect(() => {
     dispatch(fetchEmployeeData(employeeId));
@@ -781,10 +1471,11 @@ export function EmployeeProfilePage() {
   const beginEdit = (section: SectionKey) => {
     if (!profile) return;
     setEditingSection(section);
+    const storeKey = getStoreKey(section);
     const base =
-      section === "documentsRepository"
-        ? (profile as any).employeeDocuments ?? {}
-        : (profile as any)[section] ?? {};
+      storeKey === "documentsRepository"
+        ? (profile as unknown as Record<string, unknown>).employeeDocuments ?? {}
+        : (profile as unknown as Record<string, unknown>)[storeKey] ?? {};
     setDraft(JSON.parse(JSON.stringify(base)));
     setBanner(null);
   };
@@ -796,74 +1487,38 @@ export function EmployeeProfilePage() {
 
   const submitChange = async (section: SectionKey) => {
     if (!profile) return;
+    const storeKey = getStoreKey(section);
     const current =
-      section === "documentsRepository"
-        ? (profile as any).employeeDocuments ?? {}
-        : (profile as any)[section];
+      storeKey === "documentsRepository"
+        ? (profile as unknown as Record<string, unknown>).employeeDocuments ?? {}
+        : (profile as unknown as Record<string, unknown>)[storeKey];
 
     if (isEqualPayload(current, draft)) {
-      setBanner({
-        type: "error",
-        message: "No changes detected. Update at least one field before submitting.",
-      });
+      setBanner({ type: "error", message: "No changes detected. Update at least one field before submitting." });
       return;
     }
 
-    // Existing validations
+    // Validations
     if (section === "profile") {
-      const next = draft as any;
-      if (next.personalEmail && !validateEmail(next.personalEmail)) {
+      const next = draft as Record<string, unknown>;
+      if (next.personalEmail && !validateEmail(String(next.personalEmail))) {
         setBanner({ type: "error", message: "Personal email format is invalid." });
         return;
       }
     }
-
     if (section === "personalDetails") {
-      const next = draft as any;
-      if (next.panNumber && !validatePan(next.panNumber)) {
-        setBanner({
-          type: "error",
-          message: "PAN format is invalid. Expected format: ABCDE1234F.",
-        });
+      const next = draft as Record<string, unknown>;
+      if (next.panNumber && !validatePan(String(next.panNumber))) {
+        setBanner({ type: "error", message: "PAN format is invalid. Expected format: ABCDE1234F." });
         return;
       }
-      if (next.aadhaarNumber && !validateAadhaar(next.aadhaarNumber)) {
+      if (next.aadhaarNumber && !validateAadhaar(String(next.aadhaarNumber))) {
         setBanner({ type: "error", message: "Aadhaar must be a 12-digit number." });
         return;
       }
     }
-
-    if (section === "bankAndStatutoryDetails") {
-      const next = draft as any;
-      if (next.panNumber && !validatePan(next.panNumber)) {
-        setBanner({ type: "error", message: "PAN format is invalid in statutory details." });
-        return;
-      }
-      if (next.aadhaarNumber && !validateAadhaar(next.aadhaarNumber)) {
-        setBanner({
-          type: "error",
-          message: "Aadhaar must be a 12-digit number in statutory details.",
-        });
-        return;
-      }
-      if (
-        next.bankAccounts &&
-        detectDuplicateValues(next.bankAccounts.map((e: any) => e.accountNumber))
-      ) {
-        setBanner({ type: "error", message: "Duplicate bank account numbers are not allowed." });
-        return;
-      }
-      if (next.bankAccounts) {
-        const primaryCount = next.bankAccounts.filter((e: any) => e.isPrimary).length;
-        if (primaryCount > 1) {
-          setBanner({ type: "error", message: "Only one bank account can be marked as primary." });
-          return;
-        }
-      }
-    }
-
     if (section === "nomineeDetails") {
-      const next = draft as any[];
+      const next = draft as Record<string, unknown>[];
       if (Array.isArray(next)) {
         const total = next.reduce((s, e) => s + (Number(e.sharePercentage) || 0), 0);
         if (total > 100) {
@@ -872,8 +1527,7 @@ export function EmployeeProfilePage() {
         }
       }
     }
-
-    if (section === "documentsRepository") {
+    if (storeKey === "documentsRepository") {
       const names = Object.values(draft as Record<string, EmployeeDocumentMeta>)
         .map((m) => m?.fileName)
         .filter(Boolean) as string[];
@@ -884,24 +1538,11 @@ export function EmployeeProfilePage() {
       }
     }
 
-    const DIRECT_SYNC_SECTIONS = new Set<SectionKey>([
-      "profile",
-      "personalDetails",
-      "addresses",
-      "languageDetails",
-      "emergencyAndMedical",
-      "nomineeDetails",
-      "documentsRepository",
-    ]);
-
     if (DIRECT_SYNC_SECTIONS.has(section)) {
       setSubmitting(true);
       try {
-        const payloadKey = section === "documentsRepository" ? "employeeDocuments" : section;
-        const nextProfile = {
-          ...profile,
-          [payloadKey]: draft,
-        } as EmployeeProfile;
+        const payloadKey = storeKey === "documentsRepository" ? "employeeDocuments" : storeKey;
+        const nextProfile = { ...profile, [payloadKey]: draft } as EmployeeProfile;
         await dispatch(saveEssProfileWithAdminSync({ employeeId, profile: nextProfile })).unwrap();
         dispatch(addNotification({ type: "success", message: "Saved and synced with HR records." }));
         setBanner({ type: "success", message: "Your updates were saved successfully." });
@@ -917,450 +1558,278 @@ export function EmployeeProfilePage() {
     try {
       setSubmitting(true);
       const changes = getDifferences(current, draft);
-      const sectionLabel = ESS_SECTIONS.find((s) => s.key === section)?.label || String(section);
-      
-      dispatch(createRequest({
-        employeeId,
-        section,
-        sectionLabel,
-        changes
-      }));
+      const tabSection = TAB_SECTIONS.find(
+        (s) => s.key === activeTab && (s.storeKey === section || s.key === section)
+      );
+      const sectionLabel = tabSection?.label ?? String(section);
+      dispatch(createRequest({ employeeId, section, sectionLabel, changes }));
       setBanner(null);
       cancelEdit();
     } catch (err) {
-      setBanner({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to submit. Try again.",
-      });
+      setBanner({ type: "error", message: err instanceof Error ? err.message : "Failed to submit. Try again." });
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (status === 'loading' || !profile) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading profile...</div>;
+  const handleCreateFreeRequest = (sectionKey: string, _description: string) => {
+    const tabSection = TAB_SECTIONS.find((s) => s.key === sectionKey);
+    if (!tabSection) return;
+    const storeSection = (tabSection.storeKey ?? tabSection.key) as SectionKey;
+    dispatch(createRequest({ employeeId, section: storeSection, sectionLabel: tabSection.label, changes: [] }));
+  };
+
+  if (status === "loading" || !profile) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-64">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+          <span className="text-sm">Loading profile...</span>
+        </div>
+      </div>
+    );
   }
 
-  // Merge static ESS_SECTIONS with extra sections for sidebar + rendering
-  const allSections = uniqueSections;
+  const activeSection = TAB_SECTIONS.find((s) => s.key === activeTab) ?? TAB_SECTIONS[0];
+  const isPending = pendingSections.includes(getStoreKey(activeSection.key) as SectionKey);
 
-  const renderSectionBody = (sectionKey: string, sectionData: unknown, isReadOnly: boolean) => {
-    // ---- Profile ----
-    if (sectionKey === "profile") {
+  // Resolve the section data from the store
+  const storeKey = getStoreKey(activeSection.key);
+  // Employee documents are stored under "employeeDocuments" key in the profile,
+  // not under "documentsRepository"
+  const rawData =
+    storeKey === "documentsRepository"
+      ? ((profile as unknown as Record<string, unknown>).employeeDocuments ?? {})
+      : (profile as unknown as Record<string, unknown>)[storeKey];
+
+  const isEditing = editingSection !== null && (
+    editingSection === storeKey ||
+    // For combined (employeeProfile) tab, any of the sub-sections being edited
+    (activeSection.mode === "combined" &&
+      ["profile", "personalDetails", "addresses"].includes(editingSection))
+  );
+
+  const sectionData = isEditing ? draft : rawData;
+
+  const editingSectionLabel =
+    editingSection === "profile"
+      ? "Basic Information"
+      : editingSection === "personalDetails"
+      ? "Personal Details"
+      : editingSection === "addresses"
+      ? "Address & Emergency Contact"
+      : activeSection.label;
+
+  // Section body renderer
+  const renderSectionBody = () => {
+    // ── Combined Employee Profile ──
+    if (activeSection.mode === "combined") {
       return (
-        <ProfileSection
-          data={sectionData as Record<string, unknown>}
-          readOnly={isReadOnly}
-          onChange={setDraft}
+        <EmployeeProfileCombined
+          profile={(profile as unknown as Record<string, unknown>).profile as Record<string, unknown> ?? {}}
+          personalDetails={(profile as unknown as Record<string, unknown>).personalDetails as Record<string, unknown> ?? {}}
+          addresses={(profile as unknown as Record<string, unknown>).addresses as Record<string, Record<string, unknown>> ?? {}}
+          editingSection={editingSection}
+          draft={draft}
+          onEditProfile={() => beginEdit("profile" as SectionKey)}
+          onEditPersonal={() => beginEdit("personalDetails" as SectionKey)}
+          onEditAddress={() => beginEdit("addresses" as SectionKey)}
+          setDraft={setDraft}
+          pendingSections={pendingSections}
         />
       );
     }
 
-    // ---- Personal Details ----
-    if (sectionKey === "personalDetails") {
-      const data = sectionData as Record<string, unknown>;
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {PERSONAL_DETAIL_FIELDS.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
+    // ── View-only sections ──
+    if (activeSection.key === "bankPfEsi") {
+      return <BankPfEsiSection data={(sectionData as Record<string, unknown>) ?? {}} />;
     }
-
-    // ---- Addresses ----
-    if (sectionKey === "addresses") {
+    if (activeSection.key === "employeeSalary") {
+      return <EmployeeSalarySection />;
+    }
+    if (activeSection.key === "accessCardDetails") {
+      return <AccessCardSection />;
+    }
+    if (activeSection.key === "assetManagement") {
+      return <AssetManagementSection data={(sectionData as Record<string, unknown>[]) ?? []} />;
+    }
+    // ── My Request ──
+    if (activeSection.key === "myRequest") {
       return (
-        <AddressesSection
-          data={sectionData as Record<string, Record<string, unknown>>}
-          readOnly={isReadOnly}
-          onChange={setDraft}
+        <MyRequestSection
+          requests={formattedRequests}
+          onCreateRequest={handleCreateFreeRequest}
+          pendingSections={pendingSections}
         />
       );
     }
 
-    // ---- Employment ----
-    if (sectionKey === "employmentDetails") {
-      const data = sectionData as Record<string, unknown>;
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {EMPLOYMENT_FIELDS.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Bank & Statutory ----
-    if (sectionKey === "bankAndStatutoryDetails") {
-      const data = sectionData as any;
-      const statutoryFields = [
-        "panNumber",
-        "aadhaarNumber",
-        "uanNumber",
-        "esicNumber",
-        "pfNumber",
-        "professionalTaxNumber",
-        "passportNumber",
-        "taxRegime",
-      ];
-      return (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-border p-3 space-y-3">
-            <p className="text-sm font-semibold text-foreground">Bank Accounts</p>
-            <DynamicListEditor
-              rows={(data?.bankAccounts ?? []) as Record<string, unknown>[]}
-              onChange={(rows) => setDraft({ ...data, bankAccounts: rows })}
-              readOnly={isReadOnly}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {statutoryFields.map((f) => (
-              <Field
-                key={f}
-                fieldKey={f}
-                value={data[f] ?? ""}
-                readOnly={isReadOnly}
-                onChange={(v) => setDraft({ ...data, [f]: v })}
-              />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    // ---- Nominee Details ----
-    if (sectionKey === "nomineeDetails") {
+    // ── Employee Documents ──
+    if (activeSection.key === "employeeDocuments") {
+      const isEditingDocs = editingSection === "documentsRepository" || editingSection === ("documentsRepository" as SectionKey);
       return (
         <div className="space-y-3">
-          <DynamicListEditor
-            rows={sectionData as Record<string, unknown>[]}
-            onChange={setDraft}
-            readOnly={isReadOnly}
-          />
-          {!isReadOnly && (
-            <div className="rounded-lg border border-border p-3 space-y-3">
-              <p className="text-sm font-semibold text-foreground">Uploads</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <FileUploadField label="Aadhaar Card" readOnly={isReadOnly} />
-                <FileUploadField label="PAN Card" readOnly={isReadOnly} />
-                <FileUploadField label="Identity Proof" readOnly={isReadOnly} />
-                <FileUploadField label="Relationship Proof" readOnly={isReadOnly} />
-                <FileUploadField label="Supporting Documents" readOnly={isReadOnly} />
-              </div>
+          {!isEditingDocs && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => beginEdit("documentsRepository" as SectionKey)}
+                disabled={isPending}
+                className="h-9 px-4 rounded-lg bg-secondary border border-border text-xs font-bold text-foreground hover:bg-border transition-colors disabled:opacity-50"
+              >
+                Add / Edit Documents
+              </button>
             </div>
           )}
+          <EmployeeDocumentsSection
+            docs={(isEditingDocs ? draft : rawData) as Partial<Record<string, EmployeeDocumentMeta>> ?? {}}
+            readOnly={!isEditingDocs}
+            onChange={(d) => setDraft(d)}
+          />
         </div>
       );
     }
 
-    // ---- Passport & Visa ----
-    if (sectionKey === "passportAndVisa") {
+    // ── Passport & Visa ──
+    if (activeSection.key === "passportVisa") {
+      const isEditingPV = editingSection === "passportAndVisa";
       return (
         <PassportVisaSection
-          data={sectionData as Record<string, unknown>}
-          readOnly={isReadOnly}
+          data={(isEditingPV ? draft : rawData) as Record<string, unknown> ?? {}}
+          readOnly={!isEditingPV}
           onChange={setDraft}
         />
       );
     }
 
-    // ---- Previous Employment ----
-    if (sectionKey === "previousEmployment") {
+    // ── Multi-add sections ──
+    if (activeSection.mode === "multi-add") {
+      const template =
+        activeSection.key === "educationDetails"
+          ? EDUCATION_TEMPLATE
+          : activeSection.key === "familyDetails"
+          ? FAMILY_TEMPLATE
+          : activeSection.key === "nomineeDetails"
+          ? NOMINEE_TEMPLATE
+          : activeSection.key === "insuranceDetails"
+          ? INSURANCE_TEMPLATE
+          : activeSection.key === "workExperience"
+          ? WORK_EXP_TEMPLATE
+          : undefined;
+
+      const storeSection = (activeSection.storeKey ?? activeSection.key) as SectionKey;
+      const isEditingMulti = editingSection === storeSection;
+      const rows = (isEditingMulti ? draft : rawData) as Record<string, unknown>[];
+
       return (
         <div className="space-y-3">
-          <DynamicListEditor
-            rows={sectionData as Record<string, unknown>[]}
-            onChange={setDraft}
-            readOnly={isReadOnly}
-          />
-          {!isReadOnly && (
-            <div className="rounded-lg border border-border p-3 space-y-3">
-              <p className="text-sm font-semibold text-foreground">Uploads</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <FileUploadField label="Experience Letter" readOnly={isReadOnly} />
-                <FileUploadField label="Relieving Letter" readOnly={isReadOnly} />
-                <FileUploadField label="Offer Letter" readOnly={isReadOnly} />
-                <FileUploadField label="Salary Slips" readOnly={isReadOnly} />
-              </div>
+          {!isEditingMulti && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => beginEdit(storeSection)}
+                disabled={isPending}
+                className="h-9 px-4 rounded-lg bg-secondary border border-border text-xs font-bold text-foreground hover:bg-border transition-colors disabled:opacity-50"
+              >
+                + Add / Edit Entries
+              </button>
             </div>
           )}
-        </div>
-      );
-    }
-
-    // ---- Education Details ----
-    if (sectionKey === "educationDetails") {
-      return (
-        <div className="space-y-3">
           <DynamicListEditor
-            rows={sectionData as Record<string, unknown>[]}
+            rows={Array.isArray(rows) ? rows : []}
             onChange={setDraft}
-            readOnly={isReadOnly}
+            readOnly={!isEditingMulti}
+            emptyTemplate={template}
           />
-          {!isReadOnly && (
-            <div className="rounded-lg border border-border p-3 space-y-3">
-              <p className="text-sm font-semibold text-foreground">Uploads</p>
+
+          {/* Uploads for nominee */}
+          {activeSection.key === "nomineeDetails" && isEditingMulti && (
+            <div className="rounded-xl border border-border p-4 space-y-3">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Nominee Documents
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <FileUploadField label="Degree Certificate" readOnly={isReadOnly} />
-                <FileUploadField label="Marksheet" readOnly={isReadOnly} />
-                <FileUploadField label="Leaving Certificate" readOnly={isReadOnly} />
+                <FileUploadField label="Aadhaar Card" readOnly={false} />
+                <FileUploadField label="PAN Card" readOnly={false} />
+                <FileUploadField label="Relationship Proof" readOnly={false} />
               </div>
+            </div>
+          )}
+
+
+          {/* Upload for work experience — experience letter only */}
+          {activeSection.key === "workExperience" && isEditingMulti && (
+            <div className="rounded-xl border border-border p-4 space-y-3">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Supporting Document
+              </p>
+              <FileUploadField label="Experience Letter" readOnly={false} />
             </div>
           )}
         </div>
       );
     }
 
-    // ---- Skills & Certifications ----
-    if (sectionKey === "skillsAndCertifications") {
-      const data = sectionData as {
-        skills: Record<string, unknown>[];
-        certifications: Record<string, unknown>[];
-      };
-      return (
-        <SkillsCertificationsSection data={data} readOnly={isReadOnly} onChange={setDraft} />
-      );
-    }
-
-    // ---- Assets & IT ----
-    if (sectionKey === "assetsAndIT") {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Documents Repository ----
-    if (sectionKey === "documentsRepository") {
-      return (
-        <DocumentsRepositorySection
-          docs={(sectionData as Partial<Record<string, EmployeeDocumentMeta>>) || {}}
-          readOnly={isReadOnly}
-          onChange={(d) => setDraft(d)}
-        />
-      );
-    }
-
-    // ---- Family Details ----
-    if (sectionKey === "familyDetails") {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Emergency & Medical ----
-    if (sectionKey === "emergencyAndMedical") {
-      const data = sectionData as Record<string, unknown>;
-      const fields = [
-        "emergencyContactName",
-        "emergencyContactNumber",
-        "relationship",
-        "medicalConditions",
-        "allergies",
-        "bloodGroup",
-        "doctorName",
-        "insuranceProvider",
-        "insurancePolicyNumber",
-      ];
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {fields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Insurance Details ----
-    if (sectionKey === "insuranceDetails") {
-      const data = sectionData as Record<string, unknown>;
-      const fields = [
-        "policyNumber",
-        "provider",
-        "policyType",
-        "coverageAmount",
-        "startDate",
-        "endDate",
-        "nomineeName",
-      ];
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {fields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Language Details ----
-    if (sectionKey === "languageDetails") {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Social & Professional Profiles ----
-    if (sectionKey === "socialProfiles") {
-      const data = sectionData as Record<string, unknown>;
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {["linkedin", "github", "portfolioWebsite", "personalWebsite"].map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Generic fallback (array) ----
-    if (Array.isArray(sectionData)) {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Generic fallback (flat object) ----
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {Object.entries(sectionData as Record<string, unknown>).map(([f, v]) => (
-          <Field
-            key={f}
-            fieldKey={f}
-            value={v}
-            readOnly={isReadOnly}
-            onChange={(nv) =>
-              setDraft({ ...(sectionData as Record<string, unknown>), [f]: nv })
-            }
-          />
-        ))}
+      <div className="py-8 text-center">
+        <p className="text-sm text-muted-foreground">No content available for this section.</p>
       </div>
     );
   };
 
-  const selectedSection = allSections.find(s => s.key === activeSection) || allSections[0];
-  const isPending = pendingSections.includes(selectedSection.key as SectionKey);
-  const isEditing = editingSection === selectedSection.key;
-  const rawData =
-    selectedSection.key === "documentsRepository"
-      ? (profile as any).employeeDocuments ?? {}
-      : (profile as any)[selectedSection.key];
-  const sectionData = isEditing ? draft : rawData;
-  const isReadOnly = !isEditing || !selectedSection.editable;
-
-  // Skip rendering sections with no data and optional flag (clean UX)
-  const isEmpty =
-    sectionData === undefined ||
-    sectionData === null ||
-    (Array.isArray(sectionData) && sectionData.length === 0) ||
-    (typeof sectionData === "object" &&
-      !Array.isArray(sectionData) &&
-      Object.keys(sectionData as object).length === 0);
-
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto pb-28 relative">
-      {/* Hero Profile Header Card */}
+      {/* Profile Header Card */}
       <EssProfileHeaderCard employeeId={employeeId} profile={profile} />
 
-      {/* Main container */}
+      {/* Main Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Mobile Dropdown */}
+        {/* Mobile Select */}
         <div className="lg:hidden w-full">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Select Section</label>
           <select
-            value={activeSection}
-            onChange={(e) => setActiveSection(e.target.value)}
-            className="w-full h-11 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-sm focus:outline-none"
+            value={activeTab}
+            onChange={(e) => { cancelEdit(); setActiveTab(e.target.value); }}
+            className="w-full h-11 rounded-xl border border-border bg-card px-3 text-sm text-foreground focus:outline-none"
           >
-            {allSections.map((section) => (
-              <option key={section.key} value={section.key}>
-                {section.label}
-              </option>
+            {TAB_SECTIONS.map((s) => (
+              <option key={s.key} value={s.key}>{s.label}</option>
             ))}
           </select>
         </div>
 
-        {/* Sidebar Navigation */}
-        <aside className="w-64 min-w-[256px] hidden lg:block bg-card border border-border rounded-xl p-3 space-y-1 sticky top-6 shadow-sm">
-          <p className="px-3 pb-3 pt-2 text-[10px] uppercase tracking-widest text-muted-foreground font-bold border-b border-border mb-2">
-            Profile Sections
-          </p>
-          <nav className="space-y-0.5">
-            {allSections.map((section) => {
-              const isActive = activeSection === section.key;
-              const isSectionPending = pendingSections.includes(section.key as SectionKey);
+        {/* Sidebar — flat admin-style */}
+        <aside className="w-56 min-w-[224px] hidden lg:block bg-card border border-border rounded-xl overflow-hidden sticky top-6">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+              Employee Sections
+            </p>
+          </div>
+          <nav className="p-2 max-h-[calc(100vh-200px)] overflow-y-auto space-y-0.5">
+            {TAB_SECTIONS.map((section) => {
+              const isActive = activeTab === section.key;
+              const hasPending = pendingSections.includes(getStoreKey(section.key) as SectionKey);
+              const Icon = section.icon;
               return (
                 <button
                   key={section.key}
-                  onClick={() => {
-                    cancelEdit();
-                    setActiveSection(section.key);
-                  }}
-                  className={`w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all relative
-                    ${
-                      isActive
-                        ? "bg-secondary text-foreground font-semibold"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    }`}
+                  onClick={() => { cancelEdit(); setActiveTab(section.key); setBanner(null); }}
+                  className={`w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition-all relative ${
+                    isActive
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
                 >
                   {isActive && (
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
                   )}
-                  <span className="truncate">{section.label}</span>
-                  <div className="flex items-center gap-1">
-                    {section.optional && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
-                        Opt
-                      </span>
+                  <Icon className={`w-[15px] h-[15px] flex-shrink-0 ${isActive ? "text-foreground" : "text-muted-foreground"}`} />
+                  <span className="truncate flex-1 text-[13px]">{section.label}</span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {section.mode === "view-only" && (
+                      <svg className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
                     )}
-                    {isSectionPending && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600 font-bold">
-                        Pending
-                      </span>
+                    {hasPending && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
                     )}
                   </div>
                 </button>
@@ -1369,11 +1838,11 @@ export function EmployeeProfilePage() {
           </nav>
         </aside>
 
-        {/* Right Content Area */}
-        <div className="flex-1 w-full space-y-6">
+        {/* Content Area */}
+        <div className="flex-1 w-full space-y-4">
           {banner && (
             <div
-              className={`rounded-xl px-4 py-3 text-sm border shadow-sm ${
+              className={`rounded-xl px-4 py-3 text-sm border ${
                 banner.type === "success"
                   ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-medium"
                   : "bg-destructive/10 text-destructive border-destructive/20 font-medium"
@@ -1383,92 +1852,70 @@ export function EmployeeProfilePage() {
             </div>
           )}
 
-          {/* Render selected section inside a clean panel */}
-          {selectedSection.key === "requests" ? (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-foreground">My Requests</h2>
-              <p className="text-xs text-muted-foreground">Track all profile modification requests and their approvals status.</p>
-              <MyRequestsTable />
-            </div>
-          ) : selectedSection.key === "notifications" ? (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-foreground">Notifications Hub</h2>
-              <p className="text-xs text-muted-foreground">Your recent HR system notifications and alerts.</p>
-              <EmployeeNotificationPanel />
-            </div>
-          ) : (
-            <section className="rounded-xl border border-border bg-card p-6 space-y-6 shadow-sm">
-              <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
+          {/* Section Panel */}
+          <section className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            {/* Section Header */}
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-foreground">{selectedSection.label}</h2>
-                    {selectedSection.optional && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground font-semibold">
-                        Optional
-                      </span>
-                    )}
-                  </div>
+                  <h2 className="text-base font-bold text-foreground">{activeSection.label}</h2>
                   {isPending && (
-                    <p className="text-xs text-amber-600 font-medium mt-1">Pending Approval</p>
+                    <p className="text-xs text-amber-600 font-medium mt-0.5">
+                      Pending approval — editing locked
+                    </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {selectedSection.editable && !isEditing && (
-                    <button
-                      onClick={() => beginEdit(selectedSection.key as SectionKey)}
-                      disabled={isPending}
-                      className="h-9 px-4 rounded-lg bg-secondary text-foreground border border-border text-xs font-bold hover:bg-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Edit Section
-                    </button>
-                  )}
-                </div>
+                <AccessBadge mode={activeSection.mode} />
               </div>
 
-              {isEmpty && !isEditing ? (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    No data added yet.
-                  </p>
-                  {selectedSection.editable && (
-                    <button
-                      onClick={() => beginEdit(selectedSection.key as SectionKey)}
-                      className="h-9 px-4 rounded-lg bg-foreground text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity"
-                    >
-                      Add data now
-                    </button>
-                  )}
-                </div>
-              ) : (
-                renderSectionBody(selectedSection.key, sectionData, isReadOnly)
-              )}
-            </section>
-          )}
+              {/* Header actions for non-combined, non-view, non-requests sections */}
+              {activeSection.mode === "edit" &&
+                activeSection.key !== "passportVisa" &&
+                activeSection.key !== "employeeDocuments" && (
+                  <button
+                    onClick={() =>
+                      beginEdit((activeSection.storeKey ?? activeSection.key) as SectionKey)
+                    }
+                    disabled={isPending || editingSection !== null}
+                    className="h-9 px-4 rounded-lg bg-secondary border border-border text-xs font-bold text-foreground hover:bg-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    Edit
+                  </button>
+                )}
+            </div>
+
+            {/* Section Body */}
+            <div className="p-6">{renderSectionBody()}</div>
+          </section>
         </div>
       </div>
 
-      {/* Sticky Bottom Action Bar */}
+      {/* Sticky Save Bar (appears when editing) */}
       {isEditing && (
-        <div className="fixed bottom-0 left-0 right-0 h-20 bg-card/85 backdrop-blur-xl border-t border-border flex items-center justify-between px-8 z-40 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 h-[68px] bg-card/90 backdrop-blur-xl border-t border-border flex items-center justify-between px-8 z-40">
           <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-foreground animate-pulse shadow-[0_0_8px_rgba(0,0,0,0.2)]" />
+            <div className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
             <span className="text-xs font-bold text-foreground">
-              Editing {selectedSection.label}
+              Editing — {editingSectionLabel}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={cancelEdit}
-              className="h-10 px-5 rounded-xl border border-border text-xs font-bold hover:bg-secondary transition-colors"
+              className="h-9 px-5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
             >
               Cancel
             </button>
             <button
-              onClick={() => submitChange(selectedSection.key as SectionKey)}
+              onClick={() =>
+                submitChange(
+                  (editingSection ?? (activeSection.storeKey ?? activeSection.key)) as SectionKey
+                )
+              }
               disabled={submitting}
-              className="h-10 px-5 bg-foreground text-primary-foreground rounded-xl text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+              className="h-9 px-5 bg-foreground text-primary-foreground rounded-lg text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {submitting ? "Submitting..." : "Save Changes"}
+              {submitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
