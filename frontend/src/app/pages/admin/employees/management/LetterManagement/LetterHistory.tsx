@@ -43,10 +43,11 @@ interface LetterHistoryProps {
   onRepublish: (batch: LetterBatch) => void;
   onDuplicate: (batch: LetterBatch) => void;
   onDeleteBatch?: (id: string) => void;
+  onEditBatch?: (batch: LetterBatch) => void;
   batches: LetterBatch[];
 }
 
-export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplicate, onDeleteBatch, batches }: LetterHistoryProps) {
+export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplicate, onDeleteBatch, onEditBatch, batches }: LetterHistoryProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<LetterStatus | "All">("All");
 
@@ -185,29 +186,21 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
                       <span className="text-xs font-bold text-muted-foreground">{batch.createdBy}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="pr-8 text-right">
-                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
-                        onClick={() => onViewDetails(batch)}
-                        >
-                          <Eye size={14} />
-                        </Button>
-                        <KebabMenu 
-                          items={[
-                            { label: "Preview Letter", icon: FileText, onClick: () => onPreview(batch) },
-                            { label: "Download PDF", icon: Download, onClick: () => handleAction("Download PDF", batch) },
-                            { label: "Download ZIP", icon: FileArchive, onClick: () => handleAction("Download ZIP", batch) },
-                            { label: "Export Metadata", icon: FileSpreadsheet, separator: true, onClick: () => handleAction("Export Metadata", batch) },
-                            { label: "Re-publish", icon: RefreshCw, onClick: () => onRepublish(batch) },
-                            { label: "Duplicate", icon: Copy, onClick: () => onDuplicate(batch) },
-                            { label: "Cancel Batch", icon: X, separator: true, disabled: batch.status === "Published" || batch.status === "Approved", onClick: () => handleAction("Cancel Batch", batch) },
-                            { label: "Delete Batch", icon: Trash2, variant: "destructive", onClick: () => handleAction("Delete Batch", batch) },
-                          ]}
-                        />
-                      </div>
+                  <TableCell className="pr-8 text-right" onClick={(e) => e.stopPropagation()}>
+                    <KebabMenu 
+                      items={[
+                        { label: "View Details",   icon: Eye,           onClick: () => onViewDetails(batch) },
+                        { label: "Edit Batch",     icon: RefreshCw,     onClick: () => onEditBatch?.(batch) },
+                        { label: "Delete Batch",   icon: Trash2,        variant: "destructive", separator: true, onClick: () => handleAction("Delete Batch", batch) },
+                        { label: "Preview Letter", icon: FileText,      separator: true, onClick: () => onPreview(batch) },
+                        { label: "Download PDF",   icon: Download,      onClick: () => handleAction("Download PDF", batch) },
+                        { label: "Download ZIP",   icon: FileArchive,   onClick: () => handleAction("Download ZIP", batch) },
+                        { label: "Export Metadata",icon: FileSpreadsheet, onClick: () => handleAction("Export Metadata", batch) },
+                        { label: "Re-publish",     icon: RefreshCw,     separator: true, onClick: () => onRepublish(batch) },
+                        { label: "Duplicate",      icon: Copy,          onClick: () => onDuplicate(batch) },
+                        { label: "Cancel Batch",   icon: X,             separator: true, disabled: batch.status === "Published" || batch.status === "Approved", onClick: () => handleAction("Cancel Batch", batch) },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               );
