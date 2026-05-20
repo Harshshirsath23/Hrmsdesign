@@ -100,7 +100,21 @@ export function EducationDetails({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        headerExtra={null}
+        headerExtra={
+          !isEditing && (
+            <button
+              type="button"
+              onClick={() => {
+                setDraft([...baseline, emptyEdu()]);
+                setIsEditing(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add
+            </button>
+          )
+        }
       >
         {formError ? <p className="text-sm text-destructive mb-3">{formError}</p> : null}
         {!draft.length ? (

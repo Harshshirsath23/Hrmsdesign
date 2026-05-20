@@ -203,14 +203,7 @@ export function DocumentTypeModal({ open, onOpenChange, initial, existingIds, on
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.allowEmployeeEdit}
-              onChange={(e) => setForm((f) => ({ ...f, allowEmployeeEdit: e.target.checked }))}
-            />
-            Allow Employee To Edit
-          </label>
+         
 
           <div className="space-y-1.5">
             <Label>Display Order / Sequence</Label>

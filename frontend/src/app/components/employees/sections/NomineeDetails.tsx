@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Users } from "lucide-react";
+import { Users, Plus } from "lucide-react";
 import { Employee, NomineeEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import {
@@ -124,6 +124,11 @@ export function NomineeDetails({ employee }: Props) {
     if (formError) setFormError(null);
   };
 
+  const addNominee = () => {
+    setNominees((rows) => [...rows, emptyNominee()]);
+    setIsEditing(true);
+  };
+
   const displayNominees = isEditing ? nominees : baseline;
 
   return (
@@ -144,6 +149,18 @@ export function NomineeDetails({ employee }: Props) {
         onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
+        headerExtra={
+          !isEditing && (
+            <button
+              type="button"
+              onClick={addNominee}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add
+            </button>
+          )
+        }
       >
         {formError ? (
           <p className="mb-4 text-sm text-destructive font-medium">{formError}</p>

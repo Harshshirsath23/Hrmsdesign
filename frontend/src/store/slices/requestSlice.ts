@@ -119,6 +119,38 @@ export const reviewRequest = createAsyncThunk(
   }
 );
 
+export const updateRequest = createAsyncThunk(
+  'requests/update',
+  async (payload: ProfileRequest, { dispatch }) => {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const reqs = readRequests();
+    const idx = reqs.findIndex(r => r.id === payload.id);
+    if (idx >= 0) {
+      reqs[idx] = { ...reqs[idx], ...payload };
+      writeRequests(reqs);
+      dispatch(addNotification({ type: 'info', message: 'Your request has been updated.' }));
+      return reqs[idx];
+    }
+    throw new Error('Request not found');
+  }
+);
+
+export const withdrawRequest = createAsyncThunk(
+  'requests/withdraw',
+  async ({ requestId }: { requestId: string }, { dispatch }) => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    let reqs = readRequests();
+    const idx = reqs.findIndex(r => r.id === requestId);
+    if (idx >= 0) {
+      const removed = reqs.splice(idx, 1)[0];
+      writeRequests(reqs);
+      dispatch(addNotification({ type: 'info', message: 'Request withdrawn.' }));
+      return removed;
+    }
+    throw new Error('Request not found');
+  }
+);
+
 const requestSlice = createSlice({
   name: 'requests',
   initialState,
@@ -134,6 +166,13 @@ const requestSlice = createSlice({
       })
       .addCase(createRequest.fulfilled, (state, action) => {
         state.requests.unshift(action.payload);
+      })
+      .addCase(updateRequest.fulfilled, (state, action) => {
+        const index = state.requests.findIndex(r => r.id === action.payload.id);
+        if (index >= 0) state.requests[index] = action.payload;
+      })
+      .addCase(withdrawRequest.fulfilled, (state, action) => {
+        state.requests = state.requests.filter(r => r.id !== action.payload.id);
       })
       .addCase(reviewRequest.fulfilled, (state, action) => {
         const index = state.requests.findIndex(r => r.id === action.payload.id);

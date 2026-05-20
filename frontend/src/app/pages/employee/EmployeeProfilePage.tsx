@@ -1,1412 +1,364 @@
-import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { ESS_SECTIONS } from "../../modules/ess/data";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../../../store";
-import { fetchEmployeeData, saveEssProfileWithAdminSync } from "../../../store/slices/employeeSlice";
-import { addNotification } from "../../../store/slices/notificationSlice";
-import { fetchRequests, createRequest } from "../../../store/slices/requestSlice";
-import { MyRequestsTable } from "../../components/employee/MyRequestsTable";
-import { EmployeeNotificationPanel } from "../../components/ui/EmployeeNotificationPanel";
-import { EssProfileHeaderCard } from "../../components/employee/EssProfileHeaderCard";
-import { EmployeeDocumentMeta } from "../../components/employees/mockData";
-import { EmployeeDocumentsGrid } from "../../modules/employees/documentTypes/EmployeeDocumentsGrid";
-import { selectActiveDocumentTypes } from "../../../store/slices/documentTypesSlice";
-import { EmployeeProfile, SectionKey } from "../../modules/ess/types";
 import {
-  detectDuplicateValues,
-  isEqualPayload,
-  maskSensitive,
-  validateAadhaar,
-  validateEmail,
-  validatePan,
-} from "../../modules/ess/utils";
+  User, GraduationCap, Users, ShieldCheck, Building2, Briefcase,
+  CreditCard, Globe, Monitor, Key, FileText, IndianRupee, ChevronRight,
+  Send, CheckCircle2, Lock, Clock, AlertCircle,
+} from "lucide-react";
+import { AppDispatch, RootState } from "../../../store";
+import { fetchEmployeeData } from "../../../store/slices/employeeSlice";
+import { useAuth } from "../../context/AuthContext";
+import { useEssPermissions } from "../../../hooks/useEssPermissions";
 
-type BannerState = { type: "success" | "error"; message: string } | null;
+// Admin section components — reused directly
+import { EssEmployeeProfile } from "../../components/employees/sections/EssEmployeeProfile";
+import { EducationDetails } from "../../components/employees/sections/EducationDetails";
+import { FamilyDetails } from "../../components/employees/sections/FamilyDetails";
+import { NomineeDetails } from "../../components/employees/sections/NomineeDetails";
+import { InsuranceDetails } from "../../components/employees/sections/InsuranceDetails";
+import { WorkExperience } from "../../components/employees/sections/WorkExperience";
+import { PositionHistory } from "../../components/employees/sections/PositionHistory";
+import { BankDetails } from "../../components/employees/sections/BankDetails";
+import { PassportVisa } from "../../components/employees/sections/PassportVisa";
+import { AssetManagement } from "../../components/employees/sections/AssetManagement";
+import { AccessCardDetails } from "../../components/employees/sections/AccessCardDetails";
+import { EmployeeDocumentsSection } from "../../components/employees/sections/EmployeeDocumentsSection";
+import { SalarySummary } from "../../components/employees/sections/SalarySummary";
+import { MyRequestsTable } from "../../components/employee/MyRequestsTable";
+import { EssProfileHeaderCard } from "../../components/employee/EssProfileHeaderCard";
 
-// ---------------------------------------------------------------------------
-// Field label map — extended with all new fields
-// ---------------------------------------------------------------------------
-const FORM_LABELS: Record<string, string> = {
-  // Profile Information
-  employeeId: "Employee ID",
-  employeeCode: "Employee Code",
-  salutation: "Salutation",
-  firstName: "First Name",
-  middleName: "Middle Name",
-  lastName: "Last Name",
-  preferredName: "Preferred Name",
-  profilePhoto: "Profile Photo",
-  officialEmail: "Official Email",
-  personalEmail: "Personal Email",
-  workMobile: "Work Mobile",
-  personalMobile: "Personal Mobile",
-  alternateMobileNumber: "Alternate Mobile Number",
-  extensionNumber: "Extension Number",
-  username: "Username",
-  bio: "Bio / About",
-  signatureUpload: "Signature Upload",
+type SidebarSection =
+  | "profile" | "education" | "family" | "nominee" | "insurance"
+  | "work" | "position" | "bank" | "passport" | "assets"
+  | "access" | "documents" | "salary" | "requests";
 
-  // Personal Details
-  dateOfBirth: "Date of Birth",
-  actualDateOfBirth: "Actual Date of Birth",
-  gender: "Gender",
-  bloodGroup: "Blood Group",
-  maritalStatus: "Marital Status",
-  nationality: "Nationality",
-  religion: "Religion",
-  caste: "Caste",
-  casteCategory: "Caste Category",
-  residentialStatus: "Residential Status",
-  placeOfBirth: "Place of Birth",
-  identificationMark: "Identification Mark",
-  physicallyChallenged: "Physically Challenged",
-  internationalEmployee: "International Employee",
-  fatherName: "Father Name",
-  motherName: "Mother Name",
-  spouseName: "Spouse Name",
-
-  // Contact & Address
-  addressLine1: "Address Line 1",
-  addressLine2: "Address Line 2",
-  landmark: "Landmark",
-  city: "City",
-  state: "State",
-  country: "Country",
-  pincode: "Pincode",
-  startDate: "Start Date",
-  toDate: "To Date",
-  sameAsPermanent: "Same as Permanent Address",
-  emergencyContactName: "Emergency Contact Name",
-  emergencyContactRelation: "Emergency Contact Relation",
-  emergencyContactNumber: "Emergency Contact Number",
-
-  // Employment
-  department: "Department",
-  subDepartment: "Sub Department",
-  designation: "Designation",
-  employmentType: "Employment Type",
-  employeeCategory: "Employee Category",
-  gradeBand: "Grade / Band",
-  workLocation: "Work Location",
-  shift: "Shift",
-  joiningDate: "Joining Date",
-  confirmationDate: "Confirmation Date",
-  probationStatus: "Probation Status",
-  noticePeriod: "Notice Period (Days)",
-  employeeStatus: "Employee Status",
-  reportingManager: "Reporting Manager",
-  functionalManager: "Functional Manager",
-  hrPartner: "HR Partner",
-
-  // Bank & Statutory
-  bankName: "Bank Name",
-  branchName: "Branch Name",
-  ifscCode: "IFSC Code",
-  accountNumber: "Account Number",
-  accountHolderName: "Account Holder Name",
-  accountType: "Account Type",
-  isPrimary: "Primary Account",
-  panNumber: "PAN Number",
-  aadhaarNumber: "Aadhaar Number",
-  uanNumber: "UAN Number",
-  esicNumber: "ESIC Number",
-  pfNumber: "PF Number",
-  professionalTaxNumber: "Professional Tax Number",
-  passportNumber: "Passport Number",
-  taxRegime: "Tax Regime",
-
-  // Nominee
-  nomineeName: "Nominee Name",
-  relationship: "Relationship",
-  sharePercentage: "Share Percentage (%)",
-  contactNumber: "Contact Number",
-  address: "Address",
-  sameAsCurrentAddress: "Same as Current Address",
-  sameAsPermanentAddress: "Same as Permanent Address",
-
-  // Passport & Visa
-  passportHolderName: "Passport Holder Name",
-  issueDate: "Issue Date",
-  expiryDate: "Expiry Date",
-  placeOfIssue: "Place of Issue",
-  countryOfIssue: "Country of Issue",
-  passportCategory: "Passport Category",
-  passportStatus: "Passport Status",
-  visaType: "Visa Type",
-  visaNumber: "Visa Number",
-  visaCountry: "Visa Country",
-  visaSponsor: "Visa Sponsor",
-  visaIssueDate: "Visa Issue Date",
-  visaExpiryDate: "Visa Expiry Date",
-  visaStatus: "Visa Status",
-
-  // Previous Employment
-  companyName: "Company Name",
-  totalExperience: "Total Experience",
-  hrContact: "HR Contact",
-  reasonForLeaving: "Reason for Leaving",
-  currentlyWorking: "Currently Working",
-
-  // Education
-  qualification: "Qualification",
-  degree: "Degree",
-  specialization: "Specialization",
-  institutionName: "Institution Name",
-  boardUniversity: "Board / University",
-  passingYear: "Passing Year",
-  percentageCgpa: "Percentage / CGPA",
-  grade: "Grade",
-  courseType: "Course Type",
-  duration: "Duration",
-
-  // Skills
-  skillName: "Skill Name",
-  skillCategory: "Skill Category",
-  skillLevel: "Skill Level",
-  experienceInSkill: "Experience in Skill",
-
-  // Certifications
-  certificationName: "Certification Name",
-  issuingOrganization: "Issuing Organization",
-  licenseNumber: "License Number",
-  validFrom: "Valid From",
-  validTill: "Valid Till",
-  credentialUrl: "Credential URL",
-
-  // Assets
-  assetTag: "Asset Tag",
-  assetName: "Asset Name",
-  assetType: "Asset Type",
-  deviceSerialNumber: "Device Serial Number",
-  softwareLicenses: "Software Licenses",
-  assignedDate: "Assigned Date",
-  dueDate: "Due Date",
-  assetCondition: "Asset Condition",
-  remarks: "Remarks",
-
-  // Family
-  familyMemberName: "Family Member Name",
-  occupation: "Occupation",
-  dependentStatus: "Dependent Status",
-  emergencyContact: "Emergency Contact",
-
-  // Emergency & Medical
-  medicalConditions: "Medical Conditions",
-  allergies: "Allergies",
-  doctorName: "Doctor Name",
-  insuranceProvider: "Insurance Provider",
-  insurancePolicyNumber: "Insurance Policy Number",
-
-  // Insurance
-  policyNumber: "Policy Number",
-  provider: "Provider",
-  policyType: "Policy Type",
-  coverageAmount: "Coverage Amount",
-  endDate: "End Date",
-
-  // Language
-  language: "Language",
-  proficiencyLevel: "Proficiency Level",
-  canRead: "Can Read",
-  canSpeak: "Can Speak",
-  canWrite: "Can Write",
-
-  // Social
-  linkedin: "LinkedIn",
-  github: "GitHub",
-  portfolioWebsite: "Portfolio Website",
-  personalWebsite: "Personal Website",
-};
-
-// ---------------------------------------------------------------------------
-// Extended ESS_SECTIONS — sections not already in the original data file
-// ---------------------------------------------------------------------------
-const EXTRA_SECTIONS = [
-  { key: "passportAndVisa", label: "Passport & Visa Details", editable: true, optional: true },
-  { key: "previousEmployment", label: "Previous Employment / Work Experience", editable: true, optional: true },
-  { key: "educationDetails", label: "Education Details", editable: true, optional: true },
-  { key: "skillsAndCertifications", label: "Skills & Certifications", editable: true, optional: true },
-  { key: "documentsRepository", label: "Documents Repository", editable: true, optional: true },
-  { key: "familyDetails", label: "Family Details", editable: true, optional: true },
-  { key: "emergencyAndMedical", label: "Emergency & Medical Information", editable: true, optional: true },
-  { key: "socialProfiles", label: "Social & Professional Profiles", editable: true, optional: true },
-] as const;
-
-// ---------------------------------------------------------------------------
-// Field component
-// ---------------------------------------------------------------------------
-function Field({
-  fieldKey,
-  value,
-  readOnly,
-  onChange,
-}: {
-  fieldKey: string;
-  value: unknown;
-  readOnly: boolean;
-  onChange: (value: unknown) => void;
-}) {
-  const label = FORM_LABELS[fieldKey] ?? fieldKey;
-  const stringValue = value === null || value === undefined ? "" : String(value);
-  const isBoolean = typeof value === "boolean";
-  const inputType = fieldKey.toLowerCase().includes("email")
-    ? "email"
-    : fieldKey.toLowerCase().includes("url") ||
-      fieldKey.toLowerCase().includes("website") ||
-      fieldKey.toLowerCase().includes("linkedin") ||
-      fieldKey.toLowerCase().includes("github") ||
-      fieldKey.toLowerCase().includes("portfolio")
-    ? "url"
-    : fieldKey.toLowerCase().includes("date") ||
-      fieldKey.toLowerCase().includes("from") ||
-      fieldKey.toLowerCase().includes("till") ||
-      fieldKey === "joiningDate" ||
-      fieldKey === "confirmationDate"
-    ? "date"
-    : fieldKey.toLowerCase().includes("number") ||
-      fieldKey === "sharePercentage" ||
-      fieldKey === "coverageAmount"
-    ? "text"
-    : "text";
-
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      {isBoolean ? (
-        <input
-          type="checkbox"
-          checked={Boolean(value)}
-          disabled={readOnly}
-          onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 accent-foreground"
-        />
-      ) : (
-        <input
-          type={inputType}
-          value={readOnly ? maskSensitive(fieldKey, stringValue) : stringValue}
-          disabled={readOnly}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground disabled:bg-secondary disabled:text-muted-foreground"
-        />
-      )}
-    </label>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// DynamicListEditor
-// ---------------------------------------------------------------------------
-function DynamicListEditor({
-  rows,
-  onChange,
-  readOnly,
-}: {
-  rows: Record<string, unknown>[];
-  onChange: (rows: Record<string, unknown>[]) => void;
-  readOnly: boolean;
-}) {
-  const columns = rows[0] ? Object.keys(rows[0]).filter((k) => k !== "id") : [];
-
-  return (
-    <div className="space-y-3">
-      {rows.map((row, rowIndex) => (
-        <div
-          key={String(row.id ?? rowIndex)}
-          className="rounded-lg border border-border p-3 grid grid-cols-1 md:grid-cols-2 gap-3"
-        >
-          {columns.map((col) => (
-            <Field
-              key={`${rowIndex}-${col}`}
-              fieldKey={col}
-              value={row[col]}
-              readOnly={readOnly}
-              onChange={(v) => {
-                const next = [...rows];
-                next[rowIndex] = { ...next[rowIndex], [col]: v };
-                onChange(next);
-              }}
-            />
-          ))}
-          {!readOnly && (
-            <button
-              type="button"
-              onClick={() => onChange(rows.filter((_, i) => i !== rowIndex))}
-              className="h-10 px-3 rounded-lg border border-border text-sm text-foreground hover:bg-secondary"
-            >
-              Remove Row
-            </button>
-          )}
-        </div>
-      ))}
-      {!readOnly && (
-        <button
-          type="button"
-          onClick={() => {
-            const base = rows[0] ?? {};
-            const newRow = Object.keys(base).reduce((acc, key) => {
-              if (key === "id") return { ...acc, id: `${Date.now()}` };
-              if (typeof base[key] === "boolean") return { ...acc, [key]: false };
-              return { ...acc, [key]: "" };
-            }, {} as Record<string, unknown>);
-            onChange([...rows, newRow]);
-          }}
-          className="h-10 px-4 rounded-lg bg-foreground text-primary-foreground text-sm font-medium"
-        >
-          Add Row
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// FileUploadField — lightweight upload placeholder (wires to your storage layer)
-// ---------------------------------------------------------------------------
-function FileUploadField({
-  label,
-  readOnly,
-}: {
+interface MenuItem {
+  id: SidebarSection;
   label: string;
-  readOnly: boolean;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      <input
-        type="file"
-        disabled={readOnly}
-        className="text-sm text-foreground file:mr-3 file:h-8 file:rounded file:border file:border-border file:bg-secondary file:px-3 file:text-xs file:font-medium disabled:opacity-50"
-      />
-    </label>
-  );
+  icon: React.ComponentType<{ className?: string }>;
+  sectionIds: string[]; // admin editableSections IDs that control this tab
 }
 
-// ---------------------------------------------------------------------------
-// Passport & Visa section renderer
-// ---------------------------------------------------------------------------
-function PassportVisaSection({
-  data,
-  readOnly,
-  onChange,
-}: {
-  data: Record<string, unknown>;
-  readOnly: boolean;
-  onChange: (v: Record<string, unknown>) => void;
-}) {
-  const passportFields = [
-    "passportNumber",
-    "passportHolderName",
-    "issueDate",
-    "expiryDate",
-    "placeOfIssue",
-    "countryOfIssue",
-    "passportCategory",
-    "passportStatus",
-  ];
-  const visaFields = [
-    "visaType",
-    "visaNumber",
-    "visaCountry",
-    "visaSponsor",
-    "visaIssueDate",
-    "visaExpiryDate",
-    "visaStatus",
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Passport Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {passportFields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={readOnly}
-              onChange={(v) => onChange({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Visa Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {visaFields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={readOnly}
-              onChange={(v) => onChange({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      </div>
-      {!readOnly && (
-        <div className="rounded-lg border border-border p-3 space-y-3">
-          <p className="text-sm font-semibold text-foreground">Uploads</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <FileUploadField label="Passport Front" readOnly={readOnly} />
-            <FileUploadField label="Passport Back" readOnly={readOnly} />
-            <FileUploadField label="Visa Copy" readOnly={readOnly} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Skills & Certifications section renderer
-// ---------------------------------------------------------------------------
-function SkillsCertificationsSection({
-  data,
-  readOnly,
-  onChange,
-}: {
-  data: { skills: Record<string, unknown>[]; certifications: Record<string, unknown>[] };
-  readOnly: boolean;
-  onChange: (v: typeof data) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Skills</p>
-        <DynamicListEditor
-          rows={data.skills}
-          readOnly={readOnly}
-          onChange={(rows) => onChange({ ...data, skills: rows })}
-        />
-      </div>
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Certifications</p>
-        <DynamicListEditor
-          rows={data.certifications}
-          readOnly={readOnly}
-          onChange={(rows) => onChange({ ...data, certifications: rows })}
-        />
-        {!readOnly && (
-          <div className="mt-3">
-            <FileUploadField label="Certification Document" readOnly={readOnly} />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DocumentsRepositorySection({
-  docs,
-  readOnly,
-  onChange,
-}: {
-  docs: Partial<Record<string, EmployeeDocumentMeta>>;
-  readOnly: boolean;
-  onChange: (next: Partial<Record<string, EmployeeDocumentMeta>>) => void;
-}) {
-  const allTypes = useSelector(selectActiveDocumentTypes);
-  const documentTypes = useMemo(
-    () => (readOnly ? allTypes : allTypes.filter((t) => t.allowEmployeeEdit)),
-    [allTypes, readOnly]
-  );
-
-  return (
-    <EmployeeDocumentsGrid
-      documentTypes={documentTypes}
-      docs={docs}
-      isEditing={!readOnly}
-      onChange={onChange}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Address sub-section renderer (reused for current / permanent)
-// ---------------------------------------------------------------------------
-const ADDRESS_FIELDS = [
-  "addressLine1",
-  "addressLine2",
-  "landmark",
-  "city",
-  "state",
-  "country",
-  "pincode",
-  "startDate",
-  "toDate",
+const MENU_ITEMS: MenuItem[] = [
+  { id: "profile",   label: "Employee Profile",    icon: User,         sectionIds: ["profile-personal", "profile-address", "profile-work", "profile-languages", "profile-medical"] },
+  { id: "education", label: "Education Details",   icon: GraduationCap, sectionIds: ["education-details"] },
+  { id: "family",    label: "Family Details",      icon: Users,        sectionIds: ["family-details"] },
+  { id: "nominee",   label: "Nominee Details",     icon: Users,        sectionIds: ["nominee-details"] },
+  { id: "insurance", label: "Insurance Details",   icon: ShieldCheck,  sectionIds: ["insurance-details"] },
+  { id: "work",      label: "Work Experience",     icon: Building2,    sectionIds: ["work-experience"] },
+  // Position History tab removed from employee view
+  { id: "bank",      label: "Bank / PF / ESI",     icon: CreditCard,   sectionIds: ["bank-details"] },
+  { id: "passport",  label: "Passport & Visa",     icon: Globe,        sectionIds: ["passport-details", "visa-details"] },
+  { id: "assets",    label: "Asset Management",    icon: Monitor,      sectionIds: ["asset-management"] },
+  { id: "access",    label: "Access Card Details", icon: Key,          sectionIds: ["access-cards"] },
+  { id: "documents", label: "Employee Documents",  icon: FileText,     sectionIds: ["employee-documents"] },
+  { id: "salary",    label: "Employee Salary",     icon: IndianRupee,  sectionIds: ["salary-details"] },
+  { id: "requests",  label: "My Requests",         icon: Send,         sectionIds: [] },
 ];
 
-function AddressesSection({
-  data,
-  readOnly,
+function EssSidebar({
+  active,
   onChange,
+  editableSections,
 }: {
-  data: Record<string, Record<string, unknown>>;
-  readOnly: boolean;
-  onChange: (v: Record<string, Record<string, unknown>>) => void;
+  active: SidebarSection;
+  onChange: (s: SidebarSection) => void;
+  editableSections: string[];
 }) {
   return (
-    <div className="space-y-4">
-      {Object.entries(data)
-        .filter(([addrType]) => addrType !== "temporary")
-        .map(([addrType, values]) => (
-          <div key={addrType} className="rounded-lg border border-border p-3">
-            <p className="text-sm font-semibold text-foreground capitalize mb-3">{addrType} Address</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {ADDRESS_FIELDS.map((f) => (
-                <Field
-                  key={`${addrType}-${f}`}
-                  fieldKey={f}
-                  value={values[f] ?? ""}
-                  readOnly={readOnly}
-                  onChange={(v) => {
-                    if (readOnly) return;
-                    onChange({ ...data, [addrType]: { ...data[addrType], [f]: v } });
-                  }}
-                />
-              ))}
-              {addrType === "current" && (
-                <Field
-                  fieldKey="sameAsPermanent"
-                  value={values["sameAsPermanent"] ?? false}
-                  readOnly={readOnly}
-                  onChange={(v) => {
-                    if (readOnly) return;
-                    onChange({ ...data, [addrType]: { ...data[addrType], sameAsPermanent: v } });
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        ))}
-
-      {/* Communication Details */}
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm font-semibold text-foreground mb-3">Communication Details</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[
-            "emergencyContactName",
-            "emergencyContactRelation",
-            "emergencyContactNumber",
-            "alternateMobileNumber",
-          ].map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={(data["communication"] ?? {})[f] ?? ""}
-              readOnly={readOnly}
-              onChange={(v) => {
-                if (readOnly) return;
-                onChange({ ...data, communication: { ...(data["communication"] ?? {}), [f]: v } });
-              }}
-            />
-          ))}
-        </div>
-      </div>
-      
-      <div className="mt-8">
-        <h2 className="text-lg font-bold text-foreground mb-4">My Requests</h2>
-        <MyRequestsTable />
-      </div>
-      
-      <EmployeeNotificationPanel />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Profile section renderer — adds new fields not in original
-// ---------------------------------------------------------------------------
-const ORIGINAL_PROFILE_FIELDS = [
-  "employeeId",
-  "employeeCode",
-  "salutation",
-  "firstName",
-  "middleName",
-  "lastName",
-  "preferredName",
-  "officialEmail",
-  "personalEmail",
-  "workMobile",
-  "personalMobile",
-  "alternateMobileNumber",
-  "extensionNumber",
-  "username",
-  "bio",
-];
-
-function ProfileSection({
-  data,
-  readOnly,
-  onChange,
-}: {
-  data: Record<string, unknown>;
-  readOnly: boolean;
-  onChange: (v: Record<string, unknown>) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {ORIGINAL_PROFILE_FIELDS.map((f) => (
-          <Field
-            key={f}
-            fieldKey={f}
-            value={data[f] ?? ""}
-            readOnly={readOnly}
-            onChange={(v) => onChange({ ...data, [f]: v })}
-          />
-        ))}
-      </div>
-      {!readOnly && (
-        <p className="text-xs text-muted-foreground">
-          Profile photo is updated from the summary card at the top of this page.
+    <aside className="w-60 min-w-[240px] bg-card border-r border-border flex flex-col overflow-y-auto flex-shrink-0">
+      <div className="py-5 px-3">
+        <p className="px-3 pb-3 text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+          My Profile
         </p>
-      )}
+        <nav className="space-y-0.5">
+          {MENU_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = active === item.id;
+            const hasEditAccess =
+              item.sectionIds.length === 0 ||
+              item.sectionIds.some((sid) => editableSections.includes(sid));
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => onChange(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg relative
+                  transition-all duration-150 text-sm font-medium
+                  ${isActive
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
+                )}
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate flex-1">{item.label}</span>
+                {hasEditAccess && item.sectionIds.length > 0 && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" title="Edit access granted" />
+                )}
+                {isActive && (
+                  <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    </aside>
+  );
+}
+
+/** Permission-denied overlay for sections where admin hasn't granted edit access */
+function ReadOnlyBanner({ sectionLabel }: { sectionLabel: string }) {
+  return (
+    <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg bg-secondary border border-border text-sm text-muted-foreground">
+      <Lock className="w-4 h-4 flex-shrink-0" />
+      <span>
+        <strong>{sectionLabel}</strong> is currently view-only. Your manager/admin has not enabled edit access for this section.
+      </span>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Personal Details — adds motherName, caste, casteCategory
-// ---------------------------------------------------------------------------
-const PERSONAL_DETAIL_FIELDS = [
-  "dateOfBirth",
-  "actualDateOfBirth",
-  "gender",
-  "bloodGroup",
-  "maritalStatus",
-  "nationality",
-  "religion",
-  "caste",
-  "casteCategory",
-  "residentialStatus",
-  "placeOfBirth",
-  "identificationMark",
-  "physicallyChallenged",
-  "internationalEmployee",
-  "fatherName",
-  "motherName",
-  "spouseName",
-];
+function SectionContent({
+  active,
+  employee,
+  canEdit,
+}: {
+  active: SidebarSection;
+  employee: any;
+  canEdit: (sectionId: string) => boolean;
+}) {
+  // For sections that use the admin components directly, we pass the employee
+  // The admin components already respect `editableSections` on the employee object.
+  // We override `editableSections` on the employee to reflect current admin permissions.
 
-// ---------------------------------------------------------------------------
-// Employment — adds subDepartment, gradeBand, joiningDate, confirmationDate, probationStatus, employeeStatus
-// ---------------------------------------------------------------------------
-const EMPLOYMENT_FIELDS = [
-  "department",
-  "subDepartment",
-  "designation",
-  "employmentType",
-  "employeeCategory",
-  "gradeBand",
-  "workLocation",
-  "shift",
-  "joiningDate",
-  "confirmationDate",
-  "probationStatus",
-  "noticePeriod",
-  "employeeStatus",
-  "reportingManager",
-  "functionalManager",
-  "hrPartner",
-];
+  switch (active) {
+    case "profile":
+      return <EssEmployeeProfile employee={employee} />;
 
-// ---------------------------------------------------------------------------
-// Main Page
-// ---------------------------------------------------------------------------
+    case "education":
+      return (
+        <>
+          <EducationDetails employee={employee} />
+        </>
+      );
 
-function getDifferences(oldObj: any, newObj: any, prefix = ''): any[] {
-  let diffs: any[] = [];
-  if (!oldObj || !newObj) return diffs;
-  for (let key in newObj) {
-    const fullKey = prefix ? `${prefix}.${key}` : key;
-    if (typeof newObj[key] === 'object' && newObj[key] !== null && !Array.isArray(newObj[key])) {
-      diffs = diffs.concat(getDifferences(oldObj[key] || {}, newObj[key], fullKey));
-    } else if (Array.isArray(newObj[key])) {
-      if (JSON.stringify(oldObj[key]) !== JSON.stringify(newObj[key])) {
-        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: 'List Changed', newValue: 'List Changed' });
-      }
-    } else {
-      if (oldObj[key] !== newObj[key]) {
-        diffs.push({ fieldName: fullKey, fieldLabel: FORM_LABELS[key] || fullKey, oldValue: oldObj[key], newValue: newObj[key] });
-      }
-    }
+    case "family":
+      return (
+        <>
+          <FamilyDetails employee={employee} essMode />
+        </>
+      );
+
+    case "nominee":
+      return (
+        <>
+          <NomineeDetails employee={employee} />
+        </>
+      );
+
+    case "insurance":
+      return (
+        <>
+          <InsuranceDetails employee={employee} />
+        </>
+      );
+
+    case "work":
+      return (
+        <>
+          <WorkExperience employee={employee} />
+        </>
+      );
+
+    // 'position' removed from sidebar; keep case to avoid runtime errors if route still used
+    case "position":
+      return <PositionHistory employee={employee} />;
+
+    case "bank":
+      return (
+        <>
+          <BankDetails employee={employee} disableEdit={!canEdit("bank-details")} />
+        </>
+      );
+
+    case "passport":
+      return (
+        <>
+          <PassportVisa employee={employee} essMode />
+        </>
+      );
+
+    case "assets":
+      return (
+        <>
+          <AssetManagement employee={employee} />
+        </>
+      );
+
+    case "access":
+      return (
+        <>
+          <AccessCardDetails employee={employee} />
+        </>
+      );
+
+    case "documents":
+      return <EmployeeDocumentsSection employee={employee} />;
+
+    case "salary":
+      return <SalarySummary employee={employee} />;
+
+    case "requests":
+      return (
+        <div className="space-y-5 pb-24">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">My Profile Update Requests</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Track all your submitted profile change requests and their approval status.
+            </p>
+          </div>
+          <MyRequestsTable />
+        </div>
+      );
+
+    default:
+      return null;
   }
-  return diffs;
 }
 
 export function EmployeeProfilePage() {
   const { user } = useAuth();
   const employeeId = user?.employeeId ?? "1";
   const dispatch = useDispatch<AppDispatch>();
-  const profile = useSelector((state: RootState) => state.employee.profile);
+
+  const [activeSection, setActiveSection] = useState<SidebarSection>("profile");
+
+  const { editableSections, canEdit, adminEmployee } = useEssPermissions();
+  const essProfile = useSelector((state: RootState) => state.employee.profile);
   const status = useSelector((state: RootState) => state.employee.status);
-  const requests = useSelector((state: RootState) => state.requests.requests);
-
-  const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
-  const [draft, setDraft] = useState<any>(null);
-  const [banner, setBanner] = useState<BannerState>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const pendingSections = useMemo(() => {
-    return Array.from(new Set(requests.filter(r => r.status === 'pending').map(r => r.section)));
-  }, [requests]);
 
   useEffect(() => {
     dispatch(fetchEmployeeData(employeeId));
-    dispatch(fetchRequests(employeeId));
   }, [dispatch, employeeId]);
 
-  const beginEdit = (section: SectionKey) => {
-    if (!profile) return;
-    setEditingSection(section);
-    const base =
-      section === "documentsRepository"
-        ? (profile as any).employeeDocuments ?? {}
-        : (profile as any)[section] ?? {};
-    setDraft(JSON.parse(JSON.stringify(base)));
-    setBanner(null);
-  };
-
-  const cancelEdit = () => {
-    setEditingSection(null);
-    setDraft(null);
-  };
-
-  const submitChange = async (section: SectionKey) => {
-    if (!profile) return;
-    const current =
-      section === "documentsRepository"
-        ? (profile as any).employeeDocuments ?? {}
-        : (profile as any)[section];
-
-    if (isEqualPayload(current, draft)) {
-      setBanner({
-        type: "error",
-        message: "No changes detected. Update at least one field before submitting.",
-      });
-      return;
-    }
-
-    // Existing validations
-    if (section === "profile") {
-      const next = draft as any;
-      if (next.personalEmail && !validateEmail(next.personalEmail)) {
-        setBanner({ type: "error", message: "Personal email format is invalid." });
-        return;
-      }
-    }
-
-    if (section === "personalDetails") {
-      const next = draft as any;
-      if (next.panNumber && !validatePan(next.panNumber)) {
-        setBanner({
-          type: "error",
-          message: "PAN format is invalid. Expected format: ABCDE1234F.",
-        });
-        return;
-      }
-      if (next.aadhaarNumber && !validateAadhaar(next.aadhaarNumber)) {
-        setBanner({ type: "error", message: "Aadhaar must be a 12-digit number." });
-        return;
-      }
-    }
-
-    if (section === "bankAndStatutoryDetails") {
-      const next = draft as any;
-      if (next.panNumber && !validatePan(next.panNumber)) {
-        setBanner({ type: "error", message: "PAN format is invalid in statutory details." });
-        return;
-      }
-      if (next.aadhaarNumber && !validateAadhaar(next.aadhaarNumber)) {
-        setBanner({
-          type: "error",
-          message: "Aadhaar must be a 12-digit number in statutory details.",
-        });
-        return;
-      }
-      if (
-        next.bankAccounts &&
-        detectDuplicateValues(next.bankAccounts.map((e: any) => e.accountNumber))
-      ) {
-        setBanner({ type: "error", message: "Duplicate bank account numbers are not allowed." });
-        return;
-      }
-      if (next.bankAccounts) {
-        const primaryCount = next.bankAccounts.filter((e: any) => e.isPrimary).length;
-        if (primaryCount > 1) {
-          setBanner({ type: "error", message: "Only one bank account can be marked as primary." });
-          return;
-        }
-      }
-    }
-
-    if (section === "nomineeDetails") {
-      const next = draft as any[];
-      if (Array.isArray(next)) {
-        const total = next.reduce((s, e) => s + (Number(e.sharePercentage) || 0), 0);
-        if (total > 100) {
-          setBanner({ type: "error", message: "Nominee share percentage cannot exceed 100%." });
-          return;
-        }
-      }
-    }
-
-    if (section === "documentsRepository") {
-      const names = Object.values(draft as Record<string, EmployeeDocumentMeta>)
-        .map((m) => m?.fileName)
-        .filter(Boolean) as string[];
-      const dup = names.find((n, i) => names.indexOf(n) !== i);
-      if (dup) {
-        setBanner({ type: "error", message: `Duplicate file name not allowed: ${dup}` });
-        return;
-      }
-    }
-
-    const DIRECT_SYNC_SECTIONS = new Set<SectionKey>([
-      "profile",
-      "personalDetails",
-      "addresses",
-      "languageDetails",
-      "emergencyAndMedical",
-      "nomineeDetails",
-      "documentsRepository",
-    ]);
-
-    if (DIRECT_SYNC_SECTIONS.has(section)) {
-      setSubmitting(true);
-      try {
-        const payloadKey = section === "documentsRepository" ? "employeeDocuments" : section;
-        const nextProfile = {
-          ...profile,
-          [payloadKey]: draft,
-        } as EmployeeProfile;
-        await dispatch(saveEssProfileWithAdminSync({ employeeId, profile: nextProfile })).unwrap();
-        dispatch(addNotification({ type: "success", message: "Saved and synced with HR records." }));
-        setBanner({ type: "success", message: "Your updates were saved successfully." });
-        cancelEdit();
-      } catch {
-        setBanner({ type: "error", message: "Could not save changes. Try again." });
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const changes = getDifferences(current, draft);
-      const sectionLabel = ESS_SECTIONS.find((s) => s.key === section)?.label || String(section);
-      
-      dispatch(createRequest({
-        employeeId,
-        section,
-        sectionLabel,
-        changes
-      }));
-      setBanner(null);
-      cancelEdit();
-    } catch (err) {
-      setBanner({
-        type: "error",
-        message: err instanceof Error ? err.message : "Failed to submit. Try again.",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (status === 'loading' || !profile) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading profile...</div>;
-  }
-
-  // Merge static ESS_SECTIONS with extra sections for sidebar + rendering
-  const allSections = [
-    ...ESS_SECTIONS,
-    ...EXTRA_SECTIONS,
-  ] as Array<{ key: string; label: string; editable: boolean; optional?: boolean }>;
-
-  const renderSectionBody = (sectionKey: string, sectionData: unknown, isReadOnly: boolean) => {
-    // ---- Profile ----
-    if (sectionKey === "profile") {
-      return (
-        <ProfileSection
-          data={sectionData as Record<string, unknown>}
-          readOnly={isReadOnly}
-          onChange={setDraft}
-        />
-      );
-    }
-
-    // ---- Personal Details ----
-    if (sectionKey === "personalDetails") {
-      const data = sectionData as Record<string, unknown>;
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {PERSONAL_DETAIL_FIELDS.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Addresses ----
-    if (sectionKey === "addresses") {
-      return (
-        <AddressesSection
-          data={sectionData as Record<string, Record<string, unknown>>}
-          readOnly={isReadOnly}
-          onChange={setDraft}
-        />
-      );
-    }
-
-    // ---- Employment ----
-    if (sectionKey === "employmentDetails") {
-      const data = sectionData as Record<string, unknown>;
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {EMPLOYMENT_FIELDS.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Bank & Statutory ----
-    if (sectionKey === "bankAndStatutoryDetails") {
-      const data = sectionData as any;
-      const statutoryFields = [
-        "panNumber",
-        "aadhaarNumber",
-        "uanNumber",
-        "esicNumber",
-        "pfNumber",
-        "professionalTaxNumber",
-        "passportNumber",
-        "taxRegime",
-      ];
-      return (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-border p-3 space-y-3">
-            <p className="text-sm font-semibold text-foreground">Bank Accounts</p>
-            <DynamicListEditor
-              rows={(data?.bankAccounts ?? []) as Record<string, unknown>[]}
-              onChange={(rows) => setDraft({ ...data, bankAccounts: rows })}
-              readOnly={isReadOnly}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {statutoryFields.map((f) => (
-              <Field
-                key={f}
-                fieldKey={f}
-                value={data[f] ?? ""}
-                readOnly={isReadOnly}
-                onChange={(v) => setDraft({ ...data, [f]: v })}
-              />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    // ---- Nominee Details ----
-    if (sectionKey === "nomineeDetails") {
-      return (
-        <div className="space-y-3">
-          <DynamicListEditor
-            rows={sectionData as Record<string, unknown>[]}
-            onChange={setDraft}
-            readOnly={isReadOnly}
-          />
-          {!isReadOnly && (
-            <div className="rounded-lg border border-border p-3 space-y-3">
-              <p className="text-sm font-semibold text-foreground">Uploads</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <FileUploadField label="Aadhaar Card" readOnly={isReadOnly} />
-                <FileUploadField label="PAN Card" readOnly={isReadOnly} />
-                <FileUploadField label="Identity Proof" readOnly={isReadOnly} />
-                <FileUploadField label="Relationship Proof" readOnly={isReadOnly} />
-                <FileUploadField label="Supporting Documents" readOnly={isReadOnly} />
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // ---- Passport & Visa ----
-    if (sectionKey === "passportAndVisa") {
-      return (
-        <PassportVisaSection
-          data={sectionData as Record<string, unknown>}
-          readOnly={isReadOnly}
-          onChange={setDraft}
-        />
-      );
-    }
-
-    // ---- Previous Employment ----
-    if (sectionKey === "previousEmployment") {
-      return (
-        <div className="space-y-3">
-          <DynamicListEditor
-            rows={sectionData as Record<string, unknown>[]}
-            onChange={setDraft}
-            readOnly={isReadOnly}
-          />
-          {!isReadOnly && (
-            <div className="rounded-lg border border-border p-3 space-y-3">
-              <p className="text-sm font-semibold text-foreground">Uploads</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <FileUploadField label="Experience Letter" readOnly={isReadOnly} />
-                <FileUploadField label="Relieving Letter" readOnly={isReadOnly} />
-                <FileUploadField label="Offer Letter" readOnly={isReadOnly} />
-                <FileUploadField label="Salary Slips" readOnly={isReadOnly} />
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // ---- Education Details ----
-    if (sectionKey === "educationDetails") {
-      return (
-        <div className="space-y-3">
-          <DynamicListEditor
-            rows={sectionData as Record<string, unknown>[]}
-            onChange={setDraft}
-            readOnly={isReadOnly}
-          />
-          {!isReadOnly && (
-            <div className="rounded-lg border border-border p-3 space-y-3">
-              <p className="text-sm font-semibold text-foreground">Uploads</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <FileUploadField label="Degree Certificate" readOnly={isReadOnly} />
-                <FileUploadField label="Marksheet" readOnly={isReadOnly} />
-                <FileUploadField label="Leaving Certificate" readOnly={isReadOnly} />
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // ---- Skills & Certifications ----
-    if (sectionKey === "skillsAndCertifications") {
-      const data = sectionData as {
-        skills: Record<string, unknown>[];
-        certifications: Record<string, unknown>[];
-      };
-      return (
-        <SkillsCertificationsSection data={data} readOnly={isReadOnly} onChange={setDraft} />
-      );
-    }
-
-    // ---- Assets & IT ----
-    if (sectionKey === "assetsAndIT") {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Documents Repository ----
-    if (sectionKey === "documentsRepository") {
-      return (
-        <DocumentsRepositorySection
-          docs={(sectionData as Partial<Record<string, EmployeeDocumentMeta>>) || {}}
-          readOnly={isReadOnly}
-          onChange={(d) => setDraft(d)}
-        />
-      );
-    }
-
-    // ---- Family Details ----
-    if (sectionKey === "familyDetails") {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Emergency & Medical ----
-    if (sectionKey === "emergencyAndMedical") {
-      const data = sectionData as Record<string, unknown>;
-      const fields = [
-        "emergencyContactName",
-        "emergencyContactNumber",
-        "relationship",
-        "medicalConditions",
-        "allergies",
-        "bloodGroup",
-        "doctorName",
-        "insuranceProvider",
-        "insurancePolicyNumber",
-      ];
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {fields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Insurance Details ----
-    if (sectionKey === "insuranceDetails") {
-      const data = sectionData as Record<string, unknown>;
-      const fields = [
-        "policyNumber",
-        "provider",
-        "policyType",
-        "coverageAmount",
-        "startDate",
-        "endDate",
-        "nomineeName",
-      ];
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {fields.map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Language Details ----
-    if (sectionKey === "languageDetails") {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Social & Professional Profiles ----
-    if (sectionKey === "socialProfiles") {
-      const data = sectionData as Record<string, unknown>;
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {["linkedin", "github", "portfolioWebsite", "personalWebsite"].map((f) => (
-            <Field
-              key={f}
-              fieldKey={f}
-              value={data[f] ?? ""}
-              readOnly={isReadOnly}
-              onChange={(v) => setDraft({ ...data, [f]: v })}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // ---- Generic fallback (array) ----
-    if (Array.isArray(sectionData)) {
-      return (
-        <DynamicListEditor
-          rows={sectionData as Record<string, unknown>[]}
-          onChange={setDraft}
-          readOnly={isReadOnly}
-        />
-      );
-    }
-
-    // ---- Generic fallback (flat object) ----
+  if (status === "loading" || !adminEmployee) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {Object.entries(sectionData as Record<string, unknown>).map(([f, v]) => (
-          <Field
-            key={f}
-            fieldKey={f}
-            value={v}
-            readOnly={isReadOnly}
-            onChange={(nv) =>
-              setDraft({ ...(sectionData as Record<string, unknown>), [f]: nv })
-            }
-          />
-        ))}
+      <div className="flex flex-col h-full bg-background animate-pulse">
+        <div className="h-14 bg-secondary border-b border-border" />
+        <div className="flex flex-1">
+          <div className="w-60 bg-secondary border-r border-border" />
+          <div className="flex-1 p-6 space-y-4">
+            <div className="h-32 bg-secondary rounded-2xl" />
+            <div className="h-64 bg-secondary rounded-2xl" />
+          </div>
+        </div>
       </div>
     );
+  }
+
+  const activeItem = MENU_ITEMS.find((m) => m.id === activeSection)!;
+  const sectionLabel = activeItem.label;
+
+  const statusStyle: Record<string, string> = {
+    Active: "bg-[#212529] text-[#F8F9FA]",
+    "On Leave": "bg-[#6C757D] text-white",
+    Inactive: "bg-[#CED4DA] text-[#212529]",
   };
 
   return (
-    <div className="p-6 flex gap-6">
-      {/* Sidebar */}
-      <aside className="w-64 hidden lg:block">
-        <div className="sticky top-6 rounded-xl border border-border bg-card p-4 space-y-2">
-          <h3 className="text-sm font-semibold text-foreground">Profile Sections</h3>
-          {allSections.map((section) => (
-            <a
-              key={section.key}
-              href={`#${section.key}`}
-              className="flex items-center justify-between rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <span>{section.label}</span>
-              <div className="flex items-center gap-1">
-                {section.optional && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
-                    Optional
-                  </span>
-                )}
-                {pendingSections.includes(section.key as SectionKey) && (
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-secondary border border-border">
-                    Pending
-                  </span>
-                )}
-              </div>
-            </a>
-          ))}
+    <div className="flex flex-col h-full bg-background">
+      {/* Breadcrumb header */}
+      <div className="bg-card border-b border-border px-6 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+          <span className="font-medium">My Profile</span>
+          <ChevronRight className="w-3.5 h-3.5 text-border" />
+          <span className="font-semibold text-foreground bg-secondary border border-border px-2.5 py-0.5 rounded-md text-xs">
+            {sectionLabel}
+          </span>
         </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 space-y-4">
-        <EssProfileHeaderCard employeeId={employeeId} profile={profile} />
-
-        {banner && (
-          <div
-            className={`rounded-lg px-4 py-3 text-sm border ${
-              banner.type === "success"
-                ? "bg-secondary text-foreground border-border"
-                : "bg-destructive/10 text-destructive border-destructive/30"
+        <div className="flex items-center gap-3">
+          {adminEmployee.editRequestStatus === "Pending" && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-200 rounded-lg">
+              <Clock size={14} className="text-amber-600 animate-pulse" />
+              <span className="text-xs font-bold text-amber-700">Edit Request Pending</span>
+            </div>
+          )}
+          {adminEmployee.editRequestStatus === "Updated" && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-200 rounded-lg">
+              <AlertCircle size={14} className="text-emerald-600" />
+              <span className="text-xs font-bold text-emerald-700">Updates Submitted</span>
+            </div>
+          )}
+          <span
+            className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-md ${
+              statusStyle[adminEmployee.status] ?? "bg-secondary text-muted-foreground"
             }`}
           >
-            {banner.message}
-          </div>
-        )}
-
-        {allSections.map((section) => {
-          const isPending = pendingSections.includes(section.key as SectionKey);
-          const isEditing = editingSection === section.key;
-          const rawData =
-            section.key === "documentsRepository"
-              ? (profile as any).employeeDocuments
-              : (profile as any)[section.key];
-          const sectionData = isEditing ? draft : rawData;
-          const isReadOnly = !isEditing || !section.editable;
-
-          // Skip rendering sections with no data and optional flag (clean UX)
-          const isEmpty =
-            sectionData === undefined ||
-            sectionData === null ||
-            (Array.isArray(sectionData) && sectionData.length === 0) ||
-            (typeof sectionData === "object" &&
-              !Array.isArray(sectionData) &&
-              Object.keys(sectionData as object).length === 0);
-
-          return (
-            <section
-              key={section.key}
-              id={section.key}
-              className="rounded-xl border border-border bg-card p-5 space-y-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-semibold text-foreground">{section.label}</h2>
-                    {section.optional && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground">
-                        Optional
-                      </span>
-                    )}
-                  </div>
-                  {isPending && (
-                    <p className="text-xs text-muted-foreground mt-1">Pending Approval</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={() => submitChange(section.key as SectionKey)}
-                        disabled={submitting}
-                        className="h-9 px-4 rounded-lg bg-foreground text-primary-foreground text-sm disabled:opacity-60"
-                      >
-                        {submitting ? "Submitting..." : "Submit"}
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="h-9 px-4 rounded-lg border border-border text-sm"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    section.editable && (
-                      <button
-                        onClick={() => beginEdit(section.key as SectionKey)}
-                        disabled={isPending}
-                        className="h-9 px-4 rounded-lg border border-border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Edit Section
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-
-              {isEmpty && !isEditing ? (
-                <p className="text-sm text-muted-foreground">
-                  No data added yet.{" "}
-                  {section.editable && (
-                    <button
-                      onClick={() => beginEdit(section.key as SectionKey)}
-                      className="underline text-foreground"
-                    >
-                      Add now
-                    </button>
-                  )}
-                </p>
-              ) : (
-                renderSectionBody(section.key, sectionData, isReadOnly)
-              )}
-            </section>
-          );
-        })}
-
-        {/* Change Request History replaced by MyRequestsTable */}
-        <div className="mt-8">
-          <h2 className="text-lg font-bold text-foreground mb-4">My Requests</h2>
-          <MyRequestsTable />
+            {adminEmployee.status}
+          </span>
         </div>
-        
-        <EmployeeNotificationPanel />
+      </div>
+
+      {/* Main content */}
+      <div className="flex flex-1 overflow-hidden relative">
+        <EssSidebar
+          active={activeSection}
+          onChange={setActiveSection}
+          editableSections={editableSections}
+        />
+
+        <main className="flex-1 overflow-y-auto p-6 pb-28">
+          {/* Profile header card — only on the profile tab */}
+          {activeSection === "profile" && essProfile && (
+            <div className="mb-6">
+              <EssProfileHeaderCard employeeId={employeeId} profile={essProfile} />
+            </div>
+          )}
+
+          <SectionContent
+            active={activeSection}
+            employee={adminEmployee}
+            canEdit={canEdit}
+          />
+        </main>
+
+        {/* Fixed bottom status bar */}
+        <div className="absolute bottom-0 left-60 right-0 h-16 bg-card/90 backdrop-blur-xl border-t border-border flex items-center justify-between px-8 z-40">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+              <span className="text-xs font-bold text-foreground">
+                {editableSections.length} Sections Editable
+              </span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 size={12} className="text-emerald-500" />
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  Editable
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Lock size={12} className="text-slate-400" />
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  View Only
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveSection("requests")}
+            className="flex items-center gap-2 px-5 py-2 bg-foreground text-primary-foreground rounded-xl text-xs font-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-foreground/10"
+          >
+            <Send size={14} />
+            View My Requests
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Employee } from "../mockData";
-import { Users, User, CheckCircle2, AlertCircle, Phone, Heart, ShieldCheck, Edit2, Save, X } from "lucide-react";
+import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X, Plus } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 
 interface Props {
   employee: Employee;
+  essMode?: boolean;
 }
 
 const RELATIONSHIP_SHADES: Record<string, string> = {
@@ -39,13 +40,28 @@ function EditableField({ label, value, onChange, isEditing }: { label: string; v
   );
 }
 
-export function FamilyDetails({ employee }: Props) {
+export function FamilyDetails({ employee, essMode = false }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedFamily, setEditedFamily] = useState(employee.family || []);
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
 
   const updateMember = (idx: number, field: string, value: any) => {
     setEditedFamily(prev => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  };
+
+  const addFamilyMember = () => {
+    setEditedFamily(prev => [...prev, {
+      name: "",
+      relationship: "",
+      dob: "",
+      gender: "",
+      bloodGroup: "",
+      phone: "",
+      occupation: "",
+      isDependent: false,
+      isEmergencyContact: false,
+    }]);
+    setIsEditing(true);
   };
 
   const handleSave = async () => {
@@ -83,6 +99,7 @@ export function FamilyDetails({ employee }: Props) {
         </div>
 
         <div className="flex items-center gap-6">
+          {!essMode && (
           <label className="flex items-center gap-2 cursor-pointer group">
             <div className="relative flex items-center justify-center">
               <input
@@ -101,6 +118,7 @@ export function FamilyDetails({ employee }: Props) {
               Allow Employee to Edit
             </span>
           </label>
+          )}
 
           <div className="flex items-center gap-2">
             {isEditing ? (
@@ -114,9 +132,14 @@ export function FamilyDetails({ employee }: Props) {
                 </button>
               </>
             ) : (
-              <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
-                <Edit2 size={12} /> Edit Section
-              </button>
+              <>
+                <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                  <Edit2 size={12} /> Edit Section
+                </button>
+                <button onClick={addFamilyMember} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90">
+                  <Plus size={12} /> Add
+                </button>
+              </>
             )}
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Employee } from "../mockData";
-import { Globe, BookOpen, AlertCircle, CheckCircle2, Edit2, Save, X } from "lucide-react";
+import { Globe, BookOpen, AlertCircle, CheckCircle2, Edit2, Save, X, Plus } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { addNotification } from "../../../../store/slices/notificationSlice";
 import { AppDispatch } from "../../../../store";
@@ -10,6 +10,7 @@ import { validatePassport } from "../employee-details";
 
 interface Props {
   employee: Employee;
+  essMode?: boolean;
 }
 
 function isExpired(dateStr: string): boolean {
@@ -29,7 +30,7 @@ const VALID_BADGE   = "bg-[#212529] text-[#F8F9FA]";
 const EXPIRING_BADGE = "bg-[#6C757D] text-white";
 const EXPIRED_BADGE  = "bg-[#CED4DA] text-[#212529]";
 
-export function PassportVisa({ employee }: Props) {
+export function PassportVisa({ employee, essMode = false }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [visaEditing, setVisaEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
@@ -89,9 +90,14 @@ export function PassportVisa({ employee }: Props) {
               </button>
             </>
           ) : (
-            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
-              <Edit2 size={12} /> Edit Section
-            </button>
+            <>
+              <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
+                <Edit2 size={12} /> Edit Section
+              </button>
+              <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all">
+                <Plus size={12} /> Add
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -112,6 +118,7 @@ export function PassportVisa({ employee }: Props) {
           </div>
 
           <div className="flex items-center gap-4">
+             {!essMode && (
              <label className="flex items-center gap-2 cursor-pointer group">
               <div className="relative flex items-center justify-center">
                 <input
@@ -127,9 +134,10 @@ export function PassportVisa({ employee }: Props) {
                 </div>
               </div>
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                Allow Employee to Edit
+                
               </span>
             </label>
+            )}
 
             <div className="flex items-center gap-2">
               {passportExpired ? (
@@ -218,6 +226,7 @@ export function PassportVisa({ employee }: Props) {
           </div>
 
           <div className="flex items-center gap-4">
+             {!essMode && (
              <label className="flex items-center gap-2 cursor-pointer group">
               <div className="relative flex items-center justify-center">
                 <input
@@ -232,10 +241,9 @@ export function PassportVisa({ employee }: Props) {
                   {isVisaEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
                 </div>
               </div>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                Allow Employee to Edit
-              </span>
+              
             </label>
+            )}
 
             <div className="flex items-center gap-2">
               {visaEditing ? (

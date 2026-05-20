@@ -6,7 +6,7 @@ interface EditableSectionCardProps {
   icon?: LucideIcon;
   children: React.ReactNode;
   isEditing: boolean;
-  onEdit: () => void;
+  onEdit?: () => void;
   onSave: () => void;
   onCancel: () => void;
   /** Extra actions shown next to edit (e.g. Add) */
@@ -18,6 +18,8 @@ interface EditableSectionCardProps {
   canEmployeeEdit?: boolean;
   onToggleEmployeeEdit?: (checked: boolean) => void;
   requestStatus?: 'None' | 'Pending' | 'Updated';
+  /** When true, hides the admin-only "Allow Employee to Edit" checkbox (used on ESS side) */
+  hideAdminControls?: boolean;
 }
 
 export function EditableSectionCard({
@@ -35,6 +37,7 @@ export function EditableSectionCard({
   canEmployeeEdit,
   onToggleEmployeeEdit,
   requestStatus,
+  hideAdminControls = false,
 }: EditableSectionCardProps) {
   const getStatusLabel = () => {
     if (requestStatus === 'Pending') return { l: 'Pending Employee Update', c: 'bg-amber-500/10 text-amber-600 border-amber-200' };
@@ -64,7 +67,7 @@ export function EditableSectionCard({
           )}
         </div>
         <div className="flex items-center gap-4 flex-shrink-0">
-          {sectionId && onToggleEmployeeEdit && (
+          {sectionId && onToggleEmployeeEdit && !hideAdminControls && (
             <label className="flex items-center gap-2 cursor-pointer group">
               <div className="relative flex items-center justify-center">
                 <input
@@ -80,9 +83,7 @@ export function EditableSectionCard({
                   {canEmployeeEdit && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
                 </div>
               </div>
-              <span className="text-[10px] font-black text-slate-500 group-hover:text-slate-700 uppercase tracking-widest transition-colors">
-                Allow Employee to Edit
-              </span>
+             
             </label>
           )}
 
@@ -108,18 +109,20 @@ export function EditableSectionCard({
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={onEdit}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-              >
-                {editLabel === "Add" ? (
-                  <Plus className="w-3.5 h-3.5" />
-                ) : (
-                  <Pencil className="w-3.5 h-3.5" />
-                )}
-                {editLabel || "Edit"}
-              </button>
+              onEdit ? (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+                >
+                  {editLabel === "Add" ? (
+                    <Plus className="w-3.5 h-3.5" />
+                  ) : (
+                    <Pencil className="w-3.5 h-3.5" />
+                  )}
+                  {editLabel || "Edit"}
+                </button>
+              ) : null
             )}
           </div>
         </div>

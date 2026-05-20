@@ -97,7 +97,21 @@ export function WorkExperience({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        headerExtra={null}
+        headerExtra={
+          !isEditing && (
+            <button
+              type="button"
+              onClick={() => {
+                setDraft([...baseline, emptyEntry(`we-${Date.now()}`)]);
+                setIsEditing(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add
+            </button>
+          )
+        }
       >
         {dateError ? <p className="text-sm text-destructive mb-3">{dateError}</p> : null}
         {draft.length === 0 ? (
