@@ -6,6 +6,7 @@ import { useAdminSync } from "../../admin/useAdminSync";
 import { addNotification } from "../../../../store/slices/notificationSlice";
 import { AppDispatch } from "../../../../store";
 import { validatePassport } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 
 interface Props {
@@ -30,7 +31,14 @@ const VALID_BADGE   = "bg-[#212529] text-[#F8F9FA]";
 const EXPIRING_BADGE = "bg-[#6C757D] text-white";
 const EXPIRED_BADGE  = "bg-[#CED4DA] text-[#212529]";
 
+function withCurrentOption(options: Array<{ value: string; label: string }>, value?: string) {
+  if (!value || options.some((option) => option.value === value)) return options;
+  return [{ value, label: value }, ...options];
+}
+
 export function PassportVisa({ employee, essMode = false }: Props) {
+  const nationalityOptions = useMasterOptions("Nationality");
+  const countryOptions = useMasterOptions("Country");
   const [isEditing, setIsEditing] = useState(false);
   const [visaEditing, setVisaEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
@@ -63,6 +71,9 @@ export function PassportVisa({ employee, essMode = false }: Props) {
 
   const isPassportEditable = employee.editableSections?.includes("passport-details");
   const isVisaEditable = employee.editableSections?.includes("visa-details");
+  const nationalitySelectOptions = withCurrentOption(nationalityOptions, editedData.nationality);
+  const passportCountryOptions = withCurrentOption(countryOptions, editedData.passportCountryOfIssue);
+  const visaCountryOptions = withCurrentOption(countryOptions, editedData.visaCountry);
 
   const getStatusLabel = (editable: boolean) => {
     if (employee.editRequestStatus === 'Pending') return { l: 'Pending Employee Update', c: 'bg-amber-500/10 text-amber-600 border-amber-200' };
@@ -178,7 +189,15 @@ export function PassportVisa({ employee, essMode = false }: Props) {
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Nationality</p>
-              {isEditing ? (
+              {isEditing && nationalitySelectOptions.length ? (
+                <select value={editedData.nationality || ''} onChange={e => handleUpdate('nationality', e.target.value)}
+                  className="text-base font-bold mt-0.5 bg-white/10 border border-white/20 rounded px-2 py-1 text-white w-full focus:outline-none">
+                  <option value="">Select Nationality</option>
+                  {nationalitySelectOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              ) : isEditing ? (
                 <input type="text" value={editedData.nationality || ''} onChange={e => handleUpdate('nationality', e.target.value)}
                   className="text-base font-bold mt-0.5 bg-white/10 border border-white/20 rounded px-2 py-1 text-white w-full focus:outline-none" />
               ) : (
@@ -198,7 +217,15 @@ export function PassportVisa({ employee, essMode = false }: Props) {
             ]).map(({ label, field, value }) => (
               <div key={label}>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">{label}</p>
-                {isEditing ? (
+                {isEditing && field === "passportCountryOfIssue" && passportCountryOptions.length ? (
+                  <select value={value} onChange={e => handleUpdate(field, e.target.value)}
+                    className="text-sm font-bold mt-0.5 bg-white/10 border border-white/20 rounded px-2 py-1 text-white w-full focus:outline-none">
+                    <option value="">Select {label}</option>
+                    {passportCountryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                ) : isEditing ? (
                   <input type="text" value={value} onChange={e => handleUpdate(field, e.target.value)}
                     className="text-sm font-bold mt-0.5 bg-white/10 border border-white/20 rounded px-2 py-1 text-white w-full focus:outline-none" />
                 ) : (
@@ -307,7 +334,20 @@ export function PassportVisa({ employee, essMode = false }: Props) {
             ).map(([field, label]) => (
               <div key={field} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 py-2 border-b border-border last:border-0">
                 <span className="text-sm text-muted-foreground font-medium">{label}</span>
-                {isEditing || visaEditing ? (
+                {(isEditing || visaEditing) && field === "visaCountry" && visaCountryOptions.length ? (
+                  <select
+                    value={(editedData as any)[field] || ""}
+                    onChange={(e) => handleUpdate(field, e.target.value)}
+                    className="text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 sm:max-w-xs w-full focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  >
+                    <option value="">Select {label}</option>
+                    {visaCountryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : isEditing || visaEditing ? (
                   <input
                     type={field.includes("Date") || field.includes("Expiry") ? "date" : "text"}
                     value={(editedData as any)[field] || ""}

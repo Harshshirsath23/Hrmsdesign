@@ -11,6 +11,7 @@ import {
   validateEducationYear,
   validatePercentageCgpa,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -28,6 +29,9 @@ const emptyEdu = (): EducationEntry => ({
 
 export function EducationDetails({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const qualificationOptions = useMasterOptions("Qualification");
+  const specializationOptions = useMasterOptions("EducationSpecialization");
+  const boardOptions = useMasterOptions("Board");
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<EducationEntry[]>(employee.education || []);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
@@ -137,12 +141,14 @@ export function EducationDetails({ employee }: Props) {
                     value={row.qualification}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { qualification: v })}
+                    options={qualificationOptions}
                   />
                   <ProfileInfoField
                     label="Specialization"
                     value={row.specialization}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { specialization: v })}
+                    options={specializationOptions}
                   />
                   <ProfileInfoField
                     label="Institution Name"
@@ -155,6 +161,7 @@ export function EducationDetails({ employee }: Props) {
                     value={row.university}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { university: v })}
+                    options={boardOptions}
                   />
                   <ProfileInfoField
                     label="Year Of Passing"

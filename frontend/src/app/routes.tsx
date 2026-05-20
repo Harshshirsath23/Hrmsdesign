@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, useParams } from "react-router";
 import { lazy, Suspense } from "react";
 
 // Auth
@@ -261,6 +261,10 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: ":category",
+            element: <SuperadminMastersCategoryRedirect />,
+          },
+          {
             path: ":category/:masterName",
             Component: SuperadminMastersPage,
           },
@@ -269,6 +273,16 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+function SuperadminMastersCategoryRedirect() {
+  const { category: categoryParam } = useParams();
+  const category = MASTER_CATEGORIES.find((item) => item.key === categoryParam);
+  const master = category?.masters[0] ?? MASTER_CATEGORIES[0]?.masters[0];
+  const categoryKey = category?.key ?? MASTER_CATEGORIES[0]?.key;
+
+  if (!categoryKey || !master) return <div className="p-6">No masters configured.</div>;
+  return <Navigate to={`/superadmin/masters/${categoryKey}/${master.key}`} replace />;
+}
 
 function ManagementSkeleton() {
   return (

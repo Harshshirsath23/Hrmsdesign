@@ -8,6 +8,7 @@ import {
   ProfileInfoField,
   ConfirmationDialog,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -15,6 +16,8 @@ interface Props {
 
 export function PositionHistory({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const designationOptions = useMasterOptions("Designation");
+  const departmentOptions = useMasterOptions("Department");
   const [isEditing, setIsEditing] = useState(false);
   const [rows, setRows] = useState<PositionHistoryEntry[]>(employee.positionHistory || []);
   const [delIdx, setDelIdx] = useState<number | null>(null);
@@ -107,12 +110,14 @@ export function PositionHistory({ employee }: Props) {
                   value={pos.title}
                   editing={isEditing}
                   onChange={(v) => update(index, { title: v })}
+                  options={designationOptions}
                 />
                 <ProfileInfoField
                   label="Department"
                   value={pos.department}
                   editing={isEditing}
                   onChange={(v) => update(index, { department: v })}
+                  options={departmentOptions}
                 />
                 <ProfileInfoField
                   label="From Date"

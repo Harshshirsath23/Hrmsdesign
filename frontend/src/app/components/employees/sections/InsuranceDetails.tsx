@@ -8,6 +8,7 @@ import {
   UploadField,
   EmptyStateCard,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -27,6 +28,9 @@ function emptyPolicy(): InsuranceEntry {
 
 export function InsuranceDetails({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const insuranceCompanyOptions = useMasterOptions("InsuranceCompany");
+  const insuranceTypeOptions = useMasterOptions("InsuranceType");
+  const policyTypeOptions = useMasterOptions("PolicyType");
   const [isEditing, setIsEditing] = useState(false);
   const baseline = useMemo(() => employee.insurance || [], [employee.insurance]);
   const [insurance, setInsurance] = useState<InsuranceEntry[]>(baseline);
@@ -99,6 +103,7 @@ export function InsuranceDetails({ employee }: Props) {
                     label="Insurance Provider"
                     value={pol.insuranceProvider}
                     editing={isEditing}
+                    options={insuranceCompanyOptions}
                     onChange={(v) =>
                       setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, insuranceProvider: v } : r)))
                     }
@@ -115,6 +120,7 @@ export function InsuranceDetails({ employee }: Props) {
                     label="Coverage Type"
                     value={pol.coverageType}
                     editing={isEditing}
+                    options={insuranceTypeOptions.length ? insuranceTypeOptions : policyTypeOptions}
                     onChange={(v) =>
                       setInsurance((rows) => rows.map((r, i) => (i === idx ? { ...r, coverageType: v } : r)))
                     }

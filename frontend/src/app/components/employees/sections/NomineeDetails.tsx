@@ -8,6 +8,7 @@ import {
   UploadField,
   EmptyStateCard,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -75,6 +76,7 @@ function validateNominees(nominees: NomineeEntry[]): {
 
 export function NomineeDetails({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const relationOptions = useMasterOptions("Relation");
   const [isEditing, setIsEditing] = useState(false);
   const baseline = useMemo(() => employee.nominees || [], [employee.nominees]);
   const [nominees, setNominees] = useState<NomineeEntry[]>(baseline);
@@ -183,8 +185,7 @@ export function NomineeDetails({ employee }: Props) {
                     label="Relationship"
                     value={n.relationship}
                     editing={isEditing}
-                    type="select"
-                    options={RELATIONSHIP_OPTIONS}
+                    options={relationOptions.length ? relationOptions : RELATIONSHIP_OPTIONS}
                     error={rowErrors[idx]?.relationship}
                     onChange={(v) => updateNominee(idx, { relationship: v })}
                   />

@@ -7,6 +7,7 @@ import {
   EditableSectionCard,
   ProfileInfoField,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -31,6 +32,7 @@ const STATUS_OPTIONS = [
 ];
 
 export function BackgroundCheck({ employee }: Props) {
+  const verificationStatusOptions = useMasterOptions("VerificationStatus");
   const [isEditing, setIsEditing] = useState(false);
   const [editedBgCheck, setEditedBgCheck] = useState(employee.backgroundCheck || DEFAULT_BG_CHECK);
   const { handleAdminSave } = useAdminSync();
@@ -97,8 +99,7 @@ export function BackgroundCheck({ employee }: Props) {
             label="Verification Status"
             value={editedBgCheck?.verificationStatus || ""}
             editing={isEditing}
-            type="select"
-            options={STATUS_OPTIONS}
+            options={verificationStatusOptions.length ? verificationStatusOptions : STATUS_OPTIONS}
             onChange={(v) => updateBgCheck("verificationStatus", v)}
           />
           <ProfileInfoField

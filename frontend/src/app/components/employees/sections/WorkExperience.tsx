@@ -11,6 +11,7 @@ import {
   ConfirmationDialog,
   validateDateOrder,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -33,6 +34,8 @@ const emptyEntry = (id: string): WorkExperienceEntry => ({
 
 export function WorkExperience({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const employeeTypeOptions = useMasterOptions("EmployeeType");
+  const departmentOptions = useMasterOptions("Department");
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<WorkExperienceEntry[]>(employee.workExperience || []);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
@@ -146,12 +149,14 @@ export function WorkExperience({ employee }: Props) {
                     value={row.employmentType}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { employmentType: v })}
+                    options={employeeTypeOptions}
                   />
                   <ProfileInfoField
                     label="Department"
                     value={row.department}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { department: v })}
+                    options={departmentOptions}
                   />
                   <ProfileInfoField
                     label="Start Date"

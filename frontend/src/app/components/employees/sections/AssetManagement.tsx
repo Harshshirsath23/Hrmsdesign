@@ -7,6 +7,7 @@ import {
   ProfileInfoField,
   EmptyStateCard,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -69,6 +70,9 @@ function validateAssets(assets: AssetEntry[]): Record<number, Record<string, str
 
 export function AssetManagement({ employee }: Props) {
   const { handleAdminSave } = useAdminSync();
+  const assetCategoryOptions = useMasterOptions("AssetCategory");
+  const assetConditionOptions = useMasterOptions("AssetCondition");
+  const assetStatusOptions = useMasterOptions("AssetStatus");
   const [isEditing, setIsEditing] = useState(false);
   const baseline = useMemo(() => employee.assets || [], [employee.assets]);
   const [assets, setAssets] = useState<AssetEntry[]>(baseline);
@@ -166,8 +170,7 @@ export function AssetManagement({ employee }: Props) {
                     label="Asset Category"
                     value={a.assetCategory}
                     editing={isEditing}
-                    type="select"
-                    options={CATEGORY_OPTIONS}
+                    options={assetCategoryOptions.length ? assetCategoryOptions : CATEGORY_OPTIONS}
                     error={errors[idx]?.assetCategory}
                     onChange={(v) => updateAsset(idx, { assetCategory: v })}
                   />
@@ -197,16 +200,14 @@ export function AssetManagement({ employee }: Props) {
                     label="Asset Condition"
                     value={a.assetCondition}
                     editing={isEditing}
-                    type="select"
-                    options={CONDITION_OPTIONS}
+                    options={assetConditionOptions.length ? assetConditionOptions : CONDITION_OPTIONS}
                     onChange={(v) => updateAsset(idx, { assetCondition: v })}
                   />
                   <ProfileInfoField
                     label="Status"
                     value={a.status}
                     editing={isEditing}
-                    type="select"
-                    options={STATUS_OPTIONS}
+                    options={assetStatusOptions.length ? assetStatusOptions : STATUS_OPTIONS}
                     error={errors[idx]?.status}
                     onChange={(v) => updateAsset(idx, { status: v })}
                   />
