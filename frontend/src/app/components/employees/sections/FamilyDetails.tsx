@@ -171,9 +171,7 @@ export function FamilyDetails({ employee, essMode = false }: Props) {
                 <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
                   <Edit2 size={12} /> Edit Section
                 </button>
-                <button onClick={addFamilyMember} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90">
-                  <Plus size={12} /> Add
-                </button>
+                {/* Add button removed per UX request */}
               </>
             )}
           </div>

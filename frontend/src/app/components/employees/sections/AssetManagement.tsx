@@ -140,6 +140,12 @@ export function AssetManagement({ employee }: Props) {
         isEditing={isEditing}
         onCancel={handleCancel}
         onSave={handleSave}
+        headerExtra={
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={startEdit} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary">Edit Asset</button>
+            <button type="button" onClick={startEditAndAdd} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90">Add Asset</button>
+          </div>
+        }
       >
         {!displayAssets.length ? (
           <EmptyStateCard

@@ -98,6 +98,17 @@ export function AccessCardDetails({ employee }: Props) {
         isEditing={isEditing}
         onCancel={handleCancel}
         onSave={handleSave}
+        onEdit={startEdit}
+        headerExtra={!isEditing ? (
+          <button
+            type="button"
+            onClick={startEditAndAdd}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add
+          </button>
+        ) : null}
       >
         {!displayCards.length ? (
           <EmptyStateCard

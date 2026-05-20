@@ -79,6 +79,12 @@ export function GenerateLetterPage() {
     setView("wizard");
   };
 
+  const handleUpdateBatch = (updatedBatch: LetterBatch) => {
+    const updated = batches.map(b => b.id === updatedBatch.id ? { ...b, ...updatedBatch } : b);
+    persistBatches(updated);
+    setSelectedBatch(updatedBatch);
+  };
+
   const handlePreview = (batch: LetterBatch) => {
     setSelectedBatch(batch);
     setIsPreviewing(true);
@@ -226,6 +232,8 @@ export function GenerateLetterPage() {
             <LetterDetails 
               batch={selectedBatch} 
               onBack={() => setView("history")} 
+              onUpdateBatch={handleUpdateBatch}
+              onDeleteBatch={handleDeleteBatch}
             />
           )}
 

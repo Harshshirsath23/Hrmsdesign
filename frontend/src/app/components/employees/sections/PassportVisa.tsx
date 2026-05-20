@@ -105,9 +105,6 @@ export function PassportVisa({ employee, essMode = false }: Props) {
               <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
                 <Edit2 size={12} /> Edit Section
               </button>
-              <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all">
-                <Plus size={12} /> Add
-              </button>
             </>
           )}
         </div>
@@ -304,17 +301,13 @@ export function PassportVisa({ employee, essMode = false }: Props) {
                   </button>
                 )
               )}
-              {editedData.visaExpiry && !isEditing && !visaEditing ? (
-                visaExpired ? (
-                  <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRED_BADGE}`}>
-                    <AlertCircle className="w-3.5 h-3.5" /> Expired
-                  </span>
-                ) : (
-                  <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${VALID_BADGE}`}>
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Valid
-                  </span>
-                )
-              ) : null}
+              {/* Visa status now driven by explicit selectable value only */}
+              {((editedData as any).visaStatus || (!isEditing && !visaEditing && (editedData as any).visaStatus)) && (
+                <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${(editedData as any).visaStatus === 'Expired' ? EXPIRED_BADGE : VALID_BADGE}`}>
+                  {(editedData as any).visaStatus === 'Expired' ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  {(editedData as any).visaStatus || 'Active'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -348,12 +341,24 @@ export function PassportVisa({ employee, essMode = false }: Props) {
                     ))}
                   </select>
                 ) : isEditing || visaEditing ? (
-                  <input
-                    type={field.includes("Date") || field.includes("Expiry") ? "date" : "text"}
-                    value={(editedData as any)[field] || ""}
-                    onChange={(e) => handleUpdate(field, e.target.value)}
-                    className="text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 sm:max-w-xs w-full focus:outline-none focus:ring-1 focus:ring-primary/30"
-                  />
+                  field === 'visaStatus' ? (
+                    <select
+                      value={(editedData as any)[field] || ''}
+                      onChange={(e) => handleUpdate(field as any, e.target.value)}
+                      className="text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 sm:max-w-xs w-full focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    >
+                      <option value="">Select Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Expired">Expired</option>
+                    </select>
+                  ) : (
+                    <input
+                      type={field.includes("Date") || field.includes("Expiry") ? "date" : "text"}
+                      value={(editedData as any)[field] || ""}
+                      onChange={(e) => handleUpdate(field, e.target.value)}
+                      className="text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 sm:max-w-xs w-full focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    />
+                  )
                 ) : (
                   <span className="text-sm font-semibold text-foreground">
                     {field.includes("Date") || field === "visaExpiry"

@@ -151,18 +151,7 @@ export function NomineeDetails({ employee }: Props) {
         onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={
-          !isEditing && (
-            <button
-              type="button"
-              onClick={addNominee}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add
-            </button>
-          )
-        }
+        /* Add button removed (Nominee additions disabled in ESS) */
       >
         {formError ? (
           <p className="mb-4 text-sm text-destructive font-medium">{formError}</p>

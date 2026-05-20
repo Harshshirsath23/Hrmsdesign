@@ -85,14 +85,34 @@ export function EmployeeDocumentsSection({ employee }: Props) {
           setIsEditing(false);
         }}
         onSave={handleSave}
-        /* headerExtra omitted for employee view */
+        headerExtra={
+          <div className="flex items-center gap-2">
+            {isEditable && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                New Document
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => { setEditingType(null); setModalOpen(true); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+            >
+              Add New Document
+            </button>
+          </div>
+        }
       >
         <EmployeeDocumentsGrid
           documentTypes={documentTypes}
           docs={docs}
           isEditing={isEditing}
           onChange={setDocs}
-          showTypeControls
+          showTypeControls={false}
           onEditType={(type) => {
             setEditingType(type);
             setModalOpen(true);
