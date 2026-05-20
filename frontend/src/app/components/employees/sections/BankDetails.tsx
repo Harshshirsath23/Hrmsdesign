@@ -11,6 +11,7 @@ import { ProfileInfoField } from "../employee-details/ProfileInfoField";
 
 interface Props {
   employee: Employee;
+  disableEdit?: boolean;
 }
 
 function StatSectionCard({
@@ -118,7 +119,7 @@ function InfoRow({
   );
 }
 
-export function BankDetails({ employee }: Props) {
+export function BankDetails({ employee, disableEdit = false }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
   const [pfEdit, setPfEdit] = useState(false);
@@ -204,7 +205,7 @@ export function BankDetails({ employee }: Props) {
         title="Bank Account Information"
         icon={CreditCard}
         isEditing={isEditing}
-        onEdit={() => setIsEditing(true)}
+        onEdit={!disableEdit ? () => setIsEditing(true) : undefined}
         onSave={handleSaveBank}
         onCancel={() => {
           setEditedData(employee);
@@ -267,7 +268,7 @@ export function BankDetails({ employee }: Props) {
         title="Statutory Documents"
         icon={Shield}
         isEditing={isEditing}
-        onEdit={() => setIsEditing(true)}
+        onEdit={!disableEdit ? () => setIsEditing(true) : undefined}
         onSave={handleSaveBank}
         onCancel={() => {
           setEditedData(employee);
@@ -287,7 +288,7 @@ export function BankDetails({ employee }: Props) {
           title="Provident Fund (PF)"
           icon={Shield}
           isEditing={pfEdit}
-          onEdit={() => setPfEdit(true)}
+          onEdit={!disableEdit ? () => setPfEdit(true) : undefined}
           onSave={savePf}
           onCancel={() => {
             setPfDraft(employee.pfDetails || pfDraft);
@@ -313,7 +314,7 @@ export function BankDetails({ employee }: Props) {
           title="Employee State Insurance (ESI)"
           icon={Building2}
           isEditing={esiEdit}
-          onEdit={() => setEsiEdit(true)}
+          onEdit={!disableEdit ? () => setEsiEdit(true) : undefined}
           onSave={saveEsi}
           onCancel={() => {
             setEsiDraft(employee.esiDetails || esiDraft);

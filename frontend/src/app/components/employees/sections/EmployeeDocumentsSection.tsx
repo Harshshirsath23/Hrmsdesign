@@ -59,19 +59,7 @@ export function EmployeeDocumentsSection({ employee }: Props) {
     });
   };
 
-  const addTypeButton = (
-    <button
-      type="button"
-      onClick={() => {
-        setEditingType(null);
-        setModalOpen(true);
-      }}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-    >
-      <Plus className="w-3.5 h-3.5" />
-      Add New Document Type
-    </button>
-  );
+  // Employee-facing view: no header actions (Add New Document Type) shown
 
   return (
     <div className="space-y-5 pb-24">
@@ -97,7 +85,7 @@ export function EmployeeDocumentsSection({ employee }: Props) {
           setIsEditing(false);
         }}
         onSave={handleSave}
-        headerExtra={addTypeButton}
+        /* headerExtra omitted for employee view */
       >
         <EmployeeDocumentsGrid
           documentTypes={documentTypes}

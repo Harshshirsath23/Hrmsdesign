@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Monitor, Plus } from "lucide-react";
+import { Monitor } from "lucide-react";
 import { Employee, AssetEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import {
@@ -121,16 +121,7 @@ export function AssetManagement({ employee }: Props) {
 
   const displayAssets = isEditing ? assets : baseline;
 
-  const addButton = (
-    <button
-      type="button"
-      onClick={() => (isEditing ? addAsset() : startEditAndAdd())}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-    >
-      <Plus className="w-3.5 h-3.5" />
-      Add Asset
-    </button>
-  );
+  // Employee view: no header add/edit controls here; admin UI handles edits.
 
   return (
     <div className="space-y-5 pb-24">
@@ -143,13 +134,15 @@ export function AssetManagement({ employee }: Props) {
         title="Asset Management"
         icon={Monitor}
         isEditing={isEditing}
-        onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={addButton}
       >
         {!displayAssets.length ? (
-          <EmptyStateCard icon={Monitor} title="No assets assigned" description="Use Add Asset to record asset details." />
+          <EmptyStateCard
+            icon={Monitor}
+            title="No assets assigned"
+            description="No assets recorded. Contact admin to add assets."
+          />
         ) : (
           <div className="space-y-6">
             {displayAssets.map((a, idx) => (

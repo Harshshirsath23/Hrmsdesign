@@ -1,5 +1,5 @@
-import { SharedLoginLayout } from '@components/layout/SharedLoginLayout';
+import { DynamicEmployeeLoginLayout } from '@components/layout/DynamicEmployeeLoginLayout';
 
 export function EmployeeLoginPage() {
-  return <SharedLoginLayout initialRole="employee" />;
+  return <DynamicEmployeeLoginLayout />;
 }
