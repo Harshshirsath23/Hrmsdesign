@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Employee } from "../mockData";
-import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X, Plus } from "lucide-react";
+import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { useMasterOptions } from "./useMasterOptions";
 
@@ -72,13 +72,13 @@ function EditableField({
   );
 }
 
-export function FamilyDetails({ employee, essMode = false }: Props) {
+export function FamilyDetails({ employee }: Props) {
   const relationOptions = useMasterOptions("Relation");
   const genderOptions = useMasterOptions("Gender");
   const bloodGroupOptions = useMasterOptions("BloodGroup");
   const [isEditing, setIsEditing] = useState(false);
   const [editedFamily, setEditedFamily] = useState(employee.family || []);
-  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const { handleAdminSave } = useAdminSync();
 
   const updateMember = (idx: number, field: string, value: any) => {
     setEditedFamily(prev => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
@@ -134,27 +134,6 @@ export function FamilyDetails({ employee, essMode = false }: Props) {
         </div>
 
         <div className="flex items-center gap-6">
-          {!essMode && (
-          <label className="flex items-center gap-2 cursor-pointer group">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isEditable}
-                onChange={(e) => handleToggleEditAccess(employee, "family-details", e.target.checked)}
-                className="sr-only"
-              />
-              <div className={`w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center ${
-                isEditable ? "bg-indigo-500 border-indigo-500" : "border-slate-300 bg-white"
-              }`}>
-                {isEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
-              </div>
-            </div>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-              Allow Employee to Edit
-            </span>
-          </label>
-          )}
-
           <div className="flex items-center gap-2">
             {isEditing ? (
               <>

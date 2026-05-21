@@ -11,8 +11,10 @@ import { Label } from "../../../components/ui/label";
 import { Input } from "../../../components/ui/input";
 import {
   ALLOWED_FILE_TYPE_OPTIONS,
+  DOCUMENT_SECTION_OPTIONS,
   UPLOAD_TYPE_OPTIONS,
   type AllowedFileType,
+  type DocumentSection,
   type DocumentTypeConfig,
   type DocumentUploadType,
   slugifyDocumentId,
@@ -29,6 +31,7 @@ interface Props {
 const emptyForm = (): Omit<DocumentTypeConfig, "id"> & { id: string } => ({
   id: "",
   documentName: "",
+  documentSection: "Personal",
   category: "General",
   uploadType: "single",
   allowedFileTypes: ["pdf", "jpg", "png"],
@@ -69,6 +72,10 @@ export function DocumentTypeModal({ open, onOpenChange, initial, existingIds, on
       setError("Document category is required");
       return;
     }
+    if (!form.documentSection) {
+      setError("Document section is required");
+      return;
+    }
     if (!form.allowedFileTypes.length) {
       setError("Select at least one allowed file type");
       return;
@@ -85,6 +92,7 @@ export function DocumentTypeModal({ open, onOpenChange, initial, existingIds, on
     onSave({
       id,
       documentName: form.documentName.trim(),
+      documentSection: form.documentSection,
       category: form.category.trim(),
       uploadType: form.uploadType,
       allowedFileTypes: form.allowedFileTypes,
@@ -123,6 +131,21 @@ export function DocumentTypeModal({ open, onOpenChange, initial, existingIds, on
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               placeholder="e.g. KYC, Onboarding"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Document Section</Label>
+            <select
+              value={form.documentSection}
+              onChange={(e) => setForm((f) => ({ ...f, documentSection: e.target.value as DocumentSection }))}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {DOCUMENT_SECTION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2">

@@ -4,9 +4,12 @@ export type AllowedFileType = "pdf" | "jpg" | "png" | "doc" | "docx";
 
 export type DocumentTypeStatus = "Active" | "Inactive";
 
+export type DocumentSection = "Personal" | "Official" | "Company";
+
 export interface DocumentTypeConfig {
   id: string;
   documentName: string;
+  documentSection: DocumentSection;
   category: string;
   uploadType: DocumentUploadType;
   allowedFileTypes: AllowedFileType[];
@@ -31,6 +34,18 @@ export const UPLOAD_TYPE_OPTIONS: { value: DocumentUploadType; label: string }[]
   { value: "frontBack", label: "Front & Back Side" },
   { value: "multiple", label: "Multiple Files" },
 ];
+
+export const DOCUMENT_SECTION_OPTIONS: { value: DocumentSection; label: string }[] = [
+  { value: "Personal", label: "Personal" },
+  { value: "Official", label: "Official" },
+  { value: "Company", label: "Company" },
+];
+
+export function inferDocumentSection(category: string): DocumentSection {
+  if (["KYC", "Travel", "Education"].includes(category)) return "Personal";
+  if (["Payroll", "Tax", "Insurance", "HR"].includes(category)) return "Official";
+  return "Company";
+}
 
 export function fileTypesToAccept(types: AllowedFileType[]): string {
   const map: Record<AllowedFileType, string> = {

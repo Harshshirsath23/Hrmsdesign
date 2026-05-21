@@ -35,9 +35,7 @@ export function EditableSectionCard({
   editLabel,
   sectionId,
   canEmployeeEdit,
-  onToggleEmployeeEdit,
   requestStatus,
-  hideAdminControls = false,
 }: EditableSectionCardProps) {
   const getStatusLabel = () => {
     if (requestStatus === 'Pending') return { l: 'Pending Employee Update', c: 'bg-amber-500/10 text-amber-600 border-amber-200' };
@@ -67,26 +65,6 @@ export function EditableSectionCard({
           )}
         </div>
         <div className="flex items-center gap-4 flex-shrink-0">
-          {sectionId && onToggleEmployeeEdit && !hideAdminControls && (
-            <label className="flex items-center gap-2 cursor-pointer group">
-              <div className="relative flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={canEmployeeEdit}
-                  onChange={(e) => onToggleEmployeeEdit(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={cn(
-                  "w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center",
-                  canEmployeeEdit ? "bg-indigo-500 border-indigo-500 shadow-sm" : "border-slate-300 bg-white group-hover:border-indigo-400"
-                )}>
-                  {canEmployeeEdit && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
-                </div>
-              </div>
-             
-            </label>
-          )}
-
           <div className="flex items-center gap-2">
             {headerExtra}
             {isEditing ? (

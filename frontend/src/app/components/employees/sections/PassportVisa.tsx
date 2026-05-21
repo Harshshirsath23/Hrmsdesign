@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Employee } from "../mockData";
-import { Globe, BookOpen, AlertCircle, CheckCircle2, Edit2, Save, X, Plus } from "lucide-react";
+import { Globe, BookOpen, AlertCircle, CheckCircle2, Edit2, Save, X } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { addNotification } from "../../../../store/slices/notificationSlice";
 import { AppDispatch } from "../../../../store";
@@ -36,13 +36,13 @@ function withCurrentOption(options: Array<{ value: string; label: string }>, val
   return [{ value, label: value }, ...options];
 }
 
-export function PassportVisa({ employee, essMode = false }: Props) {
+export function PassportVisa({ employee }: Props) {
   const nationalityOptions = useMasterOptions("Nationality");
   const countryOptions = useMasterOptions("Country");
   const [isEditing, setIsEditing] = useState(false);
   const [visaEditing, setVisaEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
-  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const { handleAdminSave } = useAdminSync();
 
   useEffect(() => {
     setEditedData(employee);
@@ -126,27 +126,6 @@ export function PassportVisa({ employee, essMode = false }: Props) {
           </div>
 
           <div className="flex items-center gap-4">
-             {!essMode && (
-             <label className="flex items-center gap-2 cursor-pointer group">
-              <div className="relative flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={isPassportEditable}
-                  onChange={(e) => handleToggleEditAccess(employee, "passport-details", e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center ${
-                  isPassportEditable ? "bg-indigo-500 border-indigo-500" : "border-slate-300 bg-white"
-                }`}>
-                  {isPassportEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
-                </div>
-              </div>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                
-              </span>
-            </label>
-            )}
-
             <div className="flex items-center gap-2">
               {passportExpired ? (
                 <span className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-md ${EXPIRED_BADGE}`}>
@@ -250,25 +229,6 @@ export function PassportVisa({ employee, essMode = false }: Props) {
           </div>
 
           <div className="flex items-center gap-4">
-             {!essMode && (
-             <label className="flex items-center gap-2 cursor-pointer group">
-              <div className="relative flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={isVisaEditable}
-                  onChange={(e) => handleToggleEditAccess(employee, "visa-details", e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center ${
-                  isVisaEditable ? "bg-indigo-500 border-indigo-500" : "border-slate-300 bg-white"
-                }`}>
-                  {isVisaEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
-                </div>
-              </div>
-              
-            </label>
-            )}
-
             <div className="flex items-center gap-2">
               {visaEditing ? (
                 <>
