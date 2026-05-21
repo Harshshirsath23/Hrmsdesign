@@ -17,7 +17,6 @@ interface FiltersProps {
   onDateChange: (date: Date) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  onInsightsOpen: () => void;
 }
 
 export function Filters({ 
@@ -27,7 +26,6 @@ export function Filters({
   onDateChange, 
   searchTerm, 
   onSearchChange,
-  onInsightsOpen
 }: FiltersProps) {
   
   const handlePrevMonth = () => {
@@ -109,14 +107,7 @@ export function Filters({
           />
         </div>
 
-        {/* AI Insights Button */}
-        <button 
-          onClick={onInsightsOpen}
-          className="flex items-center gap-2 px-5 py-3 bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
-        >
-          <Sparkles size={16} />
-          <span className="hidden sm:inline">AI Insights</span>
-        </button>
+        {/* AI Insights removed per request */}
       </div>
     </div>
   );

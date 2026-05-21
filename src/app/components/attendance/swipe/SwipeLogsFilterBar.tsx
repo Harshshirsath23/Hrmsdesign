@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { cn } from "../../ui/utils";
 import { MOCK_DEPARTMENTS, MOCK_DESIGNATIONS, MOCK_TEAMS } from "../../../modules/attendance/mockData";
 import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
+import { Calendar } from "../../ui/calendar";
 
 interface SwipeLogsFilterBarProps {
   filters: any;
@@ -35,11 +37,27 @@ export function SwipeLogsFilterBar({ filters, setFilters }: SwipeLogsFilterBarPr
         {/* Filters Group */}
         <div className="flex-1 flex flex-wrap items-center gap-2">
           {/* Date Picker */}
-          <Button variant="outline" className="h-10 bg-slate-100/50 dark:bg-slate-800/50 border-transparent rounded-xl text-xs font-bold gap-2 text-slate-600 dark:text-slate-400">
-            <CalendarIcon className="w-3.5 h-3.5" />
-            {format(filters.dateRange.from, "dd MMM")} - {format(filters.dateRange.to, "dd MMM")}
-            <ChevronDown className="w-3 h-3 opacity-50" />
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="h-10 bg-slate-100/50 dark:bg-slate-800/50 border-transparent rounded-xl text-xs font-bold gap-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <CalendarIcon className="w-3.5 h-3.5 text-emerald-500" />
+                <span>{filters.date ? format(filters.date, "dd MMM yyyy") : "Select Date"}</span>
+                <ChevronDown className="w-3 h-3 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-60 bg-white dark:bg-slate-900" align="start">
+              <Calendar
+                mode="single"
+                selected={filters.date}
+                onSelect={(d) => d && updateFilter("date", d)}
+                disabled={{ after: new Date() }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
 
           {/* Department */}
           <Select value={filters.department} onValueChange={(v) => updateFilter("department", v)}>
@@ -92,7 +110,7 @@ export function SwipeLogsFilterBar({ filters, setFilters }: SwipeLogsFilterBarPr
             location: "all",
             device: "all",
             type: "all",
-            dateRange: { from: new Date(2026, 4, 11), to: new Date(2026, 4, 11) },
+            date: new Date(),
           })}>
             <RotateCcw className="w-3.5 h-3.5 mr-2" />
             RESET

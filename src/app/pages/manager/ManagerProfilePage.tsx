@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import { ESS_SECTIONS } from "../../modules/ess/data";
 import { EssProfileHeaderCard } from "../../components/employee/EssProfileHeaderCard";
@@ -634,10 +635,12 @@ const ORIGINAL_PROFILE_FIELDS = [
 function ProfileSection({
   data,
   readOnly,
+  isTeamMemberView,
   onChange,
 }: {
   data: Record<string, unknown>;
   readOnly: boolean;
+  isTeamMemberView?: boolean;
   onChange: (v: Record<string, unknown>) => void;
 }) {
   return (
@@ -648,8 +651,11 @@ function ProfileSection({
             key={f}
             fieldKey={f}
             value={data[f] ?? ""}
-            readOnly={readOnly}
-            onChange={(v) => onChange({ ...data, [f]: v })}
+            readOnly={isTeamMemberView || readOnly}
+            onChange={(v) => {
+              if (isTeamMemberView || readOnly) return;
+              onChange({ ...data, [f]: v });
+            }}
           />
         ))}
       </div>
@@ -713,7 +719,10 @@ const EMPLOYMENT_FIELDS = [
 // ---------------------------------------------------------------------------
 export function ManagerProfilePage() {
   const { user } = useAuth();
-  const employeeId = user?.employeeId ?? "1";
+  const [searchParams] = useSearchParams();
+  const queryEmployeeId = searchParams.get("employee");
+  const employeeId = queryEmployeeId || user?.employeeId || "1";
+  const isTeamMemberView = !!queryEmployeeId && queryEmployeeId !== user?.employeeId;
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
@@ -726,7 +735,7 @@ export function ManagerProfilePage() {
   const uniqueSections = useMemo(() => {
     const combined = [...ESS_SECTIONS, ...EXTRA_SECTIONS];
     const seen = new Set();
-    const result = combined.filter((section) => {
+    let result = combined.filter((section) => {
       if (seen.has(section.key)) return false;
       seen.add(section.key);
       return true;
@@ -737,9 +746,13 @@ export function ManagerProfilePage() {
       return s;
     });
 
-    result.push({ key: "requests", label: "My Requests", editable: false, optional: false });
+    if (isTeamMemberView) {
+      result = result.filter(s => s.key === "profile" || s.key === "employmentDetails");
+    } else {
+      result.push({ key: "requests", label: "My Requests", editable: false, optional: false });
+    }
     return result;
-  }, []);
+  }, [isTeamMemberView]);
 
   const changeHistory = useMemo(
     () => getChangeRequests(employeeId),
@@ -755,10 +768,10 @@ export function ManagerProfilePage() {
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [employeeId]);
 
   const beginEdit = (section: SectionKey) => {
-    if (!profile) return;
+    if (!profile || isTeamMemberView) return;
     setEditingSection(section);
     setDraft(JSON.parse(JSON.stringify((profile as any)[section] ?? {})));
     setBanner(null);
@@ -878,6 +891,7 @@ export function ManagerProfilePage() {
         <ProfileSection
           data={sectionData as Record<string, unknown>}
           readOnly={isReadOnly}
+          isTeamMemberView={isTeamMemberView}
           onChange={setDraft}
         />
       );
@@ -1208,7 +1222,7 @@ export function ManagerProfilePage() {
   const isEditing = editingSection === selectedSection.key;
   const rawData = (profile as any)[selectedSection.key];
   const sectionData = isEditing ? draft : rawData;
-  const isReadOnly = !isEditing || !selectedSection.editable;
+  const isReadOnly = !isEditing || !selectedSection.editable || isTeamMemberView;
 
   // Skip rendering sections with no data and optional flag (clean UX)
   const isEmpty =

@@ -11,9 +11,6 @@ import {
   Paperclip,
   XCircle,
   RefreshCw,
-  ThumbsUp,
-  ThumbsDown,
-  CornerUpLeft,
   CalendarDays,
   User,
   Building,
@@ -35,7 +32,7 @@ import { cn } from "../../../components/ui/utils";
 
 // --- Types ---
 type RequestCategory = "Attendance" | "Leave" | "Other";
-type RequestStatus = "Pending" | "Approved" | "Rejected" | "Sent Back" | "Escalated";
+type RequestStatus = "Pending" | "Approved" | "Rejected" | "Escalated";
 type Priority = "Low" | "Medium" | "High";
 
 interface RequestRow {
@@ -69,11 +66,10 @@ interface RequestRow {
 
 // --- Constants ---
 const STATUS_STYLES: Record<RequestStatus, string> = {
-  Pending: "bg-[#F59E0B] text-white border border-[#F59E0B]",
-  Approved: "bg-[#10B981] text-white border border-[#10B981]",
-  Rejected: "bg-[#EF4444] text-white border border-[#EF4444]",
-  "Sent Back": "bg-[#3B82F6] text-white border border-[#3B82F6]",
-  Escalated: "bg-[#DC2626] text-white border border-[#DC2626]",
+  Pending: "bg-amber-100 text-amber-800 border border-amber-200",
+  Approved: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+  Rejected: "bg-rose-100 text-rose-800 border border-rose-200",
+  Escalated: "bg-rose-100 text-rose-800 border border-rose-200",
 };
 
 const PRIORITY_STYLES: Record<Priority, string> = {
@@ -95,11 +91,10 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const CARD_STATUS_STYLES: Record<RequestStatus, string> = {
-  Pending: "border-l-4 border-l-[#F59E0B]",
-  Approved: "border-l-4 border-l-[#10B981]",
-  Rejected: "border-l-4 border-l-[#EF4444]",
-  "Sent Back": "border-l-4 border-l-[#3B82F6]",
-  Escalated: "border-l-4 border-l-[#DC2626]",
+  Pending: "border-l-4 border-l-amber-400",
+  Approved: "border-l-4 border-l-emerald-400",
+  Rejected: "border-l-4 border-l-rose-400",
+  Escalated: "border-l-4 border-l-rose-600",
 };
 
 // --- Mock Data ---
@@ -453,9 +448,9 @@ export default function ManagerApprovalsRequestsPage() {
     setSelectedIds(next);
   };
 
-  const handleBulkAction = (action: "Approved" | "Rejected" | "Sent Back") => {
+  const handleBulkAction = (action: "Approved" | "Rejected") => {
     const selectedRows = rows.filter((row) => selectedIds[row.id]);
-    const actionText = action === "Approved" ? "approved" : action === "Rejected" ? "rejected" : "sent back";
+    const actionText = action === "Approved" ? "approved" : "rejected";
 
     if (!selectedRows.length) return;
 
@@ -478,9 +473,9 @@ export default function ManagerApprovalsRequestsPage() {
     showToast(`${selectedRows.length} requests ${actionText} successfully.`);
   };
 
-  const handleRowAction = (row: RequestRow, action: "Approved" | "Rejected" | "Sent Back", inlineRemarks?: string) => {
+  const handleRowAction = (row: RequestRow, action: "Approved" | "Rejected", inlineRemarks?: string) => {
     const finalRemarks = inlineRemarks !== undefined ? inlineRemarks : remarks;
-    if ((action === "Rejected" || action === "Sent Back") && !finalRemarks.trim() && !inlineRemarks) {
+    if (action === "Rejected" && !finalRemarks.trim() && !inlineRemarks) {
       setRemarksError("Remarks are required for this action.");
       return;
     }
@@ -495,7 +490,7 @@ export default function ManagerApprovalsRequestsPage() {
               timeline: [
                 ...item.timeline,
                 {
-                  step: action === "Sent Back" ? "Sent Back" : action,
+                  step: action,
                   date: new Date().toISOString().slice(0, 10),
                   actor: "You",
                   status: action,
@@ -687,7 +682,6 @@ export default function ManagerApprovalsRequestsPage() {
                 <option value="Pending" className="bg-card text-foreground">Pending</option>
                 <option value="Approved" className="bg-card text-foreground">Approved</option>
                 <option value="Rejected" className="bg-card text-foreground">Rejected</option>
-                <option value="Sent Back" className="bg-card text-foreground">Sent Back</option>
                 </select>
             )}
 
@@ -835,28 +829,26 @@ export default function ManagerApprovalsRequestsPage() {
                                 <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground" onClick={() => setDrawerRow(row)}>
                                     Details
                                 </Button>
-                                {row.status === "Pending" && (
-                                    <>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="h-8 w-8 p-0 bg-[#EF4444] text-white hover:bg-[#DC2626]"
-                                            onClick={(e) => { e.stopPropagation(); handleRowAction(row, "Rejected", "Rejected from quick actions"); }}
-                                            title="Reject"
-                                        >
-                                            <ThumbsDown className="h-4 w-4" />
-                                        </Button>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="h-8 w-8 p-0 bg-[#10B981] text-white hover:bg-[#059669]"
-                                            onClick={(e) => { e.stopPropagation(); handleRowAction(row, "Approved", "Approved from quick actions"); }}
-                                            title="Approve"
-                                        >
-                                            <ThumbsUp className="h-4 w-4" />
-                                        </Button>
-                                    </>
-                                )}
+                                        {row.status === "Pending" && (
+                                          <>
+                                            <Button
+                                              size="sm"
+                                              className="flex items-center gap-2 h-8 bg-rose-100 text-rose-800 hover:bg-rose-200"
+                                              onClick={(e) => { e.stopPropagation(); handleRowAction(row, "Rejected", "Rejected from quick actions"); }}
+                                              title="Reject"
+                                            >
+                                              <XCircle className="mr-2 h-4 w-4" /> Reject
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              className="flex items-center gap-2 h-8 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                              onClick={(e) => { e.stopPropagation(); handleRowAction(row, "Approved", "Approved from quick actions"); }}
+                                              title="Approve"
+                                            >
+                                              <CheckCircle2 className="mr-2 h-4 w-4" /> Approve
+                                            </Button>
+                                          </>
+                                        )}
                             </div>
                         </div>
                     </div>
@@ -884,20 +876,17 @@ export default function ManagerApprovalsRequestsPage() {
                 {selectedCount} {selectedCount === 1 ? "request" : "requests"} selected
             </span>
             <div className="h-5 w-px bg-border"></div>
-            <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" className="bg-[#10B981] text-white hover:bg-[#059669]" onClick={() => handleBulkAction("Approved")}>
-                    <ThumbsUp className="mr-2 h-4 w-4" /> Approve Selected
-                </Button>
-                <Button size="sm" className="bg-[#EF4444] text-white hover:bg-[#DC2626]" onClick={() => handleBulkAction("Rejected")}>
-                    <ThumbsDown className="mr-2 h-4 w-4" /> Reject Selected
-                </Button>
-                <Button size="sm" className="bg-[#3B82F6] text-white hover:bg-[#2563EB]" onClick={() => handleBulkAction("Sent Back")}>
-                    <CornerUpLeft className="mr-2 h-4 w-4" /> Send Back Selected
-                </Button>
-                <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-secondary" onClick={() => setSelectedIds({})}>
-                    Clear Selection
-                </Button>
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200" onClick={() => handleBulkAction("Approved") }>
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Approve Selected
+            </Button>
+            <Button size="sm" className="bg-rose-100 text-rose-800 hover:bg-rose-200" onClick={() => handleBulkAction("Rejected") }>
+              <XCircle className="mr-2 h-4 w-4" /> Reject Selected
+            </Button>
+            <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-secondary" onClick={() => setSelectedIds({})}>
+              Clear Selection
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1045,15 +1034,12 @@ export default function ManagerApprovalsRequestsPage() {
                   {remarksError && <p className="mt-1 text-xs font-semibold text-[#EF4444] flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {remarksError}</p>}
                 </div>
                 <div className="flex items-center gap-3 w-full">
-                  <Button className="flex-1 bg-[#3B82F6] text-white hover:bg-[#2563EB]" onClick={() => drawerRow && handleRowAction(drawerRow, "Sent Back")}>
-                      <CornerUpLeft className="mr-2 h-4 w-4" /> Send Back
-                  </Button>
-                  <Button variant="destructive" className="flex-1 bg-[#EF4444] text-white hover:bg-[#DC2626] border-none" onClick={() => drawerRow && handleRowAction(drawerRow, "Rejected")}>
-                      <ThumbsDown className="mr-2 h-4 w-4" /> Reject
-                  </Button>
-                  <Button className="flex-1 bg-[#10B981] text-white hover:bg-[#059669]" onClick={() => drawerRow && handleRowAction(drawerRow, "Approved")}>
-                      <ThumbsUp className="mr-2 h-4 w-4" /> Approve
-                  </Button>
+                    <Button className="flex-1 bg-rose-100 text-rose-800 hover:bg-rose-200 border-none" onClick={() => drawerRow && handleRowAction(drawerRow, "Rejected") }>
+                      <XCircle className="mr-2 h-4 w-4" /> Reject
+                    </Button>
+                    <Button className="flex-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-200" onClick={() => drawerRow && handleRowAction(drawerRow, "Approved") }>
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Approve
+                    </Button>
                 </div>
               </DrawerFooter>
           ) : (

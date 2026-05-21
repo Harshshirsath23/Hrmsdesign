@@ -152,6 +152,7 @@ export interface SwipeLog {
   verificationMethod: "Face" | "Fingerprint" | "Mobile GPS" | "QR Scan" | "Card Tap";
   spoofDetection: "Safe" | "Suspicious" | "N/A";
   faceMatchScore?: number;
+  workMode?: WorkMode;
 }
 
 export interface SwipeAnalytics {

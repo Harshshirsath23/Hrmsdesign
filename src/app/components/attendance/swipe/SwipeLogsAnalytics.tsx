@@ -4,7 +4,6 @@ import {
   LogOut, 
   AlertCircle, 
   Clock, 
-  WifiOff, 
   Smartphone, 
   Building2 
 } from "lucide-react";
@@ -17,7 +16,6 @@ interface SwipeLogsAnalyticsProps {
     totalOutEntries: number;
     missingPunchCount: number;
     lateEntryCount: number;
-    deviceOfflineCount: number;
     wfhAttendanceCount: number;
     officeAttendanceCount: number;
   };
@@ -63,7 +61,7 @@ function MetricCard({ icon: Icon, label, value, subtext, color, trend }: any) {
 
 export function SwipeLogsAnalytics({ data }: SwipeLogsAnalyticsProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
       <MetricCard 
         icon={Activity} 
         label="Total Swipes" 
@@ -101,13 +99,6 @@ export function SwipeLogsAnalytics({ data }: SwipeLogsAnalyticsProps) {
         value={data.lateEntryCount} 
         subtext="Post shift start" 
         color="red"
-      />
-      <MetricCard 
-        icon={WifiOff} 
-        label="Device Offline" 
-        value={data.deviceOfflineCount} 
-        subtext="Needs attention" 
-        color="slate"
       />
       <MetricCard 
         icon={Smartphone} 

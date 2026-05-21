@@ -17,7 +17,7 @@ export function EmployeeAttendanceCard({ record, type }: EmployeeAttendanceCardP
 
   return (
     <div className={cn(
-      "group border border-border rounded-2xl bg-card transition-all duration-300",
+      "group border border-border rounded-2xl bg-card transition-all duration-300 glassmorph-card",
       isExpanded ? "shadow-lg ring-1 ring-primary/20 scale-[1.02] z-10" : "hover:border-primary/30 hover:shadow-md"
     )}>
       <div className="p-4 flex flex-col h-full">
@@ -74,7 +74,7 @@ export function EmployeeAttendanceCard({ record, type }: EmployeeAttendanceCardP
           <Button 
             variant="ghost" 
             size="sm" 
-            className="flex-1 h-8 text-[11px] font-bold gap-1.5 hover:bg-primary/5 hover:text-primary transition-all"
+            className="flex-1 h-8 text-[11px] font-bold gap-1.5 glassmorph-button"
             onClick={() => setIsExpanded(!isExpanded)}
           >
             {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -83,7 +83,7 @@ export function EmployeeAttendanceCard({ record, type }: EmployeeAttendanceCardP
           <Button 
             variant="outline" 
             size="icon" 
-            className="h-8 w-8 rounded-lg shrink-0"
+            className="h-8 w-8 rounded-lg shrink-0 glassmorph-button"
             onClick={() => selectEmployee(record.id)}
             title="View Full Profile"
           >

@@ -14,7 +14,7 @@ export function DayDetailsDrawer({ employeeId }: { employeeId?: string }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
-      <div className="w-full max-w-md h-full bg-card border-l border-border p-5 overflow-y-auto">
+      <div className="w-full max-w-md h-full bg-card border-l border-border p-5 overflow-y-auto glassmorph-card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-foreground">Day Details</h3>
           <button onClick={() => setSelectedDate(null)} className="text-sm border border-border rounded px-2 py-1">Close</button>
