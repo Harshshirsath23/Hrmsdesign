@@ -464,14 +464,11 @@ export function ApplicationsHistoryTable({
 
       {/* ── Edit leave centered modal (replaces right-side Drawer) ────── */}
       {!!editLeave && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={() => setEditLeave(null)}
-        >
-          <div
-            className="relative bg-background border border-border rounded-xl shadow-xl flex flex-col w-[92vw] max-w-md max-h-[90vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+<div
+  className="relative z-[9999] bg-background border border-border rounded-xl shadow-xl flex flex-col w-[92vw] max-w-md max-h-[90vh] overflow-visible pointer-events-auto"
+  onClick={(e) => e.stopPropagation()}
+>
             {/* Header */}
             <div className="border-b border-border bg-card px-5 py-4 flex items-start justify-between gap-3 flex-shrink-0">
               <div>
@@ -492,7 +489,7 @@ export function ApplicationsHistoryTable({
             </div>
 
             {/* Body */}
-            <div className="space-y-4 p-5 overflow-y-auto flex-1">
+            <div className="space-y-4 p-5 overflow-y-auto flex-1 min-h-0">
               <div className="grid gap-4">
                 <label className="space-y-2 text-sm">
                   <span className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
@@ -562,19 +559,26 @@ export function ApplicationsHistoryTable({
             </div>
 
             {/* Footer */}
-            <div className="border-t border-border bg-card px-5 py-4 flex flex-wrap items-center justify-end gap-3 flex-shrink-0">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditLeave(null)}
-              >
-                Cancel
-              </Button>
-              <Button type="button" size="sm" onClick={handleSaveEdit}>
-                Save changes
-              </Button>
-            </div>
+<div className="relative z-[10000] border-t border-border bg-card px-5 py-4 flex justify-end gap-2 flex-shrink-0 pointer-events-auto">
+  <button
+    type="button"
+    onClick={() => setEditLeave(null)}
+    className="px-4 py-2 rounded-lg border border-border text-sm font-semibold hover:bg-secondary"
+  >
+    Cancel
+  </button>
+
+  <button
+    type="button"
+    onClick={() => {
+      alert("clicked");
+      handleSaveEdit();
+    }}
+    className="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold"
+  >
+    Save Changes
+  </button>
+</div>
           </div>
         </div>
       )}

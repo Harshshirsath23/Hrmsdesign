@@ -8,6 +8,8 @@ import {
   Network,
   ShieldCheck,
   SlidersHorizontal,
+  Tag,
+  BookOpen,
 } from "lucide-react";
 import { AdminLeaveRequests } from "./sections/AdminLeaveRequests";
 import { AdminHolidayCalendarManagement } from "./sections/AdminHolidayCalendarManagement";
@@ -17,6 +19,8 @@ import { SuperadminLeaveRequests } from "./sections/SuperadminLeaveRequests";
 import { SuperadminAuditLogs } from "./sections/SuperadminAuditLogs";
 import { SuperadminReportsAnalytics } from "./sections/SuperadminReportsAnalytics";
 import { SuperadminWorkflowSettings } from "./sections/SuperadminWorkflowSettings";
+import { AdminLeaveTypeMaster } from "./sections/AdminLeaveTypeMaster";
+import { AdminLeaveAllocations } from "./sections/AdminLeaveAllocations";
 import {
   AdminNavRail,
   type AdminNavGroupSchema,
@@ -25,12 +29,14 @@ import {
 type SectionId =
   | "dashboard"
   | "applications"
-  | "policies"
+  // | "policies"
   | "holidays"
   | "audit"
   | "reports"
   | "workflow"
-  | "legacy-requests";
+  | "legacy-requests"
+  // | "leave-types"
+  | "leave-allocations";
 
 const SECTIONS: { id: SectionId; label: string; icon: React.ElementType }[] = [
   {
@@ -43,10 +49,20 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ElementType }[] = [
     label: "Leave Applications",
     icon: ListChecks,
   },
+  // {
+  //   id: "policies",
+  //   label: "Leave Policies",
+  //   icon: ShieldCheck,
+  // },
+  // {
+  //   id: "leave-types",
+  //   label: "Leave Types",
+  //   icon: Tag,
+  // },
   {
-    id: "policies",
-    label: "Leave Policies",
-    icon: ShieldCheck,
+    id: "leave-allocations",
+    label: "Leave Allocations",
+    icon: BookOpen,
   },
   {
     id: "holidays",
@@ -95,14 +111,20 @@ export function AdminLeaveModule() {
       {
         id: "leave-management",
         label: "Leave Management",
-        items: [item("dashboard"), item("applications"), item("policies"), item("legacy-requests")],
+        items: [
+          item("dashboard"),
+          item("applications"),
+          // item("policies"),
+          // item("leave-types"),
+          item("leave-allocations"),
+          item("legacy-requests"),
+        ],
       },
       {
         id: "workflows",
         label: "Workflows",
         items: [item("workflow"), item("holidays")],
       },
-
       {
         id: "insights",
         label: "Insights",
@@ -125,8 +147,14 @@ export function AdminLeaveModule() {
       <div>
         {active === "dashboard" && <SuperadminLeaveDashboard />}
         {active === "applications" && <SuperadminLeaveRequests title="Leave Applications" />}
-        {active === "policies" && (
+        {/* {active === "policies" && (
           <AdminLeavePolicies onAddNewPolicy={() => navigate("/superadmin/masters/attendance-leave/leave-policy")} />
+        )}
+        {active === "leave-types" && (
+          <AdminLeaveTypeMaster onAddNewLeaveType={() => navigate("/superadmin/masters/attendance-leave/leave-type")} />
+        )} */}
+        {active === "leave-allocations" && (
+          <AdminLeaveAllocations onAddAllocation={() => navigate("/superadmin/masters/attendance-leave/leave-allocation")} />
         )}
         {active === "holidays" && (
           <AdminHolidayCalendarManagement onAddHoliday={() => navigate("/superadmin/masters/core-hr-setup/holiday")} />
