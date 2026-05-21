@@ -1,18 +1,18 @@
-import { 
-  format, 
-  startOfMonth, 
-  endOfMonth, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  isToday, 
-  startOfWeek, 
-  endOfWeek, 
-  parseISO,
-  isAfter
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isToday,
+  startOfWeek,
+  endOfWeek,
+  isAfter,
 } from "date-fns";
 import { motion } from "motion/react";
 import { DailyAttendance } from "../../../modules/attendance/types";
 import { getStatusColor, getStatusDots } from "./utils";
+import { useAttendanceStore } from "../../../modules/attendance/store";
 
 interface CalendarViewProps {
   records: DailyAttendance[];
@@ -22,7 +22,14 @@ interface CalendarViewProps {
   onSwipeDetails?: (record: DailyAttendance) => void;
 }
 
-export function CalendarView({ records, currentDate, searchTerm, onSwipeDetails }: CalendarViewProps) {
+export function CalendarView({
+  records,
+  currentDate,
+  searchTerm,
+  onSwipeDetails,
+}: CalendarViewProps) {
+  const { selectedDate, setSelectedDate } = useAttendanceStore();
+
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -31,30 +38,36 @@ export function CalendarView({ records, currentDate, searchTerm, onSwipeDetails 
   const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
 
   return (
-    <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[3rem] overflow-hidden shadow-2xl">
+    <div className="glassmorph-card glass-shine overflow-hidden shadow-2xl rounded-[3rem]">
       {/* Weekday Headers */}
-      <div className="grid grid-cols-7 border-b border-white/20 dark:border-white/10">
+      <div className="grid grid-cols-7 bg-white/10 dark:bg-white/5 px-3">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div key={day} className="py-4 text-center text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+<div
+            key={day}
+            className="py-4 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-widest"
+          >
             {day}
           </div>
         ))}
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-7 min-h-[600px]">
-        {calendarDays.map((day, idx) => {
+      <div className="grid grid-cols-7 min-h-[600px] gap-3 p-3">
+        {calendarDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
-          const record = records.find(r => r.date === dateStr);
+          const record = records.find((r) => r.date === dateStr);
           const isCurrentMonth = isSameMonth(day, monthStart);
-          const isTodayDate = isToday(day) || (format(day, "yyyy-MM-dd") === "2026-05-12");
+          const isTodayDate = isToday(day) || format(day, "yyyy-MM-dd") === "2026-05-12";
           const isFuture = isAfter(day, new Date());
-          
+
           const statusDots = record ? getStatusDots(record) : [];
-          const isMatchingSearch = !searchTerm || (record && (
-            record.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            record.date.includes(searchTerm)
-          ));
+          const isMatchingSearch =
+            !searchTerm ||
+            (record &&
+              (record.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                record.date.includes(searchTerm)));
+
+          const isSelected = selectedDate === dateStr;
 
           return (
             <motion.button
@@ -63,19 +76,38 @@ export function CalendarView({ records, currentDate, searchTerm, onSwipeDetails 
               initial={{ opacity: 0 }}
               animate={{ opacity: isMatchingSearch ? 1 : 0.3 }}
               disabled={!record}
-              onClick={() => record && onSwipeDetails?.(record)}
-              className={`relative min-h-[120px] p-4 border-r border-b border-white/10 dark:border-white/5 transition-all group ${
-                !isCurrentMonth ? "bg-black/5 dark:bg-white/5 opacity-20" : "text-left hover:bg-white/40 dark:hover:bg-white/5"
-              }`}
+              onClick={() => {
+                if (!record) return;
+                setSelectedDate(dateStr);
+                onSwipeDetails?.(record);
+              }}
+              className={`relative min-h-[120px] p-4 calendar-tile transition-all group rounded-[26px] border border-white/10 dark:border-white/5 ${
+                !isCurrentMonth
+                  ? "bg-black/5 dark:bg-white/5 opacity-20"
+                  : "text-left bg-white/10 dark:bg-white/5 hover:bg-white/30 dark:hover:bg-white/10"
+              } ${
+                isSelected ? "shadow-xl shadow-emerald-500/10" : ""
+              } ${isTodayDate && !isSelected ? "ring-1 ring-emerald-500/25" : ""}`}
+              whileHover={{
+                y: -2,
+                scale: isSelected ? 1.01 : 1.02,
+              }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
             >
               {/* Date Number */}
               <div className="flex items-center justify-between mb-2">
-                <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-black transition-all ${
-                  isTodayDate ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-foreground group-hover:bg-emerald-500/10"
-                }`}>
+<span
+                    className={`flex items-center justify-center w-9 h-9 rounded-full text-sm font-semibold transition-all ${
+                    isSelected
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                      : isTodayDate
+                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                        : "text-foreground group-hover:bg-emerald-500/10"
+                  }`}
+                >
                   {format(day, "d")}
                 </span>
-                
+
                 {/* Status Dots */}
                 <div className="flex gap-1">
                   {statusDots.map((dotColor, i) => (
@@ -89,33 +121,53 @@ export function CalendarView({ records, currentDate, searchTerm, onSwipeDetails 
                 <div className="space-y-1.5">
                   {isFuture ? (
                     <div className="flex flex-col opacity-40">
-                      <span className="text-[9px] font-black text-muted-foreground uppercase leading-none mb-1">Roster Shift</span>
-                      <span className="text-[11px] font-black text-foreground leading-tight">09:00 - 18:00</span>
+<span className="text-[9px] font-semibold text-muted-foreground uppercase leading-none mb-1">
+                        Roster Shift
+                      </span>
+                      <span className="text-[11px] font-black text-foreground leading-tight">
+                        09:00 - 18:00
+                      </span>
                     </div>
                   ) : record ? (
                     <>
-                      <div className={`text-[10px] font-black px-2 py-0.5 rounded-md inline-block uppercase tracking-tighter ${getStatusColor(record.status)}`}>
+                      <div
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-md inline-block uppercase tracking-tighter ${getStatusColor(
+                          record.status
+                        )}`}
+                      >
                         {record.status}
                       </div>
-                      
+
                       {record.firstIn && (
                         <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">In</span>
-                          <span className="text-[11px] font-black text-foreground leading-tight">{record.firstIn}</span>
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">
+                            In
+                          </span>
+                          <span className="text-[11px] font-black text-foreground leading-tight">
+                            {record.firstIn}
+                          </span>
                         </div>
                       )}
-                      
+
                       {record.lastOut && (
                         <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">Out</span>
-                          <span className="text-[11px] font-black text-foreground leading-tight">{record.lastOut}</span>
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">
+                            Out
+                          </span>
+                          <span className="text-[11px] font-black text-foreground leading-tight">
+                            {record.lastOut}
+                          </span>
                         </div>
                       )}
 
                       {record.workHours > 0 && (
                         <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
-                          <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400">{record.workHours.toFixed(1)}h</span>
-                          {record.lateIn > 0 && <span className="text-[9px] font-black text-rose-500">LATE</span>}
+                          <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400">
+                            {record.workHours.toFixed(1)}h
+                          </span>
+{record.lateMins > 0 && (
+                            <span className="text-[9px] font-semibold text-rose-500">LATE</span>
+                          )}
                         </div>
                       )}
                     </>

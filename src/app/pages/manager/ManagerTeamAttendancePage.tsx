@@ -7,6 +7,7 @@ import { DailyAttendance } from "../../modules/attendance/types";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { cn } from "../../components/ui/utils";
+import { Modal } from "../../../components/ui/Modal";
 
 type TeamView = "card" | "list";
 
@@ -29,19 +30,20 @@ function downloadBlob(content: BlobPart, fileName: string, type: string) {
 function statusClass(status?: string) {
   switch (status) {
     case "Present":
-      return "bg-emerald-500 text-white";
+      return "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30";
     case "Absent":
-      return "bg-rose-500 text-white";
+      return "bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/30";
     case "Leave":
-      return "bg-blue-500 text-white";
+      return "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30";
     case "Half Day":
-      return "bg-amber-500 text-white";
+    case "Late":
+      return "bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30";
     case "Holiday":
-      return "bg-purple-500 text-white";
+      return "bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-500/20 dark:text-purple-400 dark:border-purple-500/30";
     case "Week Off":
-      return "bg-slate-600 text-white";
+      return "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-500/20 dark:text-slate-400 dark:border-slate-500/30";
     default:
-      return "bg-muted text-foreground";
+      return "bg-secondary text-muted-foreground border border-border";
   }
 }
 
@@ -52,6 +54,7 @@ export function ManagerTeamAttendancePage() {
   const [status, setStatus] = useState("ALL");
   const [view, setView] = useState<TeamView>("card");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
 
   const teamMembers = useMemo(() => {
     return attendanceDataset.employees.map((employee) => {
@@ -63,7 +66,7 @@ export function ManagerTeamAttendancePage() {
         name: employee.name,
         department: employee.dept,
         designation: latest?.designation ?? employee.desig,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.id}`,
+        avatar: `${employee.id}`,
         today,
       };
     });
@@ -146,12 +149,13 @@ export function ManagerTeamAttendancePage() {
     doc.save(`${selectedEmployee.id}-attendance.pdf`);
   };
 
-  const selectEmployee = (employeeId: string) => {
+  const openAttendanceModal = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
+    setIsAttendanceModalOpen(true);
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6 p-4 md:p-6 glassmorph">
       <div className="flat-card bg-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -236,12 +240,12 @@ export function ManagerTeamAttendancePage() {
                 key={employee.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => selectEmployee(employee.id)}
+                onClick={() => openAttendanceModal(employee.id)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") selectEmployee(employee.id);
+                  if (event.key === "Enter" || event.key === " ") openAttendanceModal(employee.id);
                 }}
                 className={cn(
-                  "flat-card flat-card-hover cursor-pointer bg-card p-5 text-left transition-all",
+                  "flat-card flat-card-hover cursor-pointer bg-card p-5 text-left transition-all glassmorph-card glass-shine",
                   selected && "border-primary bg-primary/10 ring-2 ring-primary/30",
                 )}
               >
@@ -269,19 +273,10 @@ export function ManagerTeamAttendancePage() {
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                  <button type="button" className="inline-flex h-8 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground">
+                  <button type="button" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }} className="inline-flex h-8 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground">
                     <Eye className="h-4 w-4" /> View Attendance
                   </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      selectEmployee(employee.id);
-                    }}
-                    className="inline-flex h-8 flex-1 items-center justify-center gap-2 rounded-md border border-border bg-card text-sm font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <User className="h-4 w-4" /> View Profile
-                  </button>
+
                 </div>
               </div>
             );
@@ -307,7 +302,7 @@ export function ManagerTeamAttendancePage() {
                 {filteredEmployees.map((employee) => (
                   <tr
                     key={employee.id}
-                    onClick={() => selectEmployee(employee.id)}
+                    onClick={() => openAttendanceModal(employee.id)}
                     className={cn("cursor-pointer hover:bg-secondary/70", employee.id === selectedEmployeeId && "bg-primary/10")}
                   >
                     <td className="px-4 py-3">
@@ -331,8 +326,8 @@ export function ManagerTeamAttendancePage() {
                     <td className="px-4 py-3 text-sm">{formatHours(employee.today?.workHours)}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
-                        <button className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground" onClick={(event) => { event.stopPropagation(); selectEmployee(employee.id); }}>View Attendance</button>
-                        <button className="rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary" onClick={(event) => { event.stopPropagation(); selectEmployee(employee.id); navigate(`/manager/team-attendance?employee=${employee.id}`); }}>View Profile</button>
+                        <button className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }}>View Attendance</button>
+
                       </div>
                     </td>
                   </tr>
@@ -349,18 +344,75 @@ export function ManagerTeamAttendancePage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
               <Users className="h-6 w-6" />
             </div>
-            <h2 className="mt-4 text-lg font-semibold text-foreground">Select a team member to view attendance details.</h2>
+            <h2 className="mt-4 text-lg font-semibold text-foreground">Select a team member to open attendance details.</h2>
+            <p className="text-sm text-muted-foreground mt-2">Attendance details will appear in a popup so you can stay on this page.</p>
           </div>
         </div>
-      ) : (
-        <div className="rounded-lg border border-border bg-background">
-          <MyAttendanceModule
-            employeeId={selectedEmployee.id}
-            title={`${selectedEmployee.name}'s Attendance`}
-            subtitle={`${selectedEmployee.id} • ${selectedEmployee.designation} • ${selectedEmployee.department}. Manager view is read-only.`}
-            readOnly
-          />
-        </div>
+      ) : null}
+
+      {selectedEmployee && (
+        <Modal
+          open={isAttendanceModalOpen}
+          onOpenChange={setIsAttendanceModalOpen}
+          title="Attendance Details"
+          className="max-w-[100vw] w-full md:max-w-[90vw] xl:max-w-[85vw]"
+        >
+          <div className="flex flex-col xl:flex-row gap-6 mb-8 p-6 bg-secondary/30 rounded-2xl border border-border shadow-sm">
+            {/* Profile Info */}
+            <div className="flex items-center gap-5 xl:w-1/3">
+              <img src={selectedEmployee.avatar} alt={selectedEmployee.name} className="h-20 w-20 rounded-full border-4 border-card shadow-sm object-cover" />
+              <div>
+                <h2 className="text-xl font-bold text-foreground">{selectedEmployee.name}</h2>
+                <p className="text-sm font-medium text-muted-foreground mb-1">{selectedEmployee.id}</p>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm text-foreground">{selectedEmployee.designation}</span>
+                  <span className="text-xs text-muted-foreground">{selectedEmployee.department}</span>
+                </div>
+                <div className="mt-2">
+                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-sm", statusClass(selectedEmployee.today?.status))}>
+                    {selectedEmployee.today?.status ?? "No Record"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 flex-1">
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Punch In</p>
+                <p className="text-sm font-semibold text-foreground">{selectedEmployee.today?.firstIn || "--:--"}</p>
+              </div>
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Punch Out</p>
+                <p className="text-sm font-semibold text-foreground">{selectedEmployee.today?.lastOut || "--:--"}</p>
+              </div>
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Working Hours</p>
+                <p className="text-sm font-semibold text-foreground">{formatHours(selectedEmployee.today?.workHours)}</p>
+              </div>
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Late By</p>
+                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">{selectedEmployee.today?.lateMins ? `${selectedEmployee.today.lateMins}m` : "-"}</p>
+              </div>
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Early Out</p>
+                <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">{selectedEmployee.today?.earlyExitMins ? `${selectedEmployee.today.earlyExitMins}m` : "-"}</p>
+              </div>
+              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Overtime</p>
+                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{selectedEmployee.today?.otMins ? `${selectedEmployee.today.otMins}m` : "-"}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="min-h-[60vh]">
+            <MyAttendanceModule
+              employeeId={selectedEmployee.id}
+              readOnly
+              showTitle={false}
+            />
+          </div>
+        </Modal>
       )}
     </div>
   );

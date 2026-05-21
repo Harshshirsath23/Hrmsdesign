@@ -19,6 +19,8 @@ interface UIState {
   aiAssistantOpen: boolean;
   moduleViews: Partial<Record<ModuleKey, ModuleView>>;
   portal: Portal;
+  /** Employee code to pre-select when navigating to Employees module */
+  selectedEmployeeCode: string | null;
   setTheme: (theme: ThemeMode) => void;
   openModule: (module: ModuleKey) => void;
   closeModule: () => void;
@@ -27,6 +29,7 @@ interface UIState {
   setAiAssistantOpen: (open: boolean) => void;
   setModuleView: (module: ModuleKey, view: ModuleView) => void;
   setPortal: (portal: Portal) => void;
+  setSelectedEmployeeCode: (code: string | null) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -40,6 +43,7 @@ export const useUIStore = create<UIState>()(
       aiAssistantOpen: false,
       moduleViews: { employees: 'admin', attendance: 'admin', leave: 'employee' },
       portal: 'hrms',
+      selectedEmployeeCode: null,
       setTheme: (theme) => set({ theme }),
       openModule: (module) => set({ activeModule: module, panelOpen: true, currentPage: 'dashboard' }),
       closeModule: () => set({ panelOpen: false, currentPage: 'dashboard' }),
@@ -47,6 +51,7 @@ export const useUIStore = create<UIState>()(
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       setAiAssistantOpen: (open) => set({ aiAssistantOpen: open }),
       setModuleView: (module, view) => set((state) => ({ moduleViews: { ...state.moduleViews, [module]: view } })),
+      setSelectedEmployeeCode: (code) => set({ selectedEmployeeCode: code }),
       setPortal: (portal) => set((state) => ({
         portal,
         // Switch to a valid default module when entering ESS

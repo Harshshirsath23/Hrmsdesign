@@ -22,7 +22,7 @@ export function ExceptionsPanel({ employeeId }: { employeeId?: string }) {
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-xs px-2 py-0.5 rounded border ${severityClass[row.severity]}`}>{row.severity}</span>
-              <span className={`text-xs px-2 py-0.5 rounded border ${row.status === "Resolved" ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-amber-100 text-amber-700 border-amber-300"}`}>{row.status}</span>
+              <span className={`text-xs px-2 py-0.5 rounded border ${row.status === "Resolved" ? "bg-secondary/20 text-muted-foreground border-border" : "bg-amber-100 text-amber-700 border-amber-300"}`}>{row.status}</span>
               <button className="text-xs px-2 py-1 border border-border rounded">Resolve</button>
               <button className="text-xs px-2 py-1 border border-border rounded">Assign</button>
             </div>

@@ -5,7 +5,6 @@ import { Filters } from "./Filters";
 import { CalendarView } from "./CalendarView";
 import { ListView } from "./ListView";
 import { RegularizationTab } from "./RegularizationTab";
-import { InsightsModal } from "./InsightsModal";
 import { SwipeDetailsDrawer } from "./SwipeDetailsDrawer";
 import { AttendanceCharts } from "./AttendanceCharts";
 import { Legend } from "./Legend";
@@ -19,13 +18,20 @@ interface MyAttendanceModuleProps {
   title?: string;
   subtitle?: string;
   readOnly?: boolean;
+  showTitle?: boolean;
 }
 
-export function MyAttendanceModule({ employeeId, title = "My Attendance", subtitle = "Track your work hours, presence, and punctuality insights.", readOnly = false }: MyAttendanceModuleProps) {
+export function MyAttendanceModule({
+  employeeId,
+  title = "My Attendance",
+  subtitle = "Track your work hours, presence, and punctuality insights.",
+  readOnly = false,
+  showTitle = true,
+}: MyAttendanceModuleProps) {
   const [view, setView] = useState<"calendar" | "list" | "regularization">("calendar");
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 1)); // Default to May 2026
   const [searchTerm, setSearchTerm] = useState("");
-  const [isInsightsOpen, setIsInsightsOpen] = useState(false);
+  
   const [isSwipeOpen, setIsSwipeOpen] = useState(false);
   const [selectedDateForRegularize, setSelectedDateForRegularize] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<DailyAttendance | null>(null);
@@ -67,13 +73,15 @@ export function MyAttendanceModule({ employeeId, title = "My Attendance", subtit
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-foreground tracking-tight">{title}</h1>
-          <p className="text-sm text-muted-foreground font-medium mt-1">{subtitle}</p>
+    <div className="space-y-6 pb-12 glassmorph">
+      {showTitle ? (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-foreground tracking-tight">{title}</h1>
+            <p className="text-sm text-muted-foreground font-medium mt-1">{subtitle}</p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Summary Cards */}
       <SummaryCards metrics={metrics} />
@@ -90,7 +98,6 @@ export function MyAttendanceModule({ employeeId, title = "My Attendance", subtit
           onDateChange={setCurrentDate}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          onInsightsOpen={() => setIsInsightsOpen(true)}
         />
       </div>
 
@@ -132,10 +139,14 @@ export function MyAttendanceModule({ employeeId, title = "My Attendance", subtit
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-20 bg-white/40 dark:bg-slate-900/40 border border-white/50 dark:border-white/10 rounded-[3rem] backdrop-blur-xl"
+              className="flex flex-col items-center justify-center py-20 glassmorph-card"
             >
-              <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                <span className="text-4xl">📅</span>
+              <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center mb-4">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                </svg>
               </div>
               <h3 className="text-xl font-bold text-foreground">No attendance records found</h3>
               <p className="text-sm text-muted-foreground mt-1 text-center max-w-md">
@@ -163,12 +174,7 @@ export function MyAttendanceModule({ employeeId, title = "My Attendance", subtit
       )}
 
       {/* Modals & Drawers */}
-      <InsightsModal
-        isOpen={isInsightsOpen}
-        onOpenChange={setIsInsightsOpen}
-        metrics={metrics}
-      />
-
+      {/* AI Insights modal removed */}
       <SwipeDetailsDrawer
         isOpen={isSwipeOpen}
         onOpenChange={setIsSwipeOpen}

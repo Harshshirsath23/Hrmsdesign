@@ -1,7 +1,7 @@
 import { attendanceDataset, useAttendanceStore } from "../../modules/attendance/store";
 
 const statusColor: Record<string, string> = {
-  Present: "bg-emerald-100 text-emerald-800",
+  Present: "bg-slate-100 text-slate-700",
   Absent: "bg-rose-100 text-rose-700",
   "Half Day": "bg-amber-100 text-amber-800",
   Leave: "bg-indigo-100 text-indigo-700",
@@ -43,13 +43,27 @@ export function AttendanceCalendarAdvanced() {
                   <p className="text-[10px] text-foreground mt-1">{record.firstIn} - {record.lastOut}</p>
                   <p className="text-[10px] text-muted-foreground">{Math.floor(record.workHours)}h {Math.round((record.workHours % 1) * 60)}m · {record.shiftName}</p>
                   <div className="flex gap-1 mt-1 flex-wrap">
-                    {record.lateMins > 0 && <span className="text-[10px]">🔴</span>}
-                    {record.earlyExitMins > 0 && <span className="text-[10px]">🟡</span>}
-                    {record.exception && <span className="text-[10px]">⚠️</span>}
-                    {record.otMins > 0 && <span className="text-[10px]">🎯</span>}
-                    {record.approvalPending && <span className="text-[10px]">🧾</span>}
-                    {record.geoViolation && <span className="text-[10px]">📍</span>}
-                    {record.locked && <span className="text-[10px]">🔐</span>}
+                    {record.lateMins > 0 && (
+                      <span className="text-[10px] px-1 rounded bg-rose-100 text-rose-700">Late</span>
+                    )}
+                    {record.earlyExitMins > 0 && (
+                      <span className="text-[10px] px-1 rounded bg-amber-100 text-amber-800">Early</span>
+                    )}
+                    {record.exception && (
+                      <span className="text-[10px] px-1 rounded bg-yellow-100 text-yellow-800">Exception</span>
+                    )}
+                    {record.otMins > 0 && (
+                      <span className="text-[10px] px-1 rounded bg-slate-100 text-slate-700">OT</span>
+                    )}
+                    {record.approvalPending && (
+                      <span className="text-[10px] px-1 rounded bg-sky-100 text-sky-700">Pending</span>
+                    )}
+                    {record.geoViolation && (
+                      <span className="text-[10px] px-1 rounded bg-slate-100 text-slate-700">Geo</span>
+                    )}
+                    {record.locked && (
+                      <span className="text-[10px] px-1 rounded bg-slate-100 text-slate-700">Locked</span>
+                    )}
                     <span className="text-[10px] px-1 rounded border border-border">{record.workMode}</span>
                   </div>
                 </>

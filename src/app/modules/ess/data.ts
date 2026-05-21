@@ -1,4 +1,5 @@
 import { EmployeeProfile } from "./types";
+import { attendanceEmployees } from "../attendance/mockData";
 
 export const ESS_SECTIONS = [
   { key: "profile", label: "Profile Section", editable: true },
@@ -14,16 +15,26 @@ export const ESS_SECTIONS = [
   { key: "assets", label: "Assets", editable: false },
 ] as const;
 
-export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
-  employeeId,
-  profile: {
-    firstName: "Arjun",
-    middleName: "",
-    lastName: "Sharma",
-    personalMobile: "+91 9876543210",
-    personalEmail: "arjun.sharma@gmail.com",
-    workMobile: "+91 9988776655",
-    officialEmail: "arjun.sharma@company.com",
+export const getSeedProfile = (employeeId: string): EmployeeProfile => {
+  const emp = attendanceEmployees.find(e => e.id === employeeId);
+  const firstName = emp ? emp.name.split(" ")[0] : "Arjun";
+  const lastName = emp ? emp.name.split(" ").slice(1).join(" ") : "Sharma";
+  const email = emp ? emp.email : "arjun.sharma@company.com";
+  const mobile = emp ? emp.contact : "+91 9988776655";
+  const dept = emp ? emp.dept : "Engineering";
+  const desig = emp ? emp.desig : "Senior Developer";
+  const manager = emp ? emp.manager : "Vikram Nair";
+
+  return {
+    employeeId,
+    profile: {
+      firstName,
+      middleName: "",
+      lastName,
+      personalMobile: "+91 9876543210",
+      personalEmail: "arjun.sharma@gmail.com",
+      workMobile: mobile,
+      officialEmail: email,
     alternateMobileNumber: "",
     extensionNumber: "",
     emergencyContactName: "Priya Sharma",
@@ -50,14 +61,14 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
     internationalEmployee: false,
   },
   employmentDetails: {
-    department: "Engineering",
-    designation: "Senior Developer",
+    department: dept,
+    designation: desig,
     employmentType: "Full Time",
     workLocation: "Bangalore",
     employeeCategory: "Permanent",
     shift: "General",
     noticePeriod: "60",
-    reportingManager: "Vikram Nair",
+    reportingManager: manager,
     functionalManager: "Karthik Menon",
     hrPartner: "Priya Nair",
     employeeStatus: "Active",
@@ -182,4 +193,5 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => ({
     },
   ],
   employeeDocuments: {},
-});
+  };
+};

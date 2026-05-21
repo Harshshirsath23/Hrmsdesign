@@ -15,7 +15,7 @@ interface AttendanceHealthSnapshotProps {
 
 export function AttendanceHealthSnapshot({ score, breakdown }: AttendanceHealthSnapshotProps) {
   const getScoreColor = (s: number) => {
-    if (s >= 90) return "text-emerald-500 stroke-emerald-500";
+    if (s >= 90) return "text-slate-700 stroke-slate-700";
     if (s >= 75) return "text-amber-500 stroke-amber-500";
     return "text-red-500 stroke-red-500";
   };
@@ -27,7 +27,7 @@ export function AttendanceHealthSnapshot({ score, breakdown }: AttendanceHealthS
   };
 
   const getScoreBg = (s: number) => {
-    if (s >= 90) return "bg-emerald-500/10 text-emerald-600";
+    if (s >= 90) return "bg-secondary/10 text-foreground";
     if (s >= 75) return "bg-amber-500/10 text-amber-600";
     return "bg-red-500/10 text-red-600";
   };
@@ -88,19 +88,19 @@ export function AttendanceHealthSnapshot({ score, breakdown }: AttendanceHealthS
 
         {/* Status Text */}
         <div className="text-center space-y-2">
-          <div className={cn("px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest inline-block", getScoreBg(score))}>
+           <div className={cn("px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest inline-block", getScoreBg(score))}>
             {getScoreText(score)}
           </div>
-          <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-muted-foreground">
-             <TrendingUp className="w-3 h-3 text-emerald-500" /> +2% from yesterday
-          </div>
+           <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+             <TrendingUp className="w-3 h-3 text-muted-foreground" /> +2% from yesterday
+           </div>
         </div>
 
         {/* Breakdown Chips */}
         <div className="grid grid-cols-2 gap-3 w-full">
            <div className="p-3 rounded-2xl bg-secondary/20 border border-border/50 flex flex-col">
               <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Present</span>
-              <span className="text-base font-black text-emerald-600">{breakdown.present}%</span>
+              <span className="text-base font-black text-foreground">{breakdown.present}%</span>
            </div>
            <div className="p-3 rounded-2xl bg-secondary/20 border border-border/50 flex flex-col">
               <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Late</span>

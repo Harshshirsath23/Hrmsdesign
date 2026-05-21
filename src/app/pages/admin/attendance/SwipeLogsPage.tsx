@@ -40,7 +40,6 @@ import { SwipeLogsFilterBar } from "../../../components/attendance/swipe/SwipeLo
 import { SwipeLogsAnalytics } from "../../../components/attendance/swipe/SwipeLogsAnalytics";
 import { SwipeLogsTable } from "../../../components/attendance/swipe/SwipeLogsTable";
 import { SwipeDetailsDrawer } from "../../../components/attendance/swipe/SwipeDetailsDrawer";
-import { DeviceHealthMonitor } from "../../../components/attendance/swipe/DeviceHealthMonitor";
 import { toast } from "sonner";
 import { SwipeLog, DeviceHealth } from "../../../modules/attendance/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../../../components/ui/dialog";
@@ -49,6 +48,8 @@ import { Input } from "../../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
 
 export function SwipeLogsPage() {
   const [logs, setLogs] = useState<SwipeLog[]>(MOCK_SWIPE_LOGS);
@@ -61,12 +62,19 @@ export function SwipeLogsPage() {
     location: "all",
     device: "all",
     type: "all",
-    dateRange: { from: new Date(2026, 4, 11), to: new Date(2026, 4, 11) },
+    date: new Date(),
   });
+
+  // Sorting & Pagination States
+  const [sortField, setSortField] = useState<string>("swipeTime");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // UI & Modal States
   const [selectedSwipe, setSelectedSwipe] = useState<SwipeLog | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isLiveEnabled, setIsLiveEnabled] = useState(true);
   
@@ -84,39 +92,222 @@ export function SwipeLogsPage() {
     reason: ""
   });
 
+  // Loaders simulation
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [filters.date, filters.department, filters.device, filters.type]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
   const handleRefresh = () => {
     setIsRefreshing(true);
+    setIsLoading(true);
     setTimeout(() => {
       setIsRefreshing(false);
+      setIsLoading(false);
       toast.success("Swipe logs synced with biometric servers");
     }, 1000);
   };
 
-  // EXPORT FUNCTIONALITY
-  const handleExport = (type: 'excel' | 'csv' | 'pdf') => {
+  // EXPORT FUNCTIONALITY (CSV)
+  const handleExportCSV = () => {
     setIsExporting(true);
     setTimeout(() => {
-      const headers = ["ID", "Employee", "Code", "Dept", "Time", "Date", "Type", "Device"];
-      const csvContent = [
-        headers.join(","),
-        ...filteredLogs.map(l => [
-          l.id, l.employeeName, l.employeeCode, l.department, l.swipeTime, l.swipeDate, l.type, l.deviceName
-        ].join(","))
-      ].join("\n");
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const headers = ["Log ID", "Employee Name", "Employee Code", "Department", "Swipe Date", "Swipe Time", "Direction", "Shift", "Device Name", "Device Type", "Work Mode", "Location", "Status"];
+      const csvRows = [headers.join(",")];
+      for (const l of filteredLogs) {
+        csvRows.push([
+          `"${l.id}"`,
+          `"${l.employeeName.replace(/"/g, '""')}"`,
+          `"${l.employeeCode}"`,
+          `"${l.department}"`,
+          `"${l.swipeDate}"`,
+          `"${l.swipeTime}"`,
+          `"${l.type}"`,
+          `"${l.shiftName || ''}"`,
+          `"${l.deviceName}"`,
+          `"${l.deviceType}"`,
+          `"${l.workMode || 'WFO'}"`,
+          `"${l.branch.replace(/"/g, '""')}"`,
+          `"${l.status || ''}"`
+        ].join(","));
+      }
+      const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `Swipe_Logs_${format(new Date(), "dd_MMM_yyyy")}.${type === 'excel' ? 'xlsx' : type}`;
+      link.download = `Swipe_Logs_${format(filters.date, "yyyy_MM_dd")}.csv`;
       link.click();
       setIsExporting(false);
-      toast.success(`${type.toUpperCase()} Export Successful`);
-    }, 1200);
+      toast.success("CSV Export Successful");
+    }, 1000);
+  };
+
+  // EXPORT FUNCTIONALITY (Excel)
+  const handleExportExcel = () => {
+    setIsExporting(true);
+    setTimeout(() => {
+      const dataToExport = filteredLogs.map(l => ({
+        "Log ID": l.id,
+        "Employee Name": l.employeeName,
+        "Employee Code": l.employeeCode,
+        "Department": l.department,
+        "Swipe Date": l.swipeDate,
+        "Swipe Time": l.swipeTime,
+        "Direction": l.type,
+        "Shift": l.shiftName,
+        "Device Name": l.deviceName,
+        "Device Type": l.deviceType,
+        "Work Mode": l.workMode || "WFO",
+        "Location": l.branch,
+        "Door": l.doorName,
+        "Status": l.status,
+        "Verification": l.verificationMethod
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Swipe Logs");
+      XLSX.writeFile(workbook, `Swipe_Logs_${format(filters.date, "yyyy_MM_dd")}.xlsx`);
+      setIsExporting(false);
+      toast.success("Excel Export Successful");
+    }, 1000);
+  };
+
+  // EXPORT FUNCTIONALITY (PDF)
+  const handleExportPDF = () => {
+    setIsExporting(true);
+    setTimeout(() => {
+      const doc = new jsPDF();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(16, 185, 129); // emerald-500
+      doc.text("HRMS Swipe Logs Report", 14, 15);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Date: ${format(filters.date, "dd MMMM yyyy")}`, 14, 21);
+      doc.text(`Generated on: ${format(new Date(), "dd MMM yyyy HH:mm")}`, 14, 26);
+      doc.text(`Total Records: ${filteredLogs.length}`, 14, 31);
+      
+      let y = 38;
+      doc.setFont("helvetica", "bold");
+      doc.setFillColor(241, 245, 249);
+      doc.rect(14, y, 182, 7, "F");
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Employee Name", 16, y + 5);
+      doc.text("ID", 55, y + 5);
+      doc.text("Time", 75, y + 5);
+      doc.text("Type", 95, y + 5);
+      doc.text("Device Source", 115, y + 5);
+      doc.text("Work Mode", 145, y + 5);
+      doc.text("Location", 165, y + 5);
+      
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      filteredLogs.slice(0, 35).forEach((l, index) => {
+        if (index % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(14, y, 182, 6, "F");
+        }
+        doc.text(l.employeeName, 16, y + 4.5);
+        doc.text(l.employeeCode, 55, y + 4.5);
+        doc.text(l.swipeTime, 75, y + 4.5);
+        doc.text(l.type, 95, y + 4.5);
+        doc.text(l.deviceName, 115, y + 4.5);
+        doc.text(l.workMode || "WFO", 145, y + 4.5);
+        doc.text(l.branch.split(' ')[0], 165, y + 4.5);
+        y += 6;
+      });
+      
+      if (filteredLogs.length > 35) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7);
+        doc.text(`... and ${filteredLogs.length - 35} more logs. Export to Excel or CSV to view full data.`, 14, y + 4);
+      }
+      
+      doc.save(`Swipe_Logs_${format(filters.date, "yyyy_MM_dd")}.pdf`);
+      setIsExporting(false);
+      toast.success("PDF Export Successful");
+    }, 1000);
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  const handleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        toast.error(`Error enabling full-screen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  // Real-Time auto sync hook
+  useEffect(() => {
+    if (!isLiveEnabled) return;
+    
+    const interval = setInterval(() => {
+      const deviceTypes = ["Biometric Device", "Mobile App", "Web Login", "QR Attendance", "RFID Card"];
+      const verificationMethods = ["Face", "Fingerprint", "Mobile GPS", "QR Scan", "Card Tap"];
+      const statuses = ["Approved", "Pending", "Rejected", "Missing Punch", "Duplicate Swipe", "Late Entry", "Early Exit"];
+      const branches = ["Mumbai HQ", "Pune Office", "Bangalore Tech Park", "Delhi Regional"];
+      const doors = ["Main Entrance", "Server Room", "Cafeteria", "South Wing Exit"];
+      
+      const emp = MOCK_EMPLOYEES[Math.floor(Math.random() * MOCK_EMPLOYEES.length)];
+      const today = new Date();
+      const dateStr = format(today, "yyyy-MM-dd");
+      const timeStr = format(today, "HH:mm:ss");
+      
+      const deviceType = deviceTypes[Math.floor(Math.random() * deviceTypes.length)];
+      const workMode = deviceType === "Mobile App" ? "WFH" : (deviceType === "Web Login" ? (Math.random() > 0.5 ? "WFH" : "WFO") : "WFO");
+
+      const newLog: SwipeLog = {
+        id: `SWIPE-LIVE-${Date.now()}`,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        employeeCode: emp.id,
+        department: emp.dept,
+        designation: emp.desig,
+        avatar: `${emp.id}`,
+        swipeDate: dateStr,
+        swipeTime: timeStr,
+        type: Math.random() > 0.5 ? "IN" : "OUT",
+        shiftName: "General Shift",
+        shiftTiming: "09:00 - 18:00",
+        deviceName: "BioMax-X990",
+        deviceId: `DEV-${Math.floor(Math.random() * 1000)}`,
+        deviceType: deviceType as any,
+        accessCardId: `CRD-${Math.floor(Math.random() * 10000)}`,
+        branch: branches[Math.floor(Math.random() * branches.length)],
+        doorName: doors[Math.floor(Math.random() * doors.length)],
+        ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
+        gpsCoordinates: "19.0760° N, 72.8777° E",
+        receivedOn: `${dateStr} ${timeStr}`,
+        syncTime: `${dateStr} ${timeStr}`,
+        status: statuses[Math.floor(Math.random() * statuses.length)] as any,
+        verificationMethod: verificationMethods[Math.floor(Math.random() * verificationMethods.length)] as any,
+        spoofDetection: Math.random() > 0.9 ? "Suspicious" : "Safe",
+        faceMatchScore: Math.random() > 0.8 ? 98.5 : undefined,
+        workMode: workMode as any,
+      };
+
+      setLogs((prev) => [newLog, ...prev]);
+      toast.info(`New swipe log synced for ${emp.name}`, { duration: 2000 });
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, [isLiveEnabled]);
 
   // MANUAL ENTRY FUNCTIONALITY
   const handleAddManualEntry = () => {
@@ -133,7 +324,7 @@ export function SwipeLogsPage() {
       employeeCode: employee.id,
       department: employee.dept,
       designation: employee.desig,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${employee.id}`,
+      avatar: `${employee.id}`,
       swipeDate: manualEntry.date,
       swipeTime: manualEntry.time,
       type: manualEntry.type as "IN" | "OUT",
@@ -152,6 +343,7 @@ export function SwipeLogsPage() {
       status: "Approved",
       verificationMethod: "QR Scan",
       spoofDetection: "Safe",
+      workMode: "WFO",
     };
 
     setLogs([newLog, ...logs]);
@@ -160,18 +352,52 @@ export function SwipeLogsPage() {
   };
 
   const filteredLogs = useMemo(() => {
+    const filterDateStr = format(filters.date, "yyyy-MM-dd");
     return logs.filter(log => {
       const matchesSearch = !filters.search || 
         log.employeeName.toLowerCase().includes(filters.search.toLowerCase()) ||
         log.employeeCode.toLowerCase().includes(filters.search.toLowerCase()) ||
-        log.deviceId.toLowerCase().includes(filters.search.toLowerCase());
+        log.deviceId.toLowerCase().includes(filters.search.toLowerCase()) ||
+        log.deviceName.toLowerCase().includes(filters.search.toLowerCase());
       
       const matchesDept = filters.department === "all" || log.department === filters.department;
       const matchesType = filters.type === "all" || log.type === filters.type;
+      const matchesDevice = filters.device === "all" || log.deviceType === filters.device;
+      const matchesDate = log.swipeDate === filterDateStr;
 
-      return matchesSearch && matchesDept && matchesType;
+      return matchesSearch && matchesDept && matchesType && matchesDevice && matchesDate;
     });
   }, [filters, logs]);
+
+  const sortedLogs = useMemo(() => {
+    const sorted = [...filteredLogs];
+    sorted.sort((a, b) => {
+      const aVal = a[sortField as keyof SwipeLog] ?? "";
+      const bVal = b[sortField as keyof SwipeLog] ?? "";
+      
+      if (sortField === "swipeTime") {
+        const aDateTime = `${a.swipeDate} ${a.swipeTime}`;
+        const bDateTime = `${b.swipeDate} ${b.swipeTime}`;
+        return sortOrder === "asc" ? aDateTime.localeCompare(bDateTime) : bDateTime.localeCompare(aDateTime);
+      }
+
+      if (typeof aVal === "string") {
+        return sortOrder === "asc" 
+          ? aVal.localeCompare(bVal as string) 
+          : (bVal as string).localeCompare(aVal);
+      } else {
+        return sortOrder === "asc" 
+          ? (aVal > bVal ? 1 : -1) 
+          : (bVal > aVal ? 1 : -1);
+      }
+    });
+    return sorted;
+  }, [filteredLogs, sortField, sortOrder]);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedLogs.slice(start, start + pageSize);
+  }, [sortedLogs, currentPage, pageSize]);
 
   const analyticsData = useMemo(() => {
     return {
@@ -180,11 +406,19 @@ export function SwipeLogsPage() {
       totalOutEntries: filteredLogs.filter(l => l.type === "OUT").length,
       missingPunchCount: filteredLogs.filter(l => l.status === "Missing Punch").length,
       lateEntryCount: filteredLogs.filter(l => l.status === "Late Entry").length,
-      deviceOfflineCount: devices.filter(d => d.status === "Offline").length,
-      wfhAttendanceCount: filteredLogs.filter(l => l.deviceType === "Mobile App").length,
-      officeAttendanceCount: filteredLogs.filter(l => l.deviceType === "Biometric Device").length,
+      wfhAttendanceCount: filteredLogs.filter(l => l.workMode === "WFH").length,
+      officeAttendanceCount: filteredLogs.filter(l => l.workMode === "WFO").length,
     };
-  }, [filteredLogs, devices]);
+  }, [filteredLogs]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("desc");
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950/50 relative overflow-hidden print:bg-white print:p-0">
@@ -234,14 +468,14 @@ export function SwipeLogsPage() {
                   <FileSpreadsheet className="w-3.5 h-3.5 text-blue-500" /> EXPORT REPORT <ChevronDown className="w-3 h-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl">
-                <DropdownMenuItem className="gap-2 text-xs font-bold py-2.5 rounded-lg" onClick={() => handleExport('excel')}>
+              <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
+                <DropdownMenuItem className="gap-2 text-xs font-bold py-2.5 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={handleExportExcel}>
                   <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to Excel (.xlsx)
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 text-xs font-bold py-2.5 rounded-lg" onClick={() => handleExport('csv')}>
+                <DropdownMenuItem className="gap-2 text-xs font-bold py-2.5 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={handleExportCSV}>
                   <Download className="w-4 h-4 text-blue-500" /> Download CSV (.csv)
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 text-xs font-bold py-2.5 rounded-lg" onClick={handlePrint}>
+                <DropdownMenuItem className="gap-2 text-xs font-bold py-2.5 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={handleExportPDF}>
                   <Printer className="w-4 h-4 text-slate-500" /> Print Data (.pdf)
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -264,10 +498,12 @@ export function SwipeLogsPage() {
             </Button>
             <KebabMenu 
               items={[
-                { label: "Sync Configuration", icon: Settings, onClick: () => toast.info("Opening sync settings...") },
-                { label: "View System Logs", icon: History, onClick: () => setShowAllActivityModal(true) },
-                { label: "Security Audit", icon: ShieldCheck, onClick: () => toast.success("Security scan completed: 0 threats") },
-                { label: "Clear Local Cache", icon: Trash2, variant: "destructive", separator: true, onClick: () => toast.error("Cache cleared") },
+                { label: "Refresh Data", icon: RefreshCw, onClick: handleRefresh },
+                { label: "Export CSV", icon: Download, onClick: handleExportCSV },
+                { label: "Export Excel", icon: FileSpreadsheet, onClick: handleExportExcel },
+                { label: "Export PDF", icon: FileText, onClick: handleExportPDF },
+                { label: "Print Report", icon: Printer, onClick: handlePrint },
+                { label: "Toggle Full Screen", icon: Eye, separator: true, onClick: handleFullScreen },
               ]}
             />
           </div>
@@ -286,57 +522,29 @@ export function SwipeLogsPage() {
             <SwipeLogsAnalytics data={analyticsData} />
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="space-y-6">
             {/* Main Table Section */}
-            <div className="xl:col-span-3 space-y-6">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between print:bg-white">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Live Swipe Logs</h3>
-                  <div className="flex items-center gap-2 print:hidden">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Displaying {filteredLogs.length} Records</span>
-                  </div>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between print:bg-white">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Live Swipe Logs</h3>
+                <div className="flex items-center gap-2 print:hidden">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Displaying {filteredLogs.length} Records</span>
                 </div>
-                <SwipeLogsTable 
-                  logs={filteredLogs} 
-                  onSelectSwipe={setSelectedSwipe} 
-                />
               </div>
-            </div>
-
-            {/* Side Panel: Device Health & Activity */}
-            <div className="space-y-6 print:hidden">
-              <DeviceHealthMonitor 
-                devices={devices} 
-                onManageDevices={() => setShowManageDevicesModal(true)}
-              />
               
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[11px] font-bold text-slate-900 dark:text-slate-100 uppercase tracking-widest">Real-time Activity</h4>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="flex gap-3 items-start">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                        <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">Device Sync: Main Gate</p>
-                        <p className="text-[10px] text-slate-500">12 new logs imported successfully</p>
-                      </div>
-                      <span className="text-[9px] font-medium text-slate-400 whitespace-nowrap">2m ago</span>
-                    </div>
-                  ))}
-                </div>
-                <Button 
-                  variant="ghost" 
-                  className="w-full h-8 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/10"
-                  onClick={() => setShowAllActivityModal(true)}
-                >
-                  VIEW ALL ACTIVITY
-                </Button>
-              </div>
+              <SwipeLogsTable 
+                logs={paginatedLogs} 
+                onSelectSwipe={setSelectedSwipe}
+                isLoading={isLoading}
+                sortField={sortField}
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                pageSize={pageSize}
+                setPageSize={setPageSize}
+                totalRecords={filteredLogs.length}
+              />
             </div>
           </div>
         </div>
@@ -363,7 +571,7 @@ export function SwipeLogsPage() {
             <Button 
               variant="outline" 
               className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 text-slate-500 font-bold gap-3 flex justify-start px-6"
-              onClick={() => handleExport('excel')}
+              onClick={handleExportExcel}
             >
               <FileSpreadsheet className="w-5 h-5 text-emerald-500" /> EXPORT FILTERED DATA
             </Button>

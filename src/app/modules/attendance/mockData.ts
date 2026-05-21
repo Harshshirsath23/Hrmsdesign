@@ -170,7 +170,7 @@ const generateRoster = (month: number, year: number): RosterRecord[] => {
       department: emp.dept,
       designation: emp.desig,
       team: emp.team,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.id}`,
+      avatar: `${emp.id}`,
       workingDays,
       weekOffs,
       shifts,
@@ -190,13 +190,24 @@ const generateSwipeLogs = (count: number): SwipeLog[] => {
 
   for (let i = 0; i < count; i++) {
     const emp = EMPLOYEES[Math.floor(Math.random() * EMPLOYEES.length)];
+    const today = new Date();
     const isToday = Math.random() > 0.3;
-    const date = isToday ? "2026-05-11" : `2026-05-${String(Math.floor(Math.random() * 10) + 1).padStart(2, '0')}`;
+    let dateStr = "";
+    if (isToday) {
+      dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    } else {
+      const pastDate = new Date();
+      pastDate.setDate(today.getDate() - (Math.floor(Math.random() * 10) + 1));
+      dateStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
+    }
+    const date = dateStr;
     const hour = Math.floor(Math.random() * 14) + 6; // 6 AM to 8 PM
     const min = Math.floor(Math.random() * 60);
     const sec = Math.floor(Math.random() * 60);
     const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
     const type = Math.random() > 0.5 ? "IN" : "OUT";
+    const deviceType = deviceTypes[Math.floor(Math.random() * deviceTypes.length)];
+    const workMode = deviceType === "Mobile App" ? "WFH" : (deviceType === "Web Login" ? (Math.random() > 0.5 ? "WFH" : "WFO") : "WFO");
 
     data.push({
       id: `SWIPE-${i}`,
@@ -205,7 +216,7 @@ const generateSwipeLogs = (count: number): SwipeLog[] => {
       employeeCode: emp.id,
       department: emp.dept,
       designation: emp.desig,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.id}`,
+      avatar: `${emp.id}`,
       swipeDate: date,
       swipeTime: time,
       type: type as "IN" | "OUT",
@@ -213,7 +224,7 @@ const generateSwipeLogs = (count: number): SwipeLog[] => {
       shiftTiming: "09:00 - 18:00",
       deviceName: "BioMax-X990",
       deviceId: `DEV-${Math.floor(Math.random() * 1000)}`,
-      deviceType: deviceTypes[Math.floor(Math.random() * deviceTypes.length)],
+      deviceType: deviceType,
       accessCardId: `CRD-${Math.floor(Math.random() * 10000)}`,
       branch: branches[Math.floor(Math.random() * branches.length)],
       doorName: doors[Math.floor(Math.random() * doors.length)],
@@ -225,6 +236,7 @@ const generateSwipeLogs = (count: number): SwipeLog[] => {
       verificationMethod: verificationMethods[Math.floor(Math.random() * verificationMethods.length)],
       spoofDetection: Math.random() > 0.9 ? "Suspicious" : "Safe",
       faceMatchScore: Math.random() > 0.8 ? 98.5 : undefined,
+      workMode: workMode as "WFO" | "WFH" | "Field",
     });
   }
 

@@ -29,11 +29,11 @@
   --accent-foreground:     #F8F9FA;
   --border:                #DEE2E6;
   --ring:                  #212529;
-  --radius:                8px;
-  --radius-sm:             6px;
-  --radius-lg:             14px;
-  --shadow-soft:           0 2px 8px rgba(16, 24, 40, 0.05);
-  --shadow-elevated:       0 8px 24px rgba(16, 24, 40, 0.08);
+  --radius:                4px;
+  --radius-sm:             3px;
+  --radius-lg:             6px;
+  --shadow-soft:           0 1px 4px rgba(16, 24, 40, 0.03);
+  --shadow-elevated:      0 4px 12px rgba(16, 24, 40, 0.06);
   --transition-fast:       140ms ease;
   --transition-base:       220ms ease;
 
@@ -55,6 +55,43 @@
   --overlay-border: #E5E7EB;
   --overlay-hover: #F3F4F6;
   --overlay-selected: #EEF6FF;
+}
+
+/* Attendance module: neutralize emerald/green accents to match global look */
+.attendance-theme-neutral {
+  /* no-op root to scope rules */
+}
+.attendance-theme-neutral .text-emerald-500,
+.attendance-theme-neutral .text-emerald-600,
+.attendance-theme-neutral .text-emerald-700,
+.attendance-theme-neutral .stroke-emerald-500 {
+  color: var(--foreground) !important;
+  stroke: var(--foreground) !important;
+}
+.attendance-theme-neutral .bg-emerald-100,
+.attendance-theme-neutral .bg-emerald-50,
+.attendance-theme-neutral .bg-emerald-200,
+.attendance-theme-neutral .bg-emerald-500\/10,
+.attendance-theme-neutral .bg-emerald-500\/5 {
+  background-color: var(--secondary) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+.attendance-theme-neutral .border-emerald-300,
+.attendance-theme-neutral .border-emerald-500\/10,
+.attendance-theme-neutral .border-emerald-300 {
+  border-color: var(--border) !important;
+}
+.attendance-theme-neutral .shadow-emerald-500\/20,
+.attendance-theme-neutral .shadow-emerald-500\/10 {
+  box-shadow: var(--shadow-soft) !important;
+}
+.attendance-theme-neutral .hover\:bg-emerald-50:hover,
+.attendance-theme-neutral .group-hover\:bg-emerald-500\/10:hover {
+  background-color: var(--overlay-hover) !important;
+}
+.attendance-theme-neutral .animate-pulse {
+  animation: none !important;
 }
 
 /* ── Dark Mode Token Overrides ──────────────────────────── */
@@ -383,6 +420,58 @@
   }
   .page-enter {
     animation: fade-up 200ms ease-out both;
+  }
+
+  /* ── Glassmorphism Utilities (attendance-focused) ───────────────── */
+  .glassmorph {
+    background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.30));
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    backdrop-filter: blur(10px) saturate(120%);
+    border: 1px solid rgba(255,255,255,0.25);
+    box-shadow: 0 6px 24px rgba(16,24,40,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+    color: var(--foreground);
+    border-radius: var(--radius-lg);
+  }
+
+  .glassmorph-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.28));
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+    backdrop-filter: blur(12px) saturate(120%);
+    border: 1px solid rgba(16,24,40,0.06);
+    box-shadow: 0 8px 30px rgba(2,6,23,0.06), inset 0 1px 0 rgba(255,255,255,0.45);
+  }
+
+  .glassmorph-panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.18));
+    -webkit-backdrop-filter: blur(8px) saturate(110%);
+    backdrop-filter: blur(8px) saturate(110%);
+    border: 1px solid rgba(16,24,40,0.05);
+    box-shadow: 0 6px 20px rgba(2,6,23,0.04);
+  }
+
+  .glassmorph-button {
+    background: linear-gradient(180deg, rgba(255,255,255,0.26), rgba(255,255,255,0.06));
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 2px 8px rgba(2,6,23,0.04);
+  }
+
+  .glassmorph-input {
+    background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0.06));
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(16,24,40,0.06);
+    color: var(--foreground);
+  }
+
+  /* Subtle liquid / shine accent for calendar tiles */
+  .glassmorph .calendar-tile {
+    transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease;
+  }
+  .glassmorph .calendar-tile:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(2,6,23,0.08);
   }
 
   /* ── Global Overlay & Dropdown Fixes ────────────────── */

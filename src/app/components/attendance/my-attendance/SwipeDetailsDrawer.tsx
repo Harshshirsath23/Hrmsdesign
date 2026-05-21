@@ -32,9 +32,9 @@ export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetail
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-l border-white/20 z-[101] shadow-2xl overflow-y-auto"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-md z-[101] overflow-y-auto"
           >
-            <div className="p-8 space-y-8">
+            <div className="p-8 space-y-8 glassmorph-card">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-black text-foreground tracking-tight">Swipe Details</h2>
                 <button 

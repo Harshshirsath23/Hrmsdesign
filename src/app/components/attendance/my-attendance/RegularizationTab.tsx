@@ -3,10 +3,7 @@ import { format, isSameMonth, parse, startOfMonth, eachDayOfInterval, startOfWee
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Clock, 
-  AlertCircle, 
   Calendar as CalendarIcon, 
-  History, 
   Send,
   ArrowRight,
   Info,
@@ -15,7 +12,7 @@ import {
   LogOut
 } from "lucide-react";
 import { DailyAttendance } from "../../../modules/attendance/types";
-import { getStatusColor, isDateLocked } from "./utils";
+import { isDateLocked } from "./utils";
 import { motion, AnimatePresence } from "motion/react";
 
 interface RegularizationTabProps {
@@ -26,13 +23,14 @@ interface RegularizationTabProps {
 
 export function RegularizationTab({ records, initialDate, readOnly = false }: RegularizationTabProps) {
   const [currentNavDate, setCurrentNavDate] = useState(new Date(2026, 4, 1)); // Default May 2026
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
 
   // Deep-link from other views
   useEffect(() => {
     if (initialDate) {
       const date = parse(initialDate, "yyyy-MM-dd", new Date());
-      setSelectedDate(date);
+      const dateKey = format(date, "yyyy-MM-dd");
+      setSelectedDates([dateKey]);
       setCurrentNavDate(startOfMonth(date));
     }
   }, [initialDate]);
@@ -43,13 +41,42 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
     end: endOfWeek(endOfMonth(monthStart)) 
   });
 
-  const selectedRecord = useMemo(() => {
-    if (!selectedDate) return null;
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    return records.find(r => r.date === dateStr);
-  }, [selectedDate, records]);
+  const selectedRecords = useMemo(() => {
+    return records.filter(r => selectedDates.includes(r.date));
+  }, [selectedDates, records]);
 
-  const isLocked = selectedDate ? isDateLocked(selectedDate) : false;
+  const selectedRecord = selectedRecords.length > 0 ? selectedRecords[0] : null;
+  const isLocked = selectedDates.some(date => isDateLocked(parse(date, "yyyy-MM-dd", new Date())));
+
+  const toggleSelectedDate = (day: Date, isCurrentMonth: boolean, isFuture: boolean) => {
+    if (!isCurrentMonth || isFuture) return;
+    const dateKey = format(day, "yyyy-MM-dd");
+    setSelectedDates((prev) =>
+      prev.includes(dateKey) ? prev.filter((date) => date !== dateKey) : [...prev, dateKey].sort()
+    );
+  };
+
+  const clearSelection = () => {
+    setSelectedDates([]);
+  };
+
+  const selectedCount = selectedDates.length;
+  const selectedDateLabel = selectedCount === 1
+    ? selectedDates[0]
+    : `${selectedCount} dates selected`;
+
+  const [perDateComments, setPerDateComments] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // ensure per-date comment entries exist for each selected date (preserve existing comments)
+    setPerDateComments((prev) => {
+      const next: Record<string, string> = {};
+      selectedDates.forEach((d) => {
+        next[d] = prev[d] || "";
+      });
+      return next;
+    });
+  }, [selectedDates]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -79,7 +106,8 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
               <div key={d} className="text-center text-[10px] font-black text-muted-foreground py-2 uppercase tracking-widest">{d}</div>
             ))}
             {calendarDays.map((day, i) => {
-              const isSel = selectedDate && format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+              const dateKey = format(day, "yyyy-MM-dd");
+              const isSel = selectedDates.includes(dateKey);
               const isCurrentMonth = isSameMonth(day, monthStart);
               const isFuture = isAfter(day, new Date());
               const locked = isDateLocked(day);
@@ -88,7 +116,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
                 <button
                   key={i}
                   disabled={!isCurrentMonth || isFuture}
-                  onClick={() => setSelectedDate(day)}
+                  onClick={() => toggleSelectedDate(day, isCurrentMonth, isFuture)}
                   className={`aspect-square relative flex flex-col items-center justify-center rounded-2xl text-xs font-bold transition-all ${
                     !isCurrentMonth || isFuture ? "opacity-10 cursor-not-allowed" : "hover:bg-emerald-500/10"
                   } ${isSel ? "bg-emerald-500 text-white shadow-xl scale-110 z-10" : "text-foreground bg-white/20 dark:bg-slate-800/20 border border-white/20 dark:border-white/5"}`}
@@ -103,38 +131,52 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
 
         {/* Selected Date Summary */}
         <AnimatePresence mode="wait">
-          {selectedDate && (
+          {selectedCount > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               className="p-6 rounded-[2.5rem] bg-black/5 dark:bg-white/5 border border-white/10 space-y-4"
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500"><CalendarIcon size={18} /></div>
-                <div>
-                  <h4 className="text-xs font-black text-foreground uppercase tracking-tight">Punch Details</h4>
-                  <p className="text-[9px] font-bold text-muted-foreground uppercase">{format(selectedDate, "EEEE, dd MMM yyyy")}</p>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500"><CalendarIcon size={18} /></div>
+                  <div>
+                    <h4 className="text-xs font-black text-foreground uppercase tracking-tight">Selected Dates</h4>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedDateLabel}</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Clear
+                </button>
               </div>
 
-              {/* Punch Info Card */}
+              <div className="grid gap-2 text-[11px] text-muted-foreground">
+                {selectedDates.slice(0, 5).map((date) => (
+                  <div key={date} className="inline-flex items-center gap-2 rounded-2xl bg-white/20 dark:bg-slate-800/20 px-3 py-2 text-xs font-black text-foreground">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    {format(parseISO(date), "EEE, dd MMM")}
+                  </div>
+                ))}
+                {selectedCount > 5 && (
+                  <span className="text-[9px] text-muted-foreground">+{selectedCount - 5} more date(s) selected</span>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20 flex flex-col items-center text-center">
                   <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 mb-1.5"><LogIn size={16} /></div>
                   <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Punch In</p>
                   <p className="text-base font-black text-foreground leading-tight">{selectedRecord?.firstIn || "No Punch"}</p>
-                  <p className="text-[7px] font-bold text-muted-foreground mt-1 opacity-60">
-                    {selectedRecord?.workMode === "Office" ? "Biometric" : "Web"}
-                  </p>
                 </div>
                 <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20 flex flex-col items-center text-center">
                   <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 mb-1.5"><LogOut size={16} /></div>
                   <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Punch Out</p>
                   <p className="text-base font-black text-foreground leading-tight">{selectedRecord?.lastOut || "No Punch"}</p>
-                  <p className="text-[7px] font-bold text-muted-foreground mt-1 opacity-60">
-                    {selectedRecord?.workMode === "Office" ? "Biometric" : "Web"}
-                  </p>
                 </div>
               </div>
 
@@ -149,7 +191,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
               {isLocked && (
                 <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3">
                   <Lock size={16} className="text-rose-500" />
-                  <p className="text-[10px] font-bold text-rose-600 italic">This date is locked. Payroll has been processed.</p>
+                  <p className="text-[10px] font-bold text-rose-600 italic">One or more selected dates are locked. Payroll has been processed.</p>
                 </div>
               )}
             </motion.div>
@@ -160,13 +202,13 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
       {/* Right Column: Correction Form */}
       <div className="lg:col-span-6 xl:col-span-5">
         <div className="p-8 rounded-[2.5rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-2xl h-fit">
-          {!selectedDate ? (
+          {selectedCount === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center opacity-30 py-12">
               <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
                 <ArrowRight size={40} className="text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-black text-foreground">Select a date</h3>
-              <p className="text-xs font-medium text-muted-foreground mt-2 max-w-[200px]">Pick an eligible day from the calendar to start.</p>
+              <h3 className="text-xl font-black text-foreground">Select one or more dates</h3>
+              <p className="text-xs font-medium text-muted-foreground mt-2 max-w-[220px]">Click on calendar days to build a bulk regularization request.</p>
             </div>
           ) : readOnly ? (
             <div className="space-y-6">
@@ -206,7 +248,10 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
             <form className="space-y-6">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
-                <h3 className="text-lg font-black text-foreground">Submit Correction</h3>
+                <div>
+                  <h3 className="text-lg font-black text-foreground">Submit Bulk Regularization</h3>
+                  <p className="text-xs text-muted-foreground">{selectedCount} selected date(s) will be included in this request.</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -256,13 +301,27 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Reason</label>
-                <textarea 
-                  rows={3}
-                  disabled={isLocked}
-                  placeholder="Enter reason here..."
-                  className="w-full px-6 py-4 bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 rounded-3xl text-xs font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-50 transition-all resize-none shadow-sm"
-                />
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Reasons (per selected date)</label>
+                <div className="space-y-3 mt-2">
+                  {selectedDates.map((date) => (
+                    <div key={date} className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{format(parseISO(date), "EEE, dd MMM yyyy")}</p>
+                        </div>
+                        <span className="text-[9px] text-muted-foreground">{date}</span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        disabled={isLocked}
+                        value={perDateComments[date] || ""}
+                        onChange={(e) => setPerDateComments((prev) => ({ ...prev, [date]: e.target.value }))}
+                        placeholder="Enter reason for this date"
+                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 rounded-lg text-xs font-medium focus:outline-none focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-50 transition-all resize-none"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <button 
