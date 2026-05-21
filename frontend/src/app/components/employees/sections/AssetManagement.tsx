@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Monitor, Plus } from "lucide-react";
+import { Monitor } from "lucide-react";
 import { Employee, AssetEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import {
@@ -7,6 +7,7 @@ import {
   ProfileInfoField,
   EmptyStateCard,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
@@ -69,6 +70,9 @@ function validateAssets(assets: AssetEntry[]): Record<number, Record<string, str
 
 export function AssetManagement({ employee }: Props) {
   const { handleAdminSave } = useAdminSync();
+  const assetCategoryOptions = useMasterOptions("AssetCategory");
+  const assetConditionOptions = useMasterOptions("AssetCondition");
+  const assetStatusOptions = useMasterOptions("AssetStatus");
   const [isEditing, setIsEditing] = useState(false);
   const baseline = useMemo(() => employee.assets || [], [employee.assets]);
   const [assets, setAssets] = useState<AssetEntry[]>(baseline);
@@ -121,16 +125,7 @@ export function AssetManagement({ employee }: Props) {
 
   const displayAssets = isEditing ? assets : baseline;
 
-  const addButton = (
-    <button
-      type="button"
-      onClick={() => (isEditing ? addAsset() : startEditAndAdd())}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-    >
-      <Plus className="w-3.5 h-3.5" />
-      Add Asset
-    </button>
-  );
+  // Employee view: no header add/edit controls here; admin UI handles edits.
 
   return (
     <div className="space-y-5 pb-24">
@@ -143,13 +138,21 @@ export function AssetManagement({ employee }: Props) {
         title="Asset Management"
         icon={Monitor}
         isEditing={isEditing}
-        onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={addButton}
+        headerExtra={
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={startEdit} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary">Edit Asset</button>
+            <button type="button" onClick={startEditAndAdd} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90">Add Asset</button>
+          </div>
+        }
       >
         {!displayAssets.length ? (
-          <EmptyStateCard icon={Monitor} title="No assets assigned" description="Use Add Asset to record asset details." />
+          <EmptyStateCard
+            icon={Monitor}
+            title="No assets assigned"
+            description="No assets recorded. Contact admin to add assets."
+          />
         ) : (
           <div className="space-y-6">
             {displayAssets.map((a, idx) => (
@@ -173,8 +176,7 @@ export function AssetManagement({ employee }: Props) {
                     label="Asset Category"
                     value={a.assetCategory}
                     editing={isEditing}
-                    type="select"
-                    options={CATEGORY_OPTIONS}
+                    options={assetCategoryOptions.length ? assetCategoryOptions : CATEGORY_OPTIONS}
                     error={errors[idx]?.assetCategory}
                     onChange={(v) => updateAsset(idx, { assetCategory: v })}
                   />
@@ -204,16 +206,14 @@ export function AssetManagement({ employee }: Props) {
                     label="Asset Condition"
                     value={a.assetCondition}
                     editing={isEditing}
-                    type="select"
-                    options={CONDITION_OPTIONS}
+                    options={assetConditionOptions.length ? assetConditionOptions : CONDITION_OPTIONS}
                     onChange={(v) => updateAsset(idx, { assetCondition: v })}
                   />
                   <ProfileInfoField
                     label="Status"
                     value={a.status}
                     editing={isEditing}
-                    type="select"
-                    options={STATUS_OPTIONS}
+                    options={assetStatusOptions.length ? assetStatusOptions : STATUS_OPTIONS}
                     error={errors[idx]?.status}
                     onChange={(v) => updateAsset(idx, { status: v })}
                   />

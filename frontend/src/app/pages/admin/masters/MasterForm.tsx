@@ -31,11 +31,16 @@ function schemaForFields(fields: MasterFieldConfig[]) {
       let base = z.coerce.number();
       if (field.min !== undefined) base = base.min(field.min);
       if (field.max !== undefined) base = base.max(field.max);
-      shape[field.key] = field.required ? base : base.optional();
+      shape[field.key] = z.preprocess(
+        (value) => (value === "" || value === null ? undefined : value),
+        field.required ? base : base.optional(),
+      );
       continue;
     }
     const str = z.string().trim();
-    shape[field.key] = field.required ? str.min(1, `${field.label} is required`) : str.optional();
+    shape[field.key] = field.required
+      ? z.preprocess((value) => value ?? "", str.min(1, `${field.label} is required`))
+      : z.preprocess((value) => (value === null ? undefined : value), str.optional());
   }
   return z.object(shape);
 }
@@ -186,9 +191,35 @@ export function MasterForm({
             )}
           />
         ) : field.type === "textarea" ? (
-          <Textarea {...form.register(field.key)} placeholder={field.placeholder} disabled={disabled} />
-        ) : field.type === "date" ? (
-          <Input type="date" {...form.register(field.key)} disabled={disabled || field.readOnly} />
+          <Controller
+            control={form.control}
+            name={field.key}
+            render={({ field: ctrl }) => (
+              <Textarea
+                value={String(ctrl.value ?? "")}
+                onChange={ctrl.onChange}
+                onBlur={ctrl.onBlur}
+                name={ctrl.name}
+                placeholder={field.placeholder}
+                disabled={disabled}
+              />
+            )}
+          />
+        ) : field.type === "date" || field.type === "time" ? (
+          <Controller
+            control={form.control}
+            name={field.key}
+            render={({ field: ctrl }) => (
+              <Input
+                type={field.type}
+                value={String(ctrl.value ?? "")}
+                onChange={ctrl.onChange}
+                onBlur={ctrl.onBlur}
+                name={ctrl.name}
+                disabled={disabled || field.readOnly}
+              />
+            )}
+          />
         ) : field.type === "multiselect" ? (
           <Controller
             control={form.control}
@@ -245,14 +276,36 @@ export function MasterForm({
             )}
           />
         ) : field.type === "color" ? (
-          <Input type="color" {...form.register(field.key)} disabled={disabled || field.readOnly} />
+          <Controller
+            control={form.control}
+            name={field.key}
+            render={({ field: ctrl }) => (
+              <Input
+                type="color"
+                value={String(ctrl.value ?? "#000000")}
+                onChange={ctrl.onChange}
+                onBlur={ctrl.onBlur}
+                name={ctrl.name}
+                disabled={disabled || field.readOnly}
+              />
+            )}
+          />
         ) : (
-          <Input
-            type={field.type === "number" ? "number" : "text"}
-            placeholder={field.placeholder}
-            readOnly={field.readOnly}
-            disabled={disabled}
-            {...form.register(field.key)}
+          <Controller
+            control={form.control}
+            name={field.key}
+            render={({ field: ctrl }) => (
+              <Input
+                type={field.type === "number" ? "number" : "text"}
+                value={String(ctrl.value ?? "")}
+                onChange={ctrl.onChange}
+                onBlur={ctrl.onBlur}
+                name={ctrl.name}
+                placeholder={field.placeholder}
+                readOnly={field.readOnly}
+                disabled={disabled}
+              />
+            )}
           />
         )}
 

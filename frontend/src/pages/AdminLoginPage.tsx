@@ -1,5 +1,5 @@
-import { SharedLoginLayout } from '@components/layout/SharedLoginLayout';
+import { DynamicAdminLoginLayout } from '@components/layout/DynamicAdminLoginLayout';
 
 export function AdminLoginPage() {
-  return <SharedLoginLayout initialRole="admin" />;
+  return <DynamicAdminLoginLayout />;
 }

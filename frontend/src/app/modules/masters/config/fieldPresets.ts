@@ -1,5 +1,5 @@
-import { BASE_FIELDS, COMPANY_FIELDS } from "./helpers";
 import type { MasterFieldConfig } from "../types";
+import { BASE_FIELDS, COMPANY_FIELDS } from "./helpers";
 
 export const COMPANY_EXTRA_FIELDS: MasterFieldConfig[] = [
   ...BASE_FIELDS,

@@ -8,10 +8,26 @@ import { AppDispatch } from "../../../../store";
 import { validateAccountNumber, validateIfsc } from "../employee-details";
 import { EditableSectionCard } from "../employee-details/EditableSectionCard";
 import { ProfileInfoField } from "../employee-details/ProfileInfoField";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  disableEdit?: boolean;
 }
+
+const ESI_TYPE_OPTIONS = [
+  { value: "Employee State Insurance", label: "Employee State Insurance" },
+];
+
+const PF_TYPE_OPTIONS = [
+  { value: "EPF (Employee Provident Fund)", label: "EPF (Employee Provident Fund)" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "Active", label: "Active" },
+  { value: "Inactive", label: "Inactive" },
+];
+
 
 function StatSectionCard({
   title,
@@ -94,17 +110,38 @@ function InfoRow({
   mono = false,
   isEditing,
   onChange,
+  options,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   isEditing?: boolean;
   onChange?: (v: string) => void;
+  options?: Array<{ value: string; label: string }>;
 }) {
+  const selectOptions = options
+    ? options.some((option) => option.value === value) || !value
+      ? options
+      : [{ value, label: value }, ...options]
+    : undefined;
+
   return (
     <div className="flex justify-between items-center py-3 border-b border-border last:border-0">
       <span className="text-sm text-muted-foreground font-medium">{label}</span>
-      {isEditing ? (
+      {isEditing && selectOptions?.length ? (
+        <select
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className="text-sm font-semibold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 w-48 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <option value="">Select {label}</option>
+          {selectOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : isEditing ? (
         <input
           type="text"
           value={value}
@@ -118,7 +155,11 @@ function InfoRow({
   );
 }
 
-export function BankDetails({ employee }: Props) {
+export function BankDetails({ employee, disableEdit = false }: Props) {
+  const bankOptions = useMasterOptions("Bank");
+  const taxRegimeOptions = useMasterOptions("TaxRegime");
+  const pfSchemeOptions = useMasterOptions("PfScheme");
+  const esiSchemeOptions = useMasterOptions("EsiScheme");
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
   const [pfEdit, setPfEdit] = useState(false);
@@ -141,6 +182,10 @@ export function BankDetails({ employee }: Props) {
   });
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const dispatch = useDispatch<AppDispatch>();
+  const bankSelectOptions =
+    bankOptions.some((option) => option.value === (editedData.bankName || "")) || !editedData.bankName
+      ? bankOptions
+      : [{ value: editedData.bankName, label: editedData.bankName }, ...bankOptions];
 
   useEffect(() => {
     setEditedData(employee);
@@ -204,7 +249,7 @@ export function BankDetails({ employee }: Props) {
         title="Bank Account Information"
         icon={CreditCard}
         isEditing={isEditing}
-        onEdit={() => setIsEditing(true)}
+        onEdit={!disableEdit ? () => setIsEditing(true) : undefined}
         onSave={handleSaveBank}
         onCancel={() => {
           setEditedData(employee);
@@ -236,12 +281,18 @@ export function BankDetails({ employee }: Props) {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">Bank Name</p>
               {isEditing ? (
-                <input
-                  type="text"
+                <select
                   value={editedData.bankName || ""}
                   onChange={(e) => handleUpdate("bankName", e.target.value)}
                   className="text-sm font-medium mt-0.5 bg-white/10 border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-                />
+                >
+                  <option value="">Select Bank</option>
+                  {bankSelectOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <p className="text-sm font-medium mt-0.5">{employee.bankName}</p>
               )}
@@ -267,7 +318,7 @@ export function BankDetails({ employee }: Props) {
         title="Statutory Documents"
         icon={Shield}
         isEditing={isEditing}
-        onEdit={() => setIsEditing(true)}
+        onEdit={!disableEdit ? () => setIsEditing(true) : undefined}
         onSave={handleSaveBank}
         onCancel={() => {
           setEditedData(employee);
@@ -278,7 +329,7 @@ export function BankDetails({ employee }: Props) {
           <InfoRow label="PAN Number" value={editedData.panNumber || ""} mono isEditing={isEditing} onChange={(v) => handleUpdate("panNumber", v)} />
           <InfoRow label="Aadhaar Number" value={editedData.aadhaarNumber || ""} mono isEditing={isEditing} onChange={(v) => handleUpdate("aadhaarNumber", v)} />
           <InfoRow label="UAN Number" value={editedData.uanNumber || ""} mono isEditing={isEditing} onChange={(v) => handleUpdate("uanNumber", v)} />
-          <InfoRow label="Tax Regime" value={editedData.taxRegime || ""} isEditing={isEditing} onChange={(v) => handleUpdate("taxRegime", v)} />
+          <InfoRow label="Tax Regime" value={editedData.taxRegime || ""} isEditing={isEditing} onChange={(v) => handleUpdate("taxRegime", v)} options={taxRegimeOptions} />
         </div>
       </EditableSectionCard>
 
@@ -287,7 +338,7 @@ export function BankDetails({ employee }: Props) {
           title="Provident Fund (PF)"
           icon={Shield}
           isEditing={pfEdit}
-          onEdit={() => setPfEdit(true)}
+          onEdit={!disableEdit ? () => setPfEdit(true) : undefined}
           onSave={savePf}
           onCancel={() => {
             setPfDraft(employee.pfDetails || pfDraft);
@@ -296,7 +347,13 @@ export function BankDetails({ employee }: Props) {
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="PF Number" value={pfDraft.pfNumber} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfNumber: v }))} />
-            <ProfileInfoField label="PF Type" value={pfDraft.pfType} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, pfType: v }))} />
+            <ProfileInfoField
+              label="PF Type"
+              value={pfDraft.pfType}
+              editing={pfEdit}
+              onChange={(v) => setPfDraft((d) => ({ ...d, pfType: v }))}
+              options={pfSchemeOptions.length ? pfSchemeOptions : PF_TYPE_OPTIONS}
+            />
             <ProfileInfoField
               label="Monthly Contribution"
               value={pfDraft.monthlyContribution}
@@ -305,7 +362,13 @@ export function BankDetails({ employee }: Props) {
             />
             <ProfileInfoField label="Employee Share" value={pfDraft.employeeShare} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, employeeShare: v }))} />
             <ProfileInfoField label="Employer Share" value={pfDraft.employerShare} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, employerShare: v }))} />
-            <ProfileInfoField label="Status" value={pfDraft.status} editing={pfEdit} onChange={(v) => setPfDraft((d) => ({ ...d, status: v }))} />
+            <ProfileInfoField
+              label="Status"
+              value={pfDraft.status}
+              editing={pfEdit}
+              onChange={(v) => setPfDraft((d) => ({ ...d, status: v }))}
+              options={STATUS_OPTIONS}
+            />
           </div>
         </StatSectionCard>
 
@@ -313,7 +376,7 @@ export function BankDetails({ employee }: Props) {
           title="Employee State Insurance (ESI)"
           icon={Building2}
           isEditing={esiEdit}
-          onEdit={() => setEsiEdit(true)}
+          onEdit={!disableEdit ? () => setEsiEdit(true) : undefined}
           onSave={saveEsi}
           onCancel={() => {
             setEsiDraft(employee.esiDetails || esiDraft);
@@ -322,7 +385,13 @@ export function BankDetails({ employee }: Props) {
         >
           <div className="grid grid-cols-1 gap-3">
             <ProfileInfoField label="ESI Number" value={esiDraft.esiNumber} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiNumber: v }))} />
-            <ProfileInfoField label="ESI Type" value={esiDraft.esiType} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, esiType: v }))} />
+            <ProfileInfoField
+              label="ESI Type"
+              value={esiDraft.esiType}
+              editing={esiEdit}
+              onChange={(v) => setEsiDraft((d) => ({ ...d, esiType: v }))}
+              options={esiSchemeOptions.length ? esiSchemeOptions : ESI_TYPE_OPTIONS}
+            />
             <ProfileInfoField
               label="Employee Contribution"
               value={esiDraft.employeeContribution}
@@ -336,7 +405,13 @@ export function BankDetails({ employee }: Props) {
               onChange={(v) => setEsiDraft((d) => ({ ...d, employerContribution: v }))}
             />
             <ProfileInfoField label="Dispensary" value={esiDraft.dispensary} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, dispensary: v }))} />
-            <ProfileInfoField label="Status" value={esiDraft.status} editing={esiEdit} onChange={(v) => setEsiDraft((d) => ({ ...d, status: v }))} />
+            <ProfileInfoField
+              label="Status"
+              value={esiDraft.status}
+              editing={esiEdit}
+              onChange={(v) => setEsiDraft((d) => ({ ...d, status: v }))}
+              options={STATUS_OPTIONS}
+            />
           </div>
         </StatSectionCard>
       </div>

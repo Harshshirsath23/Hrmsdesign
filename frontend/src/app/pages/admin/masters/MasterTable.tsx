@@ -1,19 +1,23 @@
 import { useMemo, useState } from "react";
-import { Edit3, Plus, Search, Shield, ToggleLeft, ToggleRight } from "lucide-react";
+import { useQueries } from "@tanstack/react-query";
+import { Edit3, Plus, Search, Shield, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { Switch } from "../../../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table";
-import { useMasterCreate, useMasterList, useMasterToggleActive, useMasterUpdate } from "../../../modules/masters/hooks";
+import { Textarea } from "../../../components/ui/textarea";
+import { getMasterList } from "../../../modules/masters/api";
+import { useMasterCreate, useMasterDelete, useMasterList, useMasterToggleActive, useMasterUpdate } from "../../../modules/masters/hooks";
 import { formatDateTime, getCellValue, normalizeTableColumns, sortRecords } from "../../../modules/masters/tableUtils";
-import type { MasterConfig, MasterListQuery, MasterRecord, MasterTableColumnConfig } from "../../../modules/masters/types";
+import type { MasterConfig, MasterFieldConfig, MasterListQuery, MasterRecord, MasterTableColumnConfig } from "../../../modules/masters/types";
 import { MasterForm } from "./MasterForm";
 
 function displayLabel(rec: MasterRecord) {
-  return String(rec.label ?? rec.name ?? "");
+  return String(rec.label ?? rec.name ?? rec.title ?? rec.code ?? rec.id ?? "");
 }
 
 function renderCell(record: MasterRecord, column: MasterTableColumnConfig) {
@@ -28,10 +32,13 @@ function renderCell(record: MasterRecord, column: MasterTableColumnConfig) {
     return formatDateTime(record[column.key]);
   }
   if (column.render === "boolean") {
-    const value = record[column.key];
-    return value ? "Yes" : "No";
+    return record[column.key] ? "Yes" : "No";
   }
   return getCellValue(record, column);
+}
+
+function supportsMultiCreate(config: MasterConfig) {
+  return config.category === "employee" || config.categoryKey === "employee";
 }
 
 export function MasterTable({ config }: { config: MasterConfig }) {
@@ -44,6 +51,7 @@ export function MasterTable({ config }: { config: MasterConfig }) {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const columns = useMemo(() => normalizeTableColumns(config.listColumns), [config.listColumns]);
+  const multiCreate = supportsMultiCreate(config);
 
   const query = useMemo<MasterListQuery>(
     () => ({
@@ -60,6 +68,7 @@ export function MasterTable({ config }: { config: MasterConfig }) {
   const createMut = useMasterCreate(config.apiName, query);
   const updateMut = useMasterUpdate(config.apiName, query);
   const toggleMut = useMasterToggleActive(config.apiName, query);
+  const deleteMut = useMasterDelete(config.apiName, query);
 
   const rows = useMemo(() => {
     const base = listQ.data?.results ?? [];
@@ -84,12 +93,26 @@ export function MasterTable({ config }: { config: MasterConfig }) {
   };
 
   const buildPayload = (values: Record<string, unknown>) => {
-    const labelValue = String(values.label ?? values.name ?? "");
+    if (!("label" in values) && !("name" in values) && !("title" in values)) return values;
+    const labelValue = String(values.label ?? values.name ?? values.title ?? "");
     return {
       ...values,
-      label: labelValue,
+      label: String(values.label ?? labelValue),
       name: String(values.name ?? labelValue),
     };
+  };
+
+  const handleToggleActive = (record: MasterRecord) => {
+    if (record.is_active && activeOnly) {
+      setActiveOnly(false);
+    }
+    toggleMut.mutate({ id: record.id, is_active: !record.is_active });
+  };
+
+  const handleDelete = (record: MasterRecord) => {
+    const label = String(record.label ?? record.name ?? record.code ?? "this record");
+    if (!window.confirm(`Delete ${label}?`)) return;
+    deleteMut.mutate(record.id);
   };
 
   return (
@@ -170,7 +193,7 @@ export function MasterTable({ config }: { config: MasterConfig }) {
                   onClick={() => handleSort(column)}
                 >
                   {column.label}
-                  {sortColumn === column.key ? (sortDirection === "asc" ? " ↑" : " ↓") : null}
+                  {sortColumn === column.key ? (sortDirection === "asc" ? " A-Z" : " Z-A") : null}
                 </TableHead>
               ))}
               {config.parentFieldKey && <TableHead>{config.parentFieldKey.replaceAll("_", " ")}</TableHead>}
@@ -213,10 +236,20 @@ export function MasterTable({ config }: { config: MasterConfig }) {
                             size="sm"
                             variant="outline"
                             className="h-8 gap-1.5"
-                            onClick={() => toggleMut.mutate({ id: r.id, is_active: !r.is_active })}
+                            onClick={() => handleToggleActive(r)}
                           >
                             {r.is_active ? <ToggleLeft className="h-3.5 w-3.5" /> : <ToggleRight className="h-3.5 w-3.5" />}
-                            Toggle
+                            {r.is_active ? "Deactivate" : "Activate"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1.5"
+                            onClick={() => handleDelete(r)}
+                            disabled={deleteMut.isPending}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
                           </Button>
                         </>
                       )}
@@ -230,30 +263,215 @@ export function MasterTable({ config }: { config: MasterConfig }) {
       </div>
 
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>{editing ? `Edit ${config.label}` : `Add ${config.label}`}</DialogTitle>
           </DialogHeader>
-          <MasterForm
-            config={config}
-            mode={editing ? "edit" : "create"}
-            initialData={editing}
-            isSubmitting={isBusy}
-            onCancel={() => setEditorOpen(false)}
-            onSubmit={(values) => {
-              const payload = buildPayload(values);
-              if (editing) {
-                updateMut.mutate(
-                  { id: editing.id, payload },
-                  { onSuccess: () => setEditorOpen(false) },
-                );
-                return;
-              }
-              createMut.mutate(payload, { onSuccess: () => setEditorOpen(false) });
-            }}
-          />
+          {!editing && multiCreate ? (
+            <MultipleMasterCreateForm
+              config={config}
+              isSubmitting={createMut.isPending}
+              onCancel={() => setEditorOpen(false)}
+              onSubmit={async (multiRows) => {
+                for (const row of multiRows) {
+                  await createMut.mutateAsync(buildPayload(row));
+                }
+                setEditorOpen(false);
+              }}
+            />
+          ) : (
+            <MasterForm
+              config={config}
+              mode={editing ? "edit" : "create"}
+              initialData={editing}
+              isSubmitting={isBusy}
+              onCancel={() => setEditorOpen(false)}
+              onSubmit={(values) => {
+                const payload = buildPayload(values);
+                if (editing) {
+                  updateMut.mutate(
+                    { id: editing.id, payload },
+                    { onSuccess: () => setEditorOpen(false) },
+                  );
+                  return;
+                }
+                createMut.mutate(payload, { onSuccess: () => setEditorOpen(false) });
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+type MultiCreateRow = Record<string, unknown>;
+
+function buildDefaultRow(fields: MasterFieldConfig[], defaults: Record<string, unknown> | undefined): MultiCreateRow {
+  const row: MultiCreateRow = { ...(defaults ?? {}) };
+  for (const field of fields) {
+    if (field.readOnly) continue;
+    if (row[field.key] !== undefined) continue;
+    if (field.type === "boolean") {
+      row[field.key] = field.defaultValue ?? field.key === "is_active";
+    } else if (field.type === "number") {
+      row[field.key] = field.defaultValue ?? "";
+    } else if (field.type === "multiselect") {
+      row[field.key] = field.defaultValue ?? [];
+    } else {
+      row[field.key] = field.defaultValue ?? "";
+    }
+  }
+  return row;
+}
+
+function MultipleMasterCreateForm({
+  config,
+  isSubmitting,
+  onCancel,
+  onSubmit,
+}: {
+  config: MasterConfig;
+  isSubmitting?: boolean;
+  onCancel: () => void;
+  onSubmit: (rows: Record<string, unknown>[]) => Promise<void>;
+}) {
+  const fields = useMemo(
+    () => (config.formFields ?? []).filter((field) => !field.readOnly),
+    [config.formFields],
+  );
+  const defaultRow = useMemo(() => buildDefaultRow(fields, config.defaultValues), [fields, config.defaultValues]);
+  const [rows, setRows] = useState<MultiCreateRow[]>([defaultRow]);
+  const [error, setError] = useState("");
+
+  const relationFields = fields.filter((field) => field.relationMaster);
+  const relationQueries = useQueries({
+    queries: relationFields.map((field) => ({
+      queryKey: ["masters", "options", field.relationMaster],
+      queryFn: () => getMasterList(String(field.relationMaster), { is_active: "true", page: 1 }),
+    })),
+  });
+
+  const relationOptionsByKey = useMemo(() => {
+    const map: Record<string, MasterRecord[]> = {};
+    relationFields.forEach((field, index) => {
+      map[field.key] = relationQueries[index]?.data?.results ?? [];
+    });
+    return map;
+  }, [relationFields, relationQueries]);
+
+  const updateRow = (index: number, patch: MultiCreateRow) => {
+    setRows((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
+  };
+
+  const validateRow = (row: MultiCreateRow) =>
+    fields.every((field) => {
+      if (!field.required) return true;
+      const value = row[field.key];
+      if (Array.isArray(value)) return value.length > 0;
+      return value !== undefined && value !== null && String(value).trim() !== "";
+    });
+
+  const submitRows = async () => {
+    const payloads = rows.map((row) => ({ ...row }));
+
+    if (!payloads.length || !payloads.every(validateRow)) {
+      setError("Please fill all required fields for every row.");
+      return;
+    }
+
+    setError("");
+    await onSubmit(payloads);
+  };
+
+  return (
+    <div className="w-full min-w-0 space-y-4">
+      <div className="space-y-2">
+        {rows.map((row, index) => (
+          <div key={index} className="space-y-3 rounded-lg border border-border p-3">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              {fields.map((field) => (
+                <div key={field.key} className={field.type === "textarea" ? "space-y-1.5 sm:col-span-2" : "space-y-1.5"}>
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {field.label}{field.required ? " *" : ""}
+                  </Label>
+                  {field.type === "boolean" ? (
+                    <div className="flex h-10 w-full max-w-[190px] items-center justify-between rounded-lg border border-border px-3 text-sm">
+                      <span>{row[field.key] ? "Active" : "Inactive"}</span>
+                      <Switch
+                        checked={Boolean(row[field.key])}
+                        onCheckedChange={(checked) => updateRow(index, { [field.key]: checked })}
+                      />
+                    </div>
+                  ) : field.type === "select" ? (
+                    <Select
+                      value={String(row[field.key] ?? "")}
+                      onValueChange={(value) => updateRow(index, { [field.key]: value })}
+                    >
+                      <SelectTrigger className="h-10 min-w-0">
+                        <SelectValue placeholder={`Select ${field.label}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(field.options ?? relationOptionsByKey[field.key]?.map((record) => ({
+                          value: String(record.id),
+                          label: displayLabel(record),
+                        })) ?? []).map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : field.type === "textarea" ? (
+                    <Textarea
+                      value={String(row[field.key] ?? "")}
+                      onChange={(event) => updateRow(index, { [field.key]: event.target.value })}
+                      placeholder={field.placeholder}
+                    />
+                  ) : field.type === "color" ? (
+                    <Input
+                      type="color"
+                      value={String(row[field.key] ?? "#000000")}
+                      onChange={(event) => updateRow(index, { [field.key]: event.target.value })}
+                      className="h-10 min-w-0"
+                    />
+                  ) : (
+                    <Input
+                      type={field.type === "number" ? "number" : field.type === "date" || field.type === "time" ? field.type : "text"}
+                      value={String(row[field.key] ?? "")}
+                      onChange={(event) => updateRow(index, { [field.key]: event.target.value })}
+                      placeholder={field.placeholder ?? field.label}
+                      className="h-10 min-w-0"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => setRows((current) => [...current, buildDefaultRow(fields, config.defaultValues)])}
+        >
+          <Plus className="h-4 w-4" />
+          Add Row
+        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="button" disabled={isSubmitting} onClick={submitRows}>
+            {isSubmitting ? "Creating..." : rows.length > 1 ? "Create All" : "Create"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   FileText, 
   ChevronLeft, 
@@ -36,34 +36,86 @@ import {
 } from "../../../../../components/ui/table";
 import { LetterBatch } from "./types";
 import { employees } from "../../../../../components/employees/mockData";
-import { format } from "date-fns";
-import { cn } from "../../../../../components/ui/utils";
+import { cn, safeFormatDate } from "../../../../../components/ui/utils";
 
 interface LetterDetailsProps {
   batch: LetterBatch;
   onBack: () => void;
+  onUpdateBatch?: (b: LetterBatch) => void;
+  onDeleteBatch?: (id: string) => void;
 }
 
-export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
+export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: LetterDetailsProps) {
+  const [localBatch, setLocalBatch] = useState<LetterBatch>(batch);
   const [recipientIds, setRecipientIds] = useState<string[]>(batch.selectedEmployeeIds);
   const selectedEmployees = employees.filter(e => recipientIds.includes(e.id));
 
+  useEffect(() => {
+    setLocalBatch(batch);
+    setRecipientIds(batch.selectedEmployeeIds);
+  }, [batch]);
+
+  const pushActivity = (message: string) => {
+    const entry = { id: `act-${Date.now()}`, time: new Date().toISOString(), message };
+    const next = { ...localBatch, activityLog: [entry, ...(localBatch.activityLog || [])], updatedAt: new Date().toISOString() } as LetterBatch;
+    setLocalBatch(next);
+    onUpdateBatch?.(next);
+  };
+
+  const pushApprovalHistory = (action: string, by = 'Admin', remarks = '') => {
+    const entry = { id: `apr-${Date.now()}`, time: new Date().toISOString(), by, action, remarks };
+    const next = { ...localBatch, approvalHistory: [entry, ...(localBatch.approvalHistory || [])], updatedAt: new Date().toISOString() } as LetterBatch;
+    setLocalBatch(next);
+    onUpdateBatch?.(next);
+  };
+
   const handleDeleteRecipient = (empId: string, empName: string) => {
-    if (confirm(`Are you sure you want to remove \${empName} from this letter batch?`)) {
-      setRecipientIds(prev => prev.filter(id => id !== empId));
-      toast.success(`\${empName} has been removed from this batch.`);
+    if (confirm(`Are you sure you want to remove ${empName} from this letter batch?`)) {
+      const nextRecipients = recipientIds.filter(id => id !== empId);
+      setRecipientIds(nextRecipients);
+      const next = { ...localBatch, selectedEmployeeIds: nextRecipients, updatedAt: new Date().toISOString() } as LetterBatch;
+      setLocalBatch(next);
+      onUpdateBatch?.(next);
+      pushActivity(`${empName} removed from batch`);
+      toast.success(`${empName} has been removed from this batch.`);
     }
   };
 
   const handleDownloadPDF = (empName: string) => {
     const element = document.createElement("a");
-    const file = new Blob([`Mock PDF Letter for recipient: \${empName}\nBatch: \${batch.subject}\nType: \${batch.letterType}`], { type: 'text/plain' });
+    const file = new Blob([`Mock PDF Letter for recipient: ${empName}\nBatch: ${batch.subject}\nType: ${batch.letterType}`], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = `\${empName.replace(/\\s+/g, "_")}_Letter.pdf`;
+    element.download = `${empName.replace(/\s+/g, "_")}_Letter.pdf`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    toast.success(`Download started for \${empName}`);
+    toast.success(`Download started for ${empName}`);
+  };
+
+  const handleDownloadZip = () => {
+    const element = document.createElement('a');
+    const file = new Blob([`Mock ZIP for batch: ${localBatch.subject}\nRecipients: ${localBatch.selectedEmployeeIds.join(', ')}`], { type: 'application/zip' });
+    const url = URL.createObjectURL(file);
+    element.href = url;
+    element.download = `${localBatch.subject.replace(/\s+/g, '_')}_${localBatch.id}.zip`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    const next = { ...localBatch, zipFileUrl: url, updatedAt: new Date().toISOString() } as LetterBatch;
+    setLocalBatch(next);
+    onUpdateBatch?.(next);
+    pushActivity('ZIP downloaded');
+    toast.success('ZIP download prepared');
+  };
+
+  const handleRegenerateAll = () => {
+    const now = new Date().toISOString();
+    const nextStatus = localBatch.approvalWorkflow === 'No Approval Required' ? 'Published' : 'Pending Approval';
+    const next = { ...localBatch, updatedAt: now, status: nextStatus, publishedAt: nextStatus === 'Published' ? now : localBatch.publishedAt } as LetterBatch;
+    setLocalBatch(next);
+    onUpdateBatch?.(next);
+    pushActivity('Batch re-generated for all recipients');
+    toast.success('Re-generation started');
   };
 
   return (
@@ -87,17 +139,23 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
               </Badge>
             </div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-              Batch ID: {batch.id} • Created on {format(new Date(batch.createdAt), "dd MMM yyyy")}
+              Batch ID: {batch.id} • Created on {safeFormatDate(batch.createdAt, "dd MMM yyyy")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-10 rounded-xl text-xs font-black uppercase tracking-widest">
+          <Button variant="outline" size="sm" onClick={handleDownloadZip} className="h-10 rounded-xl text-xs font-black uppercase tracking-widest">
             <Download className="w-4 h-4 mr-2" /> Download ZIP
           </Button>
-          <Button className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+          <Button onClick={handleRegenerateAll} className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20">
             <RefreshCw className="w-4 h-4 mr-2" /> Re-generate All
           </Button>
+          <KebabMenu items={[
+            { label: 'Publish', icon: CheckCircle2, onClick: () => { const next = { ...localBatch, status: 'Published', publishedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as LetterBatch; setLocalBatch(next); onUpdateBatch?.(next); pushApprovalHistory('Published'); toast.success('Batch published'); } },
+            { label: 'Approve', icon: UserCheck, onClick: () => { const next = { ...localBatch, status: 'Approved', updatedAt: new Date().toISOString() } as LetterBatch; setLocalBatch(next); onUpdateBatch?.(next); pushApprovalHistory('Approved'); toast.success('Batch approved'); } },
+            { label: 'Reject', icon: X, onClick: () => { const next = { ...localBatch, status: 'Rejected', updatedAt: new Date().toISOString() } as LetterBatch; setLocalBatch(next); onUpdateBatch?.(next); pushApprovalHistory('Rejected'); toast.success('Batch rejected'); } },
+            { label: 'Cancel', icon: Trash2, variant: 'destructive', onClick: () => { if (confirm('Cancel this batch?')) { const next = { ...localBatch, status: 'Cancelled', updatedAt: new Date().toISOString() } as LetterBatch; setLocalBatch(next); onUpdateBatch?.(next); pushApprovalHistory('Cancelled'); toast.success('Batch cancelled'); } } },
+          ]} />
         </div>
       </div>
 
@@ -106,9 +164,9 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <InfoCard label="Letter Type" value={batch.letterType} Icon={FileText} />
-            <InfoCard label="Effective Date" value={format(new Date(batch.effectiveDate), "dd MMM yyyy")} Icon={Calendar} />
+            <InfoCard label="Effective Date" value={safeFormatDate(batch.effectiveDate, "dd MMM yyyy")} Icon={Calendar} />
             <InfoCard label="Workflow" value={batch.approvalWorkflow} Icon={Shield} />
-            <InfoCard label="Publish Date" value={format(new Date(batch.publishDate), "dd MMM yyyy")} Icon={Clock} />
+            <InfoCard label="Publish Date" value={safeFormatDate(batch.publishDate, "dd MMM yyyy")} Icon={Clock} />
           </div>
 
           {/* Employee List */}
@@ -184,9 +242,9 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
               <Paperclip className="w-4 h-4 text-primary" />
               Supporting Documents
             </h3>
-            {batch.attachmentUrls && batch.attachmentUrls.length > 0 ? (
+            {localBatch.attachmentUrls && localBatch.attachmentUrls.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {batch.attachmentUrls.map((file, idx) => (
+                {localBatch.attachmentUrls.map((file, idx) => (
                   <div key={idx} className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl border border-border/50 group hover:border-primary/30 transition-all">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary shadow-sm">
@@ -198,11 +256,27 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        const element = document.createElement('a');
+                        const blob = new Blob([`Mock file content for ${file}`], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        element.href = url;
+                        element.download = file;
+                        document.body.appendChild(element);
+                        element.click();
+                        document.body.removeChild(element);
+                        pushActivity(`Downloaded ${file}`);
+                      }} className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
                         <Download size={14} />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
-                        <ExternalLink size={14} />
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        const nextFiles = (localBatch.attachmentUrls || []).filter((_, i) => i !== idx);
+                        const next = { ...localBatch, attachmentUrls: nextFiles, updatedAt: new Date().toISOString() } as LetterBatch;
+                        setLocalBatch(next);
+                        onUpdateBatch?.(next);
+                        pushActivity(`Removed attachment ${file}`);
+                      }} className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
+                        <Trash2 size={14} />
                       </Button>
                     </div>
                   </div>
@@ -213,6 +287,22 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
                 <p className="text-xs font-bold text-muted-foreground opacity-60">No supporting documents attached to this batch.</p>
               </div>
             )}
+            <div className="mt-4 flex items-center gap-3">
+              <input id="attach-file-input" type="file" className="hidden" onChange={(e) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+                const names = Array.from(files).map(f => f.name);
+                const nextFiles = [...(localBatch.attachmentUrls || []), ...names];
+                const next = { ...localBatch, attachmentUrls: nextFiles, updatedAt: new Date().toISOString() } as LetterBatch;
+                setLocalBatch(next);
+                onUpdateBatch?.(next);
+                pushActivity(`Added ${names.length} supporting document(s)`);
+                toast.success('Files attached');
+              }} />
+              <label htmlFor="attach-file-input" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-xs font-bold hover:bg-secondary cursor-pointer">
+                <Plus className="w-3.5 h-3.5" /> Attach Documents
+              </label>
+            </div>
           </div>
         </div>
 
@@ -227,7 +317,7 @@ export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
               <TimelineItem 
                 title="Batch Created" 
                 user={batch.createdBy} 
-                time={format(new Date(batch.createdAt), "dd MMM, hh:mm a")} 
+                time={safeFormatDate(batch.createdAt, "dd MMM, hh:mm a")} 
                 status="completed"
                 Icon={Plus}
               />

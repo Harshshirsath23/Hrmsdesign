@@ -160,12 +160,8 @@ export function SalarySummary({ employee }: Props) {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all"
-            >
-              <Edit2 size={12} /> Edit Section
+            <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
+              <Edit2 size={12} /> Edit Salary
             </button>
           )}
         </div>
@@ -174,17 +170,32 @@ export function SalarySummary({ employee }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="flat-card bg-foreground text-primary-foreground p-6">
           <p className="text-[11px] font-bold uppercase tracking-widest text-primary-foreground/60">Gross Salary</p>
-          <p className="text-2xl mt-2 font-mono font-bold">{formatInr(editedData.grossSalary)}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-2xl mt-2 font-mono font-bold">{formatInr(editedData.grossSalary)}</p>
+            {!isEditing && (
+              <button onClick={() => setIsEditing(true)} className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary">Edit</button>
+            )}
+          </div>
           <p className="text-xs text-primary-foreground/60 mt-1.5 font-medium">Per Month</p>
         </div>
         <div className="flat-card bg-card p-6">
           <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Total Deductions</p>
-          <p className="text-2xl mt-2 font-mono font-bold text-[#6C757D]">{formatInr(totalDeductions)}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-2xl mt-2 font-mono font-bold text-[#6C757D]">{formatInr(totalDeductions)}</p>
+            {!isEditing && (
+              <button onClick={() => setIsEditing(true)} className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary">Edit</button>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground mt-1.5 font-medium">PF + TDS</p>
         </div>
         <div className="flat-card bg-secondary border-foreground/20 p-6">
           <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Net Salary</p>
-          <p className="text-2xl mt-2 font-mono font-bold text-foreground">{formatInr(editedData.netSalary)}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-2xl mt-2 font-mono font-bold text-foreground">{formatInr(editedData.netSalary)}</p>
+            {!isEditing && (
+              <button onClick={() => setIsEditing(true)} className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary">Edit</button>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground mt-1.5 font-medium">Take Home</p>
         </div>
       </div>

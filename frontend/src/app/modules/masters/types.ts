@@ -1,4 +1,4 @@
-export type MasterFieldType = "text" | "textarea" | "number" | "select" | "boolean" | "date" | "multiselect" | "color";
+export type MasterFieldType = "text" | "textarea" | "number" | "select" | "boolean" | "date" | "time" | "multiselect" | "color";
 
 export interface MasterFieldDisabledWhen {
   field: string;
@@ -39,12 +39,6 @@ export interface MasterTableColumnConfig {
   altKeys?: string[];
 }
 
-export interface MasterGroupConfig {
-  key: string;
-  label: string;
-  masters: MasterConfig[];
-}
-
 export interface MasterConfig {
   key: string;
   apiName: string;
@@ -68,13 +62,7 @@ export interface MasterCategoryConfig {
   label: string;
   categoryKey?: string;
   categoryLabel?: string;
-  masterGroups?: MasterGroupConfig[];
   masters: MasterConfig[];
-}
-
-export interface MasterSectionRoute {
-  categoryKey: string;
-  masterKey: string;
 }
 
 export interface MasterRecord {
@@ -103,4 +91,3 @@ export interface MasterListQuery {
   is_active?: "true" | "false";
   page?: number;
 }
-

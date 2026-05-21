@@ -53,6 +53,8 @@ export interface LetterBatch {
   templateName?: string;
   updatedAt?: string;
   currentStep?: number;
+  activityLog?: { id: string; time: string; message: string }[];
+  approvalHistory?: { id: string; time: string; by: string; action: string; remarks?: string }[];
 }
 
 export interface GeneratedLetter {

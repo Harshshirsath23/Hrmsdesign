@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Building2, Plus } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { Employee, WorkExperienceEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import {
@@ -11,28 +11,18 @@ import {
   ConfirmationDialog,
   validateDateOrder,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
 }
 
-const emptyEntry = (id: string): WorkExperienceEntry => ({
-  id,
-  companyName: "",
-  jobTitle: "",
-  employmentType: "",
-  department: "",
-  responsibilities: "",
-  technologiesUsed: "",
-  location: "",
-  experienceLetterFileName: "",
-  reasonForLeaving: "",
-  startDate: "",
-  endDate: "",
-});
+// Additions disabled in ESS view — no empty entry helper required
 
 export function WorkExperience({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const employeeTypeOptions = useMasterOptions("EmployeeType");
+  const departmentOptions = useMasterOptions("Department");
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<WorkExperienceEntry[]>(employee.workExperience || []);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
@@ -44,9 +34,7 @@ export function WorkExperience({ employee }: Props) {
     setDraft((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   };
 
-  const addRow = () => {
-    setDraft((rows) => [...rows, emptyEntry(`we-${Date.now()}`)]);
-  };
+  // addRow removed — additions disabled in ESS view per UX
 
   const confirmDelete = () => {
     if (deleteIndex === null) return;
@@ -97,21 +85,7 @@ export function WorkExperience({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        headerExtra={
-          <button
-            type="button"
-            onClick={() => {
-              if (!isEditing) {
-                setIsEditing(true);
-              }
-              addRow();
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Experience
-          </button>
-        }
+        /* Add button intentionally removed per UX request */
       >
         {dateError ? <p className="text-sm text-destructive mb-3">{dateError}</p> : null}
         {draft.length === 0 ? (
@@ -146,12 +120,14 @@ export function WorkExperience({ employee }: Props) {
                     value={row.employmentType}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { employmentType: v })}
+                    options={employeeTypeOptions}
                   />
                   <ProfileInfoField
                     label="Department"
                     value={row.department}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { department: v })}
+                    options={departmentOptions}
                   />
                   <ProfileInfoField
                     label="Start Date"

@@ -74,6 +74,7 @@ const formSchema = z.object({
   dateOfJoining: z.string().min(1, 'Required'),
   workLocationId: z.string().min(1, 'Required'),
   employeeCategory: z.string().min(1, 'Required'),
+  employeeType: z.string().optional(),
   probationPeriod: z.coerce.number().optional(),
   probationPeriodUnit: z.enum(['days', 'months']),
   confirmationDate: z.string().optional(),
@@ -121,7 +122,7 @@ const formSchema = z.object({
 
   // BACKGROUND CHECK
   backgroundCheck: z.object({
-    verificationStatus: z.enum(['Pending', 'In Progress', 'Verified', 'Failed', 'Not Required']),
+    verificationStatus: z.string().optional(),
     completedOn: z.string().optional(),
     agencyName: z.string().optional(),
     remarks: z.string().optional(),
@@ -325,8 +326,9 @@ export default function AddEmployeeBasicForm() {
       emergencyContactNumber: '',
       currentAddress: '',
       sameAsCurrent: true,
-      employeeStatus: 'active',
-      employeeCategory: 'full_time',
+      employeeStatus: '',
+      employeeCategory: '',
+      employeeType: '',
       attendanceSchemeId: '',
       attendanceTrackingType: 'biometrics',
       disabilityStatus: false,
@@ -335,7 +337,7 @@ export default function AddEmployeeBasicForm() {
       probationPeriodUnit: 'months',
       educationDetails: [],
       backgroundCheck: {
-        verificationStatus: 'Pending',
+        verificationStatus: '',
       }
     }
   });
@@ -689,6 +691,9 @@ export default function AddEmployeeBasicForm() {
                 <FormField label="Employee Category" required>
                   <MasterSelect masterName="EmployeeCategory" value={watch('employeeCategory')} onChange={(v) => setValue('employeeCategory', v)} />
                 </FormField>
+                <FormField label="Employee Type">
+                  <MasterSelect masterName="EmployeeType" value={watch('employeeType') || ''} onChange={(v) => setValue('employeeType', v)} />
+                </FormField>
                 <FormField label="Reporting Manager" required error={errors.reportingManagerId?.message}>
                   <SearchableSelect
                     value={watch('reportingManagerId')}
@@ -850,18 +855,18 @@ export default function AddEmployeeBasicForm() {
                         }} />
                       </FormField>
                       <FormField label="Qualification / Degree">
-                        <Input value={edu.qualification} onChange={(e) => {
+                        <MasterSelect masterName="Qualification" value={edu.qualification} onChange={(v) => {
                           const current = [...(watch('educationDetails') || [])];
-                          current[index].qualification = e.target.value;
+                          current[index].qualification = v;
                           setValue('educationDetails', current);
-                        }} className="h-11 rounded-xl" />
+                        }} />
                       </FormField>
                       <FormField label="Field of Study">
-                        <Input value={edu.specialization} onChange={(e) => {
+                        <MasterSelect masterName="EducationSpecialization" value={edu.specialization} onChange={(v) => {
                           const current = [...(watch('educationDetails') || [])];
-                          current[index].specialization = e.target.value;
+                          current[index].specialization = v;
                           setValue('educationDetails', current);
-                        }} className="h-11 rounded-xl" />
+                        }} />
                       </FormField>
                       <FormField label="Institution Name">
                         <Input value={edu.institutionName} onChange={(e) => {
@@ -869,6 +874,27 @@ export default function AddEmployeeBasicForm() {
                           current[index].institutionName = e.target.value;
                           setValue('educationDetails', current);
                         }} className="h-11 rounded-xl" />
+                      </FormField>
+                      <FormField label="Board / University">
+                        <MasterSelect masterName="Board" value={edu.boardUniversity} onChange={(v) => {
+                          const current = [...(watch('educationDetails') || [])];
+                          current[index].boardUniversity = v;
+                          setValue('educationDetails', current);
+                        }} />
+                      </FormField>
+                      <FormField label="Study Mode">
+                        <MasterSelect masterName="StudyMode" value={edu.modeOfStudy} onChange={(v) => {
+                          const current = [...(watch('educationDetails') || [])];
+                          current[index].modeOfStudy = v;
+                          setValue('educationDetails', current);
+                        }} />
+                      </FormField>
+                      <FormField label="Country">
+                        <MasterSelect masterName="Country" value={edu.country} onChange={(v) => {
+                          const current = [...(watch('educationDetails') || [])];
+                          current[index].country = v;
+                          setValue('educationDetails', current);
+                        }} />
                       </FormField>
                       <div className="grid grid-cols-2 gap-3">
                         <FormField label="Start Date">
@@ -911,8 +937,8 @@ export default function AddEmployeeBasicForm() {
                       startDate: '',
                       endDate: '',
                       grade: '',
-                      modeOfStudy: 'Regular',
-                      country: 'India'
+                      modeOfStudy: '',
+                      country: ''
                     }]);
                   }}
                   className="w-full h-14 border-dashed border-2 hover:border-primary hover:bg-primary/5 rounded-[1.5rem] flex items-center justify-center gap-2 text-xs font-black text-muted-foreground hover:text-primary transition-all"
