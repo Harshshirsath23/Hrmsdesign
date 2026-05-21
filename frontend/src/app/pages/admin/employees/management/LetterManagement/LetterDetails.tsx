@@ -3,16 +3,12 @@ import {
   FileText, 
   ChevronLeft, 
   Download, 
-  Printer, 
-  Share2, 
   Clock, 
   CheckCircle2, 
   UserCheck, 
   Users,
   Calendar,
   Shield,
-  Activity,
-  MoreVertical,
   ExternalLink,
   Eye,
   RefreshCw,
@@ -20,10 +16,10 @@ import {
   Send,
   Paperclip,
   File,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { Button } from "../../../../../components/ui/button";
-import { KebabMenu } from "../../../../../components/ui/KebabMenu";
 import { toast } from "sonner";
 import { Badge } from "../../../../../components/ui/badge";
 import { 
@@ -45,10 +41,131 @@ interface LetterDetailsProps {
   onDeleteBatch?: (id: string) => void;
 }
 
-export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: LetterDetailsProps) {
-  const [localBatch, setLocalBatch] = useState<LetterBatch>(batch);
-  const [recipientIds, setRecipientIds] = useState<string[]>(batch.selectedEmployeeIds);
-  const selectedEmployees = employees.filter(e => recipientIds.includes(e.id));
+type ZipFile = {
+  name: string;
+  content: string;
+};
+
+const textEncoder = new TextEncoder();
+
+const crcTable = new Uint32Array(256).map((_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k += 1) {
+    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  }
+  return c >>> 0;
+});
+
+function getCrc32(data: Uint8Array) {
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function getDosDateTime(date = new Date()) {
+  const year = Math.max(date.getFullYear(), 1980);
+  const dosTime = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const dosDate = ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { dosDate, dosTime };
+}
+
+function writeUint16(bytes: number[], value: number) {
+  bytes.push(value & 0xff, (value >>> 8) & 0xff);
+}
+
+function writeUint32(bytes: number[], value: number) {
+  bytes.push(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
+}
+
+function appendBytes(target: number[], source: Uint8Array) {
+  for (const byte of source) target.push(byte);
+}
+
+function createZipBlob(files: ZipFile[]) {
+  const zipBytes: number[] = [];
+  const centralDirectory: number[] = [];
+  const { dosDate, dosTime } = getDosDateTime();
+
+  files.forEach((file) => {
+    const fileName = textEncoder.encode(file.name);
+    const fileContent = textEncoder.encode(file.content);
+    const crc32 = getCrc32(fileContent);
+    const localHeaderOffset = zipBytes.length;
+
+    writeUint32(zipBytes, 0x04034b50);
+    writeUint16(zipBytes, 20);
+    writeUint16(zipBytes, 0);
+    writeUint16(zipBytes, 0);
+    writeUint16(zipBytes, dosTime);
+    writeUint16(zipBytes, dosDate);
+    writeUint32(zipBytes, crc32);
+    writeUint32(zipBytes, fileContent.length);
+    writeUint32(zipBytes, fileContent.length);
+    writeUint16(zipBytes, fileName.length);
+    writeUint16(zipBytes, 0);
+    appendBytes(zipBytes, fileName);
+    appendBytes(zipBytes, fileContent);
+
+    writeUint32(centralDirectory, 0x02014b50);
+    writeUint16(centralDirectory, 20);
+    writeUint16(centralDirectory, 20);
+    writeUint16(centralDirectory, 0);
+    writeUint16(centralDirectory, 0);
+    writeUint16(centralDirectory, dosTime);
+    writeUint16(centralDirectory, dosDate);
+    writeUint32(centralDirectory, crc32);
+    writeUint32(centralDirectory, fileContent.length);
+    writeUint32(centralDirectory, fileContent.length);
+    writeUint16(centralDirectory, fileName.length);
+    writeUint16(centralDirectory, 0);
+    writeUint16(centralDirectory, 0);
+    writeUint16(centralDirectory, 0);
+    writeUint16(centralDirectory, 0);
+    writeUint32(centralDirectory, 0);
+    writeUint32(centralDirectory, localHeaderOffset);
+    appendBytes(centralDirectory, fileName);
+  });
+
+  const centralDirectoryOffset = zipBytes.length;
+  zipBytes.push(...centralDirectory);
+
+  writeUint32(zipBytes, 0x06054b50);
+  writeUint16(zipBytes, 0);
+  writeUint16(zipBytes, 0);
+  writeUint16(zipBytes, files.length);
+  writeUint16(zipBytes, files.length);
+  writeUint32(zipBytes, centralDirectory.length);
+  writeUint32(zipBytes, centralDirectoryOffset);
+  writeUint16(zipBytes, 0);
+
+  return new Blob([new Uint8Array(zipBytes)], { type: "application/zip" });
+}
+
+function sanitizeFileName(value: string) {
+  return value.replace(/[<>:"/\\|?*]+/g, "_").replace(/\s+/g, "_");
+}
+
+export function LetterDetails({ batch, onBack }: LetterDetailsProps) {
+  const mockRecipientIds = useMemo(() => {
+    const matchedIds = batch.selectedEmployeeIds
+      .map(id => employees.find(e => e.id === id || e.employeeId === id)?.id)
+      .filter(Boolean) as string[];
+
+    if (matchedIds.length > 0) return matchedIds;
+    if (batch.letterType === "Increment Letter") return employees.slice(1, 4).map(e => e.id);
+    return employees.slice(0, 1).map(e => e.id);
+  }, [batch.letterType, batch.selectedEmployeeIds]);
+
+  const [recipientIds, setRecipientIds] = useState<string[]>(mockRecipientIds);
+  const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showAllEmployees, setShowAllEmployees] = useState(false);
+
+  const selectedEmployees = employees.filter(e => recipientIds.includes(e.id) || recipientIds.includes(e.employeeId));
+  const visibleEmployees = showAllEmployees ? selectedEmployees : selectedEmployees.slice(0, 5);
+  const previewEmployee = employees.find(e => e.id === previewEmployeeId);
 
   useEffect(() => {
     setLocalBatch(batch);
@@ -93,29 +210,52 @@ export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: L
   };
 
   const handleDownloadZip = () => {
-    const element = document.createElement('a');
-    const file = new Blob([`Mock ZIP for batch: ${localBatch.subject}\nRecipients: ${localBatch.selectedEmployeeIds.join(', ')}`], { type: 'application/zip' });
-    const url = URL.createObjectURL(file);
-    element.href = url;
-    element.download = `${localBatch.subject.replace(/\s+/g, '_')}_${localBatch.id}.zip`;
+    const letterFiles = selectedEmployees.map((emp) => ({
+      name: `${sanitizeFileName(emp.name)}_${sanitizeFileName(emp.employeeId)}_Letter.txt`,
+      content: [
+        batch.letterType,
+        "",
+        `Date: ${safeFormatDate(batch.publishDate || batch.createdAt, "dd MMM yyyy")}`,
+        `Employee: ${emp.name}`,
+        `Employee ID: ${emp.employeeId}`,
+        `Department: ${emp.department}`,
+        `Designation: ${emp.designation}`,
+        `Batch: ${batch.subject}`,
+        `Batch ID: ${batch.id}`,
+        `Effective Date: ${safeFormatDate(batch.effectiveDate, "dd MMM yyyy")}`,
+        "",
+        `Dear ${emp.name},`,
+        "",
+        `This is a mock generated letter for ${emp.designation} in the ${emp.department} department.`,
+        "",
+        "Sincerely,",
+        "Human Resources",
+      ].join("\n"),
+    }));
+
+    const files = letterFiles.length > 0 ? letterFiles : [{
+      name: "No_Recipients.txt",
+      content: "No recipients found for this letter batch.",
+    }];
+
+    const element = document.createElement("a");
+    const file = createZipBlob(files);
+    element.href = URL.createObjectURL(file);
+    element.download = `${batch.subject.replace(/\s+/g, "_")}_${batch.id}_letters.zip`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-    const next = { ...localBatch, zipFileUrl: url, updatedAt: new Date().toISOString() } as LetterBatch;
-    setLocalBatch(next);
-    onUpdateBatch?.(next);
-    pushActivity('ZIP downloaded');
-    toast.success('ZIP download prepared');
+    URL.revokeObjectURL(element.href);
+    toast.success("ZIP download started.");
   };
 
   const handleRegenerateAll = () => {
-    const now = new Date().toISOString();
-    const nextStatus = localBatch.approvalWorkflow === 'No Approval Required' ? 'Published' : 'Pending Approval';
-    const next = { ...localBatch, updatedAt: now, status: nextStatus, publishedAt: nextStatus === 'Published' ? now : localBatch.publishedAt } as LetterBatch;
-    setLocalBatch(next);
-    onUpdateBatch?.(next);
-    pushActivity('Batch re-generated for all recipients');
-    toast.success('Re-generation started');
+    setIsRegenerating(true);
+    setTimeout(() => {
+      setRecipientIds(prev => prev.length > 0 ? prev : mockRecipientIds);
+      setIsRegenerating(false);
+      toast.success(`Re-generated letters for ${Math.max(selectedEmployees.length, mockRecipientIds.length)} employees.`);
+    }, 900);
   };
 
   return (
@@ -147,8 +287,13 @@ export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: L
           <Button variant="outline" size="sm" onClick={handleDownloadZip} className="h-10 rounded-xl text-xs font-black uppercase tracking-widest">
             <Download className="w-4 h-4 mr-2" /> Download ZIP
           </Button>
-          <Button onClick={handleRegenerateAll} className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-            <RefreshCw className="w-4 h-4 mr-2" /> Re-generate All
+          <Button
+            onClick={handleRegenerateAll}
+            disabled={isRegenerating}
+            className="h-10 px-6 rounded-xl bg-primary text-white hover:bg-primary/90 text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+          >
+            <RefreshCw className={cn("w-4 h-4 mr-2", isRegenerating && "animate-spin")} />
+            {isRegenerating ? "Re-generating..." : "Re-generate All"}
           </Button>
           <KebabMenu items={[
             { label: 'Publish', icon: CheckCircle2, onClick: () => { const next = { ...localBatch, status: 'Published', publishedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as LetterBatch; setLocalBatch(next); onUpdateBatch?.(next); pushApprovalHistory('Published'); toast.success('Batch published'); } },
@@ -176,7 +321,12 @@ export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: L
                 <Users className="w-4 h-4 text-primary" />
                 Selected Employees ({selectedEmployees.length})
               </h3>
-              <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest opacity-60">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllEmployees(prev => !prev)}
+                className="text-[10px] font-black uppercase tracking-widest opacity-60"
+              >
                 View All
               </Button>
             </div>
@@ -189,7 +339,7 @@ export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: L
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {selectedEmployees.map((emp) => (
+                {visibleEmployees.map((emp) => (
                   <TableRow key={emp.id} className="border-border/50 group hover:bg-secondary/30 transition-colors">
                     <TableCell className="pl-8">
                       <div className="flex items-center gap-3">
@@ -208,19 +358,27 @@ export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: L
                       </Badge>
                     </TableCell>
                     <TableCell className="pr-8 text-right" onClick={(e) => e.stopPropagation()}>
-                      <KebabMenu 
-                        size="sm"
-                        items={[
-                          { label: "Preview Letter", icon: Eye, onClick: () => toast.info(`Previewing for ${emp.name}`) },
-                          { label: "Download PDF", icon: Download, onClick: () => handleDownloadPDF(emp.name) },
-                          { label: "Print Letter", icon: Printer, onClick: () => window.print() },
-                          { label: "Send to Employee", icon: Send, onClick: () => toast.info("Sending email notification...") },
-                          { label: "Remove Recipient", icon: Trash2, variant: "destructive", separator: true, onClick: () => handleDeleteRecipient(emp.id, emp.name) },
-                        ]}
-                      />
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" title="Preview" onClick={() => setPreviewEmployeeId(emp.id)} className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Download PDF" onClick={() => handleDownloadPDF(emp.name)} className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Remove" onClick={() => handleDeleteRecipient(emp.id, emp.name)} className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                {selectedEmployees.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                      No recipients found for this batch.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -351,6 +509,32 @@ export function LetterDetails({ batch, onBack, onUpdateBatch, onDeleteBatch }: L
           </div>
         </div>
       </div>
+
+      {previewEmployee && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-6" onClick={() => setPreviewEmployeeId(null)}>
+          <div className="w-full max-w-2xl rounded-[2rem] bg-card border border-border shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Letter Preview</h3>
+                <p className="text-xs font-bold text-muted-foreground">{previewEmployee.name} • {previewEmployee.employeeId}</p>
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => setPreviewEmployeeId(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-8 bg-white text-slate-900 min-h-80">
+              <h1 className="text-2xl font-bold text-center mb-8">{batch.letterType}</h1>
+              <p className="mb-4">Date: {safeFormatDate(batch.publishDate || batch.createdAt, "dd MMM yyyy")}</p>
+              <p className="mb-4">Dear <strong>{previewEmployee.name}</strong>,</p>
+              <p className="mb-4">
+                This is a mock generated letter for <strong>{previewEmployee.designation}</strong> in the <strong>{previewEmployee.department}</strong> department.
+              </p>
+              <p className="mb-8">Effective Date: <strong>{safeFormatDate(batch.effectiveDate, "dd MMM yyyy")}</strong></p>
+              <p>Sincerely,<br /><strong>Human Resources</strong></p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -185,8 +185,13 @@ export function LetterWizard({ onCancel, onComplete, onSaveDraft, initialData, i
     }
   };
 
-  const prevStep = () => {
-    if (step > 1) setStep(step - 1);
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+      return;
+    }
+
+    onCancel();
   };
 
   return (
@@ -896,8 +901,7 @@ export function LetterWizard({ onCancel, onComplete, onSaveDraft, initialData, i
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Button 
             variant="ghost" 
-            onClick={prevStep} 
-            disabled={step === 1}
+            onClick={handleBack} 
             className="rounded-xl h-12 px-6 text-xs font-black uppercase tracking-widest"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
