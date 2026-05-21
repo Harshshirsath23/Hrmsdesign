@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import { Employee, WorkExperienceEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import {
@@ -13,13 +13,28 @@ import {
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
 
+const emptyWorkExperience = (): WorkExperienceEntry => ({
+  id: `we-${Date.now()}`,
+  companyName: "",
+  jobTitle: "",
+  employmentType: "",
+  department: "",
+  responsibilities: "",
+  technologiesUsed: "",
+  location: "",
+  experienceLetterFileName: "",
+  experienceLetterDataUrl: "",
+  reasonForLeaving: "",
+  startDate: "",
+  endDate: "",
+});
+
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
-// Additions disabled in ESS view — no empty entry helper required
-
-export function WorkExperience({ employee }: Props) {
+export function WorkExperience({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const employeeTypeOptions = useMasterOptions("EmployeeType");
   const departmentOptions = useMasterOptions("Department");
@@ -34,7 +49,10 @@ export function WorkExperience({ employee }: Props) {
     setDraft((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   };
 
-  // addRow removed — additions disabled in ESS view per UX
+  const addRow = () => {
+    setDraft((rows) => [...rows, emptyWorkExperience()]);
+    setIsEditing(true);
+  };
 
   const confirmDelete = () => {
     if (deleteIndex === null) return;
@@ -85,7 +103,16 @@ export function WorkExperience({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        /* Add button intentionally removed per UX request */
+        headerExtra={showAddButton ? (
+          <button
+            type="button"
+            onClick={addRow}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add New
+          </button>
+        ) : null}
       >
         {dateError ? <p className="text-sm text-destructive mb-3">{dateError}</p> : null}
         {draft.length === 0 ? (

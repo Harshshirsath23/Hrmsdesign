@@ -10,6 +10,7 @@ import {
 
 interface Props {
   employee: Employee;
+  showActions?: boolean;
 }
 
 function emptyCard(employee: Employee): AccessCardEntry {
@@ -28,7 +29,7 @@ function validateCards(cards: AccessCardEntry[]): Record<number, string> {
   return errors;
 }
 
-export function AccessCardDetails({ employee }: Props) {
+export function AccessCardDetails({ employee, showActions = true }: Props) {
   const { handleAdminSave } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
   const baseline = useMemo(() => employee.accessCards || [], [employee.accessCards]);
@@ -98,8 +99,8 @@ export function AccessCardDetails({ employee }: Props) {
         isEditing={isEditing}
         onCancel={handleCancel}
         onSave={handleSave}
-        onEdit={startEdit}
-        headerExtra={!isEditing ? (
+        onEdit={showActions ? startEdit : undefined}
+        headerExtra={showActions && !isEditing ? (
           <button
             type="button"
             onClick={startEditAndAdd}

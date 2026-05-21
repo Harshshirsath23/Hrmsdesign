@@ -12,6 +12,7 @@ import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
 const RELATIONSHIP_OPTIONS = [
@@ -74,7 +75,7 @@ function validateNominees(nominees: NomineeEntry[]): {
   return { rowErrors, formError };
 }
 
-export function NomineeDetails({ employee }: Props) {
+export function NomineeDetails({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const relationOptions = useMasterOptions("Relation");
   const [isEditing, setIsEditing] = useState(false);
@@ -151,7 +152,16 @@ export function NomineeDetails({ employee }: Props) {
         onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        /* Add button removed (Nominee additions disabled in ESS) */
+        headerExtra={showAddButton ? (
+          <button
+            type="button"
+            onClick={addNominee}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add New
+          </button>
+        ) : null}
       >
         {formError ? (
           <p className="mb-4 text-sm text-destructive font-medium">{formError}</p>

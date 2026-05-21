@@ -11,6 +11,7 @@ import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showActions?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -68,7 +69,7 @@ function validateAssets(assets: AssetEntry[]): Record<number, Record<string, str
   return errors;
 }
 
-export function AssetManagement({ employee }: Props) {
+export function AssetManagement({ employee, showActions = true }: Props) {
   const { handleAdminSave } = useAdminSync();
   const assetCategoryOptions = useMasterOptions("AssetCategory");
   const assetConditionOptions = useMasterOptions("AssetCondition");
@@ -140,12 +141,12 @@ export function AssetManagement({ employee }: Props) {
         isEditing={isEditing}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={
+        headerExtra={showActions ? (
           <div className="flex items-center gap-2">
             <button type="button" onClick={startEdit} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary">Edit Asset</button>
             <button type="button" onClick={startEditAndAdd} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90">Add Asset</button>
           </div>
-        }
+        ) : null}
       >
         {!displayAssets.length ? (
           <EmptyStateCard

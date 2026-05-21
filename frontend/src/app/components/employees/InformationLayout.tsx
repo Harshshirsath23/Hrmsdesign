@@ -75,7 +75,7 @@ export function InformationLayout() {
       <div className="relative flex flex-1 overflow-hidden">
         <SidebarMenu activeSection={activeSection} onSectionChange={setActiveSection} />
         <main className="flex-1 overflow-y-auto p-6">
-          <ContentSection employee={employee} activeSection={activeSection} />
+          <ContentSection employee={employee} activeSection={activeSection} showAddButtons={false} />
         </main>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Employee } from "../mockData";
-import { Globe, BookOpen, AlertCircle, CheckCircle2, Edit2, Save, X } from "lucide-react";
+import { Globe, BookOpen, AlertCircle, CheckCircle2, Edit2, Save, X, Plus } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { addNotification } from "../../../../store/slices/notificationSlice";
 import { AppDispatch } from "../../../../store";
@@ -12,6 +12,7 @@ import { useMasterOptions } from "./useMasterOptions";
 interface Props {
   employee: Employee;
   essMode?: boolean;
+  showAddButton?: boolean;
 }
 
 function isExpired(dateStr: string): boolean {
@@ -36,7 +37,7 @@ function withCurrentOption(options: Array<{ value: string; label: string }>, val
   return [{ value, label: value }, ...options];
 }
 
-export function PassportVisa({ employee }: Props) {
+export function PassportVisa({ employee, showAddButton = true }: Props) {
   const nationalityOptions = useMasterOptions("Nationality");
   const countryOptions = useMasterOptions("Country");
   const [isEditing, setIsEditing] = useState(false);
@@ -102,6 +103,11 @@ export function PassportVisa({ employee }: Props) {
             </>
           ) : (
             <>
+              {showAddButton ? (
+                <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
+                  <Plus size={12} /> Add New
+                </button>
+              ) : null}
               <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
                 <Edit2 size={12} /> Edit Section
               </button>

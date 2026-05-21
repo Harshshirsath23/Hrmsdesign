@@ -15,6 +15,7 @@ import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
 const emptyEdu = (): EducationEntry => ({
@@ -27,7 +28,7 @@ const emptyEdu = (): EducationEntry => ({
   grade: "",
 });
 
-export function EducationDetails({ employee }: Props) {
+export function EducationDetails({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const qualificationOptions = useMasterOptions("Qualification");
   const specializationOptions = useMasterOptions("EducationSpecialization");
@@ -45,6 +46,7 @@ export function EducationDetails({ employee }: Props) {
 
   const addRow = () => {
     setDraft((rows) => [...rows, emptyEdu()]);
+    setIsEditing(true);
   };
 
   const confirmDelete = () => {
@@ -104,7 +106,16 @@ export function EducationDetails({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        /* Add button removed per UX request */
+        headerExtra={showAddButton ? (
+          <button
+            type="button"
+            onClick={addRow}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add New
+          </button>
+        ) : null}
       >
         {formError ? <p className="text-sm text-destructive mb-3">{formError}</p> : null}
         {!draft.length ? (

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Employee } from "../mockData";
-import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X } from "lucide-react";
+import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X, Plus } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
   essMode?: boolean;
+  showAddButton?: boolean;
 }
 
 const RELATIONSHIP_SHADES: Record<string, string> = {
@@ -72,7 +73,7 @@ function EditableField({
   );
 }
 
-export function FamilyDetails({ employee }: Props) {
+export function FamilyDetails({ employee, showAddButton = true }: Props) {
   const relationOptions = useMasterOptions("Relation");
   const genderOptions = useMasterOptions("Gender");
   const bloodGroupOptions = useMasterOptions("BloodGroup");
@@ -147,10 +148,14 @@ export function FamilyDetails({ employee }: Props) {
               </>
             ) : (
               <>
+                {showAddButton ? (
+                  <button onClick={addFamilyMember} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                    <Plus size={12} /> Add New
+                  </button>
+                ) : null}
                 <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
                   <Edit2 size={12} /> Edit Section
                 </button>
-                {/* Add button removed per UX request */}
               </>
             )}
           </div>

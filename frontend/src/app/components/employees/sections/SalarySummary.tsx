@@ -5,6 +5,7 @@ import { useAdminSync } from "../../admin/useAdminSync";
 
 interface Props {
   employee: Employee;
+  showActions?: boolean;
 }
 
 /** Indian salary format with explicit rupee symbol */
@@ -73,7 +74,7 @@ function InrInput({
   );
 }
 
-export function SalarySummary({ employee }: Props) {
+export function SalarySummary({ employee, showActions = true }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState(employee);
   const { handleAdminSave } = useAdminSync();
@@ -159,11 +160,11 @@ export function SalarySummary({ employee }: Props) {
                 <X size={12} /> Cancel
               </button>
             </>
-          ) : (
+          ) : showActions ? (
             <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold hover:bg-secondary transition-all">
               <Edit2 size={12} /> Edit Salary
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -172,7 +173,7 @@ export function SalarySummary({ employee }: Props) {
           <p className="text-[11px] font-bold uppercase tracking-widest text-primary-foreground/60">Gross Salary</p>
           <div className="flex items-center justify-between">
             <p className="text-2xl mt-2 font-mono font-bold">{formatInr(editedData.grossSalary)}</p>
-            {!isEditing && (
+            {showActions && !isEditing && (
               <button onClick={() => setIsEditing(true)} className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary">Edit</button>
             )}
           </div>
@@ -182,7 +183,7 @@ export function SalarySummary({ employee }: Props) {
           <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Total Deductions</p>
           <div className="flex items-center justify-between">
             <p className="text-2xl mt-2 font-mono font-bold text-[#6C757D]">{formatInr(totalDeductions)}</p>
-            {!isEditing && (
+            {showActions && !isEditing && (
               <button onClick={() => setIsEditing(true)} className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary">Edit</button>
             )}
           </div>
@@ -192,7 +193,7 @@ export function SalarySummary({ employee }: Props) {
           <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Net Salary</p>
           <div className="flex items-center justify-between">
             <p className="text-2xl mt-2 font-mono font-bold text-foreground">{formatInr(editedData.netSalary)}</p>
-            {!isEditing && (
+            {showActions && !isEditing && (
               <button onClick={() => setIsEditing(true)} className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary">Edit</button>
             )}
           </div>

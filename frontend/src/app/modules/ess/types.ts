@@ -181,6 +181,8 @@ export type SectionKey =
   | "insuranceDetails"
   | "languageDetails"
   | "assets"
+  | "positionHistory"
+  | "backgroundCheck"
   | "passportAndVisa"
   | "previousEmployment"
   | "documentsRepository"
