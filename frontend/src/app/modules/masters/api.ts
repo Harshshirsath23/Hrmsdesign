@@ -1,0 +1,205 @@
+import type { MasterListQuery, MasterRecord, PaginatedMasterResponse } from "./types";
+
+const BASE_URL = "/api/masters";
+const DEMO_STORAGE_PREFIX = "hrms-superadmin-demo-masters";
+
+const DEMO_MASTERS: Record<string, MasterRecord[]> = {
+  Company: [
+    { id: "company-1", code: "COOL", label: "Coolor HRMS Pvt Ltd", name: "Coolor HRMS Pvt Ltd", is_active: true },
+    { id: "company-2", code: "NOVA", label: "Nova Manufacturing", name: "Nova Manufacturing", is_active: true },
+  ],
+  Gender: [
+    { id: "gender-1", code: "M", label: "Male", name: "Male", is_active: true },
+    { id: "gender-2", code: "F", label: "Female", name: "Female", is_active: true },
+    { id: "gender-3", code: "O", label: "Other", name: "Other", is_active: true },
+  ],
+  Salutation: [
+    { id: "salutation-1", code: "MR", label: "Mr.", name: "Mr.", is_active: true },
+    { id: "salutation-2", code: "MS", label: "Ms.", name: "Ms.", is_active: true },
+    { id: "salutation-3", code: "DR", label: "Dr.", name: "Dr.", is_active: true },
+  ],
+  Department: [
+    { id: "department-1", code: "HR", label: "Human Resources", name: "Human Resources", is_active: true, company: "company-1", company_name: "Coolor HRMS Pvt Ltd" },
+    { id: "department-2", code: "FIN", label: "Finance", name: "Finance", is_active: true, company: "company-1", company_name: "Coolor HRMS Pvt Ltd" },
+    { id: "department-3", code: "OPS", label: "Operations", name: "Operations", is_active: true, company: "company-2", company_name: "Nova Manufacturing" },
+  ],
+  Designation: [
+    { id: "designation-1", code: "HRM", title: "HR Manager", label: "HR Manager", name: "HR Manager", is_active: true, company: "company-1", company_name: "Coolor HRMS Pvt Ltd" },
+    { id: "designation-2", code: "SWE", title: "Software Engineer", label: "Software Engineer", name: "Software Engineer", is_active: true, company: "company-1", company_name: "Coolor HRMS Pvt Ltd" },
+    { id: "designation-3", code: "SUP", title: "Production Supervisor", label: "Production Supervisor", name: "Production Supervisor", is_active: true, company: "company-2", company_name: "Nova Manufacturing" },
+  ],
+  Grade: [
+    { id: "grade-1", code: "G1", label: "Junior", name: "Junior", is_active: true, company: "company-1", company_name: "Coolor HRMS Pvt Ltd" },
+    { id: "grade-2", code: "G2", label: "Senior", name: "Senior", is_active: true, company: "company-1", company_name: "Coolor HRMS Pvt Ltd" },
+  ],
+  Country: [
+    { id: "country-1", code: "IN", iso3_code: "IND", numeric_code: 356, label: "India", name: "India", is_active: true },
+    { id: "country-2", code: "US", iso3_code: "USA", numeric_code: 840, label: "United States", name: "United States", is_active: true },
+  ],
+  State: [
+    { id: "state-1", code: "MH", label: "Maharashtra", name: "Maharashtra", country: "country-1", country_name: "India", is_active: true },
+    { id: "state-2", code: "KA", label: "Karnataka", name: "Karnataka", country: "country-1", country_name: "India", is_active: true },
+  ],
+  City: [
+    { id: "city-1", code: "MUM", label: "Mumbai", name: "Mumbai", state: "state-1", state_name: "Maharashtra", pincode: "400001", is_active: true },
+    { id: "city-2", code: "BLR", label: "Bengaluru", name: "Bengaluru", state: "state-2", state_name: "Karnataka", pincode: "560001", is_active: true },
+  ],
+};
+
+function storageKey(masterApiName: string) {
+  return `${DEMO_STORAGE_PREFIX}:${masterApiName}`;
+}
+
+function formatMasterName(masterApiName: string) {
+  return masterApiName.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+}
+
+function createGenericSeed(masterApiName: string): MasterRecord[] {
+  const label = formatMasterName(masterApiName);
+  return [
+    {
+      id: `${masterApiName.toLowerCase()}-demo-1`,
+      code: `${masterApiName.replace(/[^A-Z0-9]/gi, "").slice(0, 4).toUpperCase() || "MST"}01`,
+      label: `Default ${label}`,
+      name: `Default ${label}`,
+      is_active: true,
+    },
+  ];
+}
+
+function readDemoMasters(masterApiName: string): MasterRecord[] {
+  const raw = localStorage.getItem(storageKey(masterApiName));
+  if (raw) {
+    try {
+      return JSON.parse(raw) as MasterRecord[];
+    } catch {
+      // fall through to a fresh seed
+    }
+  }
+  const seeded = DEMO_MASTERS[masterApiName] ?? createGenericSeed(masterApiName);
+  localStorage.setItem(storageKey(masterApiName), JSON.stringify(seeded));
+  return seeded;
+}
+
+function writeDemoMasters(masterApiName: string, records: MasterRecord[]) {
+  localStorage.setItem(storageKey(masterApiName), JSON.stringify(records));
+}
+
+function matchesSearch(record: MasterRecord, search: string) {
+  const haystack = [record.code, record.label, record.name, record.title, record.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(search.toLowerCase());
+}
+
+function applyDemoQuery(records: MasterRecord[], query: MasterListQuery): MasterRecord[] {
+  return records.filter((record) => {
+    if (query.is_active === "true" && !record.is_active) return false;
+    if (query.is_active === "false" && record.is_active) return false;
+    if (query.company && String(record.company) !== String(query.company)) return false;
+    if (query.search && !matchesSearch(record, query.search)) return false;
+    return true;
+  });
+}
+
+function listDemoMasters(masterApiName: string, query: MasterListQuery): PaginatedMasterResponse<MasterRecord> {
+  const results = applyDemoQuery(readDemoMasters(masterApiName), query);
+  return { count: results.length, next: null, previous: null, results };
+}
+
+function makeDemoRecord(masterApiName: string, payload: Record<string, unknown>): MasterRecord {
+  const labelValue = String(payload.label ?? payload.name ?? payload.title ?? `New ${formatMasterName(masterApiName)}`);
+  return {
+    id: crypto.randomUUID(),
+    code: String(payload.code ?? labelValue.replace(/\W+/g, "_").toUpperCase()),
+    label: labelValue,
+    name: String(payload.name ?? labelValue),
+    is_active: payload.is_active === undefined ? true : Boolean(payload.is_active),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...payload,
+  };
+}
+
+function toQueryString(query: MasterListQuery) {
+  const params = new URLSearchParams();
+  if (query.search) params.set("search", query.search);
+  if (query.company) params.set("company", query.company);
+  if (query.is_active) params.set("is_active", query.is_active);
+  if (query.page) params.set("page", String(query.page));
+  const str = params.toString();
+  return str ? `?${str}` : "";
+}
+
+async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    ...init,
+  });
+  if (!res.ok) {
+    let msg = `Request failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { detail?: string; message?: string };
+      msg = body.detail ?? body.message ?? msg;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export async function getMasterList(masterApiName: string, query: MasterListQuery) {
+  try {
+    return await request<PaginatedMasterResponse<MasterRecord>>(
+      `${BASE_URL}/${masterApiName}/${toQueryString(query)}`,
+    );
+  } catch {
+    return listDemoMasters(masterApiName, query);
+  }
+}
+
+export async function createMaster(masterApiName: string, payload: Record<string, unknown>) {
+  try {
+    return await request<MasterRecord>(`${BASE_URL}/${masterApiName}/`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    const record = makeDemoRecord(masterApiName, payload);
+    writeDemoMasters(masterApiName, [record, ...readDemoMasters(masterApiName)]);
+    return record;
+  }
+}
+
+export async function patchMaster(masterApiName: string, id: string | number, payload: Record<string, unknown>) {
+  try {
+    return await request<MasterRecord>(`${BASE_URL}/${masterApiName}/${id}/`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    const records = readDemoMasters(masterApiName);
+    const updated = records.map((record) =>
+      String(record.id) === String(id) ? { ...record, ...payload, updated_at: new Date().toISOString() } : record,
+    );
+    writeDemoMasters(masterApiName, updated);
+    return updated.find((record) => String(record.id) === String(id)) ?? records[0];
+  }
+}
+
+export async function deleteMaster(masterApiName: string, id: string | number) {
+  try {
+    return await request<void>(`${BASE_URL}/${masterApiName}/${id}/`, {
+      method: "DELETE",
+    });
+  } catch {
+    writeDemoMasters(
+      masterApiName,
+      readDemoMasters(masterApiName).filter((record) => String(record.id) !== String(id)),
+    );
+  }
+}
+
