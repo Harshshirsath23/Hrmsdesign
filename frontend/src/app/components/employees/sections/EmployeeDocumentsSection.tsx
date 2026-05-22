@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FileText, Plus } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Employee } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { EditableSectionCard } from "../employee-details";
@@ -87,16 +87,6 @@ export function EmployeeDocumentsSection({ employee }: Props) {
         onSave={handleSave}
         headerExtra={
           <div className="flex items-center gap-2">
-            {isEditable && (
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                New Document
-              </button>
-            )}
             <button
               type="button"
               onClick={() => { setEditingType(null); setModalOpen(true); }}

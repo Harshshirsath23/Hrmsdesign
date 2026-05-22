@@ -242,7 +242,7 @@ export function SelfProfileInformationPage() {
       (item) =>
         item.id === requestedId ||
         item.employeeId === requestedId ||
-        item.email.toLowerCase() === user?.email.toLowerCase()
+        (item.email?.toLowerCase() ?? "") === (user?.email?.toLowerCase() ?? "")
     );
     if (matched) return matched;
 
