@@ -11,13 +11,10 @@ import {
   ConfirmationDialog,
   validateDateOrder,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
-interface Props {
-  employee: Employee;
-}
-
-const emptyEntry = (id: string): WorkExperienceEntry => ({
-  id,
+const emptyWorkExperience = (): WorkExperienceEntry => ({
+  id: `we-${Date.now()}`,
   companyName: "",
   jobTitle: "",
   employmentType: "",
@@ -26,13 +23,21 @@ const emptyEntry = (id: string): WorkExperienceEntry => ({
   technologiesUsed: "",
   location: "",
   experienceLetterFileName: "",
+  experienceLetterDataUrl: "",
   reasonForLeaving: "",
   startDate: "",
   endDate: "",
 });
 
-export function WorkExperience({ employee }: Props) {
+interface Props {
+  employee: Employee;
+  showAddButton?: boolean;
+}
+
+export function WorkExperience({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const employeeTypeOptions = useMasterOptions("EmployeeType");
+  const departmentOptions = useMasterOptions("Department");
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<WorkExperienceEntry[]>(employee.workExperience || []);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
@@ -45,7 +50,8 @@ export function WorkExperience({ employee }: Props) {
   };
 
   const addRow = () => {
-    setDraft((rows) => [...rows, emptyEntry(`we-${Date.now()}`)]);
+    setDraft((rows) => [...rows, emptyWorkExperience()]);
+    setIsEditing(true);
   };
 
   const confirmDelete = () => {
@@ -97,21 +103,16 @@ export function WorkExperience({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        headerExtra={
+        headerExtra={showAddButton ? (
           <button
             type="button"
-            onClick={() => {
-              if (!isEditing) {
-                setIsEditing(true);
-              }
-              addRow();
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+            onClick={addRow}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-secondary"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add Experience
+            <Plus className="h-3.5 w-3.5" />
+            Add New
           </button>
-        }
+        ) : null}
       >
         {dateError ? <p className="text-sm text-destructive mb-3">{dateError}</p> : null}
         {draft.length === 0 ? (
@@ -146,12 +147,14 @@ export function WorkExperience({ employee }: Props) {
                     value={row.employmentType}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { employmentType: v })}
+                    options={employeeTypeOptions}
                   />
                   <ProfileInfoField
                     label="Department"
                     value={row.department}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { department: v })}
+                    options={departmentOptions}
                   />
                   <ProfileInfoField
                     label="Start Date"

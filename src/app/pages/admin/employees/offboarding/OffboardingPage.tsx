@@ -21,103 +21,12 @@ import {
 import { employees, Employee } from "../../../../components/employees/mockData";
 import { AddOffboardingForm } from "./AddOffboardingForm";
 import { OffboardingDetailsPage } from "./OffboardingDetailsPage";
+import { useOffboardingRecords } from "./useOffboardingDetails";
+import { OffboardingRecord } from "./types";
 
 type OffboardingStatus = "Active" | "Pending" | "Approved" | "In Notice Period" | "Clearance Pending" | "Completed" | "Archived";
 
-interface OffboardingRecord {
-  id: string;
-  employeeId: string;
-  name: string;
-  avatar?: string;
-  avatarColor?: string;
-  initials: string;
-  department: string;
-  designation: string;
-  reportingManager: string;
-  resignationDate: string;
-  lastWorkingDay: string;
-  noticeStatus: "In Notice" | "Completed" | "Waived";
-  exitStatus: OffboardingStatus;
-  clearanceStatus: "Pending" | "Partially Completed" | "Completed";
-}
-
-const initialOffboardingData: OffboardingRecord[] = [
-  {
-    id: "OFF001",
-    employeeId: "EMP001",
-    name: "John Doe",
-    initials: "JD",
-    avatarColor: "#4F46E5",
-    department: "Engineering",
-    designation: "Senior Developer",
-    reportingManager: "Sarah Wilson",
-    resignationDate: "2024-05-01",
-    lastWorkingDay: "2024-06-01",
-    noticeStatus: "In Notice",
-    exitStatus: "In Notice Period",
-    clearanceStatus: "Partially Completed",
-  },
-  {
-    id: "OFF002",
-    employeeId: "EMP005",
-    name: "Michael Smith",
-    initials: "MS",
-    avatarColor: "#10B981",
-    department: "Marketing",
-    designation: "Marketing Lead",
-    reportingManager: "Sarah Wilson",
-    resignationDate: "2024-04-15",
-    lastWorkingDay: "2024-05-15",
-    noticeStatus: "Completed",
-    exitStatus: "Clearance Pending",
-    clearanceStatus: "Pending",
-  },
-  {
-    id: "OFF003",
-    employeeId: "EMP003",
-    name: "Emily Brown",
-    initials: "EB",
-    avatarColor: "#F59E0B",
-    department: "Human Resources",
-    designation: "HR Generalist",
-    reportingManager: "Sarah Wilson",
-    resignationDate: "2024-05-10",
-    lastWorkingDay: "2024-06-10",
-    noticeStatus: "In Notice",
-    exitStatus: "Approved",
-    clearanceStatus: "Pending",
-  },
-  {
-    id: "OFF004",
-    employeeId: "EMP004",
-    name: "David Wilson",
-    initials: "DW",
-    avatarColor: "#6366F1",
-    department: "Sales",
-    designation: "Sales Executive",
-    reportingManager: "Sarah Wilson",
-    resignationDate: "2024-03-01",
-    lastWorkingDay: "2024-04-01",
-    noticeStatus: "Completed",
-    exitStatus: "Completed",
-    clearanceStatus: "Completed",
-  },
-  {
-    id: "OFF005",
-    employeeId: "EMP002",
-    name: "Priya Nair",
-    initials: "PN",
-    avatarColor: "#EC4899",
-    department: "Design",
-    designation: "UI/UX Designer",
-    reportingManager: "Sarah Wilson",
-    resignationDate: "2024-05-12",
-    lastWorkingDay: "2024-06-12",
-    noticeStatus: "In Notice",
-    exitStatus: "Pending",
-    clearanceStatus: "Pending",
-  }
-];
+// Removed static initialOffboardingData - now using dynamic data from localStorage via hook
 
 function SummaryCard({ title, count, icon: Icon, trend }: { title: string, count: number, icon: any, trend?: string }) {
   return (
@@ -163,19 +72,21 @@ export function OffboardingPage() {
   const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<OffboardingRecord | null>(null);
-  const [offboardingData, setOffboardingData] = useState<OffboardingRecord[]>(initialOffboardingData);
   const [selectedDepartment, setSelectedDepartment] = useState("All Departments");
+
+  // Use the hook to manage offboarding records
+  const { records: offboardingData, addRecord, deleteRecord } = useOffboardingRecords();
 
   const departments = ["All Departments", ...Array.from(new Set(offboardingData.map(item => item.department)))];
 
   const stats = useMemo(() => {
     return {
-      active: offboardingData.filter(i => ["Pending", "Approved", "Active"].includes(i.exitStatus)).length,
+      active: offboardingData.filter(i => ["Pending", "Approved", "Active", "In Notice Period"].includes(i.exitStatus)).length,
       notice: offboardingData.filter(i => i.exitStatus === "In Notice Period").length,
       clearance: offboardingData.filter(i => i.clearanceStatus === "Pending" || i.clearanceStatus === "Partially Completed").length,
       completed: offboardingData.filter(i => i.exitStatus === "Completed").length,
-      ff: 3, // Mock
-      assets: 7, // Mock
+      ff: offboardingData.filter(i => i.clearanceStatus !== "Completed").length,
+      assets: offboardingData.filter(i => i.clearanceStatus === "Pending").length,
     };
   }, [offboardingData]);
 
@@ -185,7 +96,7 @@ export function OffboardingPage() {
       const matchesTab = (() => {
         switch (activeTab) {
           case "Active Offboarding":
-            return ["Pending", "Approved", "Active"].includes(item.exitStatus);
+            return ["Pending", "Approved", "Active", "In Notice Period"].includes(item.exitStatus);
           case "Notice Period":
             return item.exitStatus === "In Notice Period";
           case "Pending Clearance":
@@ -239,25 +150,56 @@ export function OffboardingPage() {
   };
 
   const handleAddOffboarding = (data: any) => {
-    // In a real app, 'data' would come from the form
-    // For now, we simulate adding a new record based on 'data'
+    // Convert OffboardingData to OffboardingRecord for list
     const newRecord: OffboardingRecord = {
-      id: `OFF${(offboardingData.length + 1).toString().padStart(3, '0')}`,
-      employeeId: "EMP999", // Mock
-      name: "New Request",
-      initials: "NR",
-      avatarColor: "#6B7280",
-      department: "General",
-      designation: "Employee",
-      reportingManager: "HR Admin",
-      resignationDate: new Date().toISOString().split('T')[0],
-      lastWorkingDay: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      noticeStatus: "In Notice",
-      exitStatus: "Pending",
-      clearanceStatus: "Pending",
+      id: data.offboardingId,
+      employeeId: data.employeeId,
+      name: data.name,
+      initials: data.initials,
+      avatarColor: data.avatarColor,
+      department: data.department,
+      designation: data.designation,
+      reportingManager: data.reportingManager,
+      resignationDate: data.resignationDate,
+      lastWorkingDay: data.lastWorkingDay,
+      noticeStatus: data.noticeDetails ? calculateNoticeStatus(data.noticeDetails.noticeEndDate) : "In Notice",
+      exitStatus: deriveExitStatus(data),
+      clearanceStatus: data.clearanceChecklist.clearanceProgress === 100 ? "Completed" : 
+                       data.clearanceChecklist.clearanceProgress > 0 ? "Partially Completed" : "Pending",
     };
-    setOffboardingData([newRecord, ...offboardingData]);
+    addRecord(newRecord);
     setShowAddForm(false);
+  };
+
+  const calculateNoticeStatus = (endDate: string): "In Notice" | "Completed" | "Waived" => {
+    try {
+      const end = new Date(endDate);
+      const today = new Date();
+      return today > end ? "Completed" : "In Notice";
+    } catch {
+      return "In Notice";
+    }
+  };
+
+  // Derive high-level exit status used for list filtering/cards
+  const deriveExitStatus = (data: any): OffboardingStatus => {
+    // If explicit status set on data (from form), normalize to known values
+    const explicit = (data.status || "").toString();
+    if (explicit === "Completed") return "Completed";
+    if (explicit === "Approved") return "Approved";
+
+    // If notice details exist, consider notice period state
+    if (data.noticeDetails && data.noticeDetails.noticeEndDate) {
+      const end = new Date(data.noticeDetails.noticeEndDate);
+      if (new Date() > end) return "Completed";
+      return "In Notice Period";
+    }
+
+    // If any clearance progress exists, mark accordingly
+    if (data.clearanceChecklist && data.clearanceChecklist.clearanceProgress > 0) return "Clearance Pending";
+
+    // Default to Pending
+    return "Pending";
   };
 
   const tabs = [
@@ -353,10 +295,7 @@ export function OffboardingPage() {
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
-              <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-foreground bg-card border border-border rounded-xl hover:bg-secondary transition-all">
-                <Filter className="w-4 h-4" />
-                More Filters
-              </button>
+              
             </div>
           </div>
         </div>
@@ -487,8 +426,8 @@ export function OffboardingPage() {
                         </button>
                         <button 
                           onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete the offboarding record for \${record.name}?`)) {
-                              setOffboardingData(prev => prev.filter(item => item.id !== record.id));
+                            if (window.confirm(`Are you sure you want to delete the offboarding record for ${record.name}?`)) {
+                              deleteRecord(record.id);
                             }
                           }}
                           className="p-2 hover:bg-rose-50 rounded-lg transition-colors text-rose-500 hover:text-rose-600" 

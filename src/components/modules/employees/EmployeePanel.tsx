@@ -1,6 +1,5 @@
 import { UserPlus, FileLock2, Download, Upload, ArrowRight } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
-import { useUIStore } from '@store/uiStore';
+import { useMemo, useState } from 'react';
 import { Button, toast } from '@components/ui';
 import { AddEmployeeForm } from './AddEmployeeForm';
 import { EmployeeCard } from './EmployeeCard';
@@ -45,16 +44,6 @@ function EmployeeDirectory() {
     dateStart: '',
     dateEnd: '',
   });
-
-  // Pre-filter by employee code when navigating via "View Profile"
-  const selectedEmployeeCode = useUIStore((s) => s.selectedEmployeeCode);
-  const setSelectedEmployeeCode = useUIStore((s) => s.setSelectedEmployeeCode);
-  useEffect(() => {
-    if (selectedEmployeeCode) {
-      setFilters((prev) => ({ ...prev, search: selectedEmployeeCode }));
-      setSelectedEmployeeCode(null);
-    }
-  }, [selectedEmployeeCode, setSelectedEmployeeCode]);
 
   const { data: apiEmployees = [], isLoading } = useEmployeeList();
 

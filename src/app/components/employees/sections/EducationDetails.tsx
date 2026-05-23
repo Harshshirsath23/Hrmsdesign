@@ -11,9 +11,11 @@ import {
   validateEducationYear,
   validatePercentageCgpa,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
 const emptyEdu = (): EducationEntry => ({
@@ -26,8 +28,11 @@ const emptyEdu = (): EducationEntry => ({
   grade: "",
 });
 
-export function EducationDetails({ employee }: Props) {
+export function EducationDetails({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const qualificationOptions = useMasterOptions("Qualification");
+  const specializationOptions = useMasterOptions("EducationSpecialization");
+  const boardOptions = useMasterOptions("Board");
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<EducationEntry[]>(employee.education || []);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
@@ -41,6 +46,7 @@ export function EducationDetails({ employee }: Props) {
 
   const addRow = () => {
     setDraft((rows) => [...rows, emptyEdu()]);
+    setIsEditing(true);
   };
 
   const confirmDelete = () => {
@@ -100,7 +106,16 @@ export function EducationDetails({ employee }: Props) {
         }}
         onSave={handleSave}
         onCancel={handleCancel}
-        headerExtra={null}
+        headerExtra={showAddButton ? (
+          <button
+            type="button"
+            onClick={addRow}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add New
+          </button>
+        ) : null}
       >
         {formError ? <p className="text-sm text-destructive mb-3">{formError}</p> : null}
         {!draft.length ? (
@@ -123,12 +138,14 @@ export function EducationDetails({ employee }: Props) {
                     value={row.qualification}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { qualification: v })}
+                    options={qualificationOptions}
                   />
                   <ProfileInfoField
                     label="Specialization"
                     value={row.specialization}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { specialization: v })}
+                    options={specializationOptions}
                   />
                   <ProfileInfoField
                     label="Institution Name"
@@ -141,6 +158,7 @@ export function EducationDetails({ employee }: Props) {
                     value={row.university}
                     editing={isEditing}
                     onChange={(v) => updateRow(index, { university: v })}
+                    options={boardOptions}
                   />
                   <ProfileInfoField
                     label="Year Of Passing"

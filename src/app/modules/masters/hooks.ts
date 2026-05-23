@@ -14,37 +14,37 @@ export function useMasterList(masterApiName: string, query: MasterListQuery, ena
   });
 }
 
-export function useMasterCreate(masterApiName: string, query: MasterListQuery) {
+export function useMasterCreate(masterApiName: string, _query: MasterListQuery) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: Record<string, unknown>) => createMaster(masterApiName, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKey(masterApiName, query) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["masters", masterApiName] }),
   });
 }
 
-export function useMasterUpdate(masterApiName: string, query: MasterListQuery) {
+export function useMasterUpdate(masterApiName: string, _query: MasterListQuery) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: string | number; payload: Record<string, unknown> }) =>
       patchMaster(masterApiName, id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKey(masterApiName, query) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["masters", masterApiName] }),
   });
 }
 
-export function useMasterToggleActive(masterApiName: string, query: MasterListQuery) {
+export function useMasterToggleActive(masterApiName: string, _query: MasterListQuery) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, is_active }: { id: string | number; is_active: boolean }) =>
       patchMaster(masterApiName, id, { is_active }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKey(masterApiName, query) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["masters", masterApiName] }),
   });
 }
 
-export function useMasterDelete(masterApiName: string, query: MasterListQuery) {
+export function useMasterDelete(masterApiName: string, _query: MasterListQuery) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string | number) => deleteMaster(masterApiName, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKey(masterApiName, query) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["masters", masterApiName] }),
   });
 }
 

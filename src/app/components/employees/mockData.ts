@@ -62,6 +62,7 @@ export interface AssetEntry {
 }
 
 export interface PfDetails {
+  id?: string;
   pfNumber: string;
   pfType: string;
   monthlyContribution: string;
@@ -71,12 +72,47 @@ export interface PfDetails {
 }
 
 export interface EsiDetails {
+  id?: string;
   esiNumber: string;
   esiType: string;
   employeeContribution: string;
   employerContribution: string;
   dispensary: string;
   status: string;
+}
+
+export interface BankAccount {
+  id: string;
+  accountNumber: string;
+  bankName: string;
+  ifscCode: string;
+  accountType?: string;
+  isPrimary?: boolean;
+}
+
+export interface BackgroundCheckRecord {
+  id: string;
+  verificationStatus: string;
+  completedOn?: string;
+  agencyName?: string;
+  remarks?: string;
+  reportUrl?: string;
+  verifiedBy?: string;
+  referenceNumber?: string;
+}
+
+export interface SalaryRecord {
+  id: string;
+  effectiveDate?: string;
+  basicSalary: number;
+  hra: number;
+  conveyance: number;
+  medicalAllowance: number;
+  specialAllowance: number;
+  grossSalary: number;
+  pf: number;
+  tds: number;
+  netSalary: number;
 }
 
 export interface AccessCardEntry {
@@ -307,6 +343,13 @@ export interface Employee {
     verifiedBy?: string;
     referenceNumber?: string;
   };
+
+  // Multi-record arrays (admin-managed)
+  bankAccounts?: BankAccount[];
+  pfRecords?: PfDetails[];
+  esiRecords?: EsiDetails[];
+  backgroundChecks?: BackgroundCheckRecord[];
+  salaryHistory?: SalaryRecord[];
 
   // Emergency Contact (subset of communication)
   emergencyContact?: {
@@ -1336,6 +1379,45 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
     previousEmployment?: unknown;
   };
 
+  // Seed bankAccounts array from existing scalar bank fields if not yet set
+  const bankAccounts: BankAccount[] = (e.bankAccounts as BankAccount[]) ||
+    (String(e.accountNumber ?? "") || String(e.bankName ?? "") ? [{
+      id: `bank-${e.id}-0`,
+      accountNumber: String(e.accountNumber ?? ""),
+      bankName: String(e.bankName ?? ""),
+      ifscCode: String(e.ifscCode ?? ""),
+      isPrimary: true,
+    }] : []);
+
+  // Seed pfRecords from pfDetails
+  const pfRecords: PfDetails[] = (e.pfRecords as PfDetails[]) ||
+    [{ id: `pf-${e.id}-0`, ...pfDetails }];
+
+  // Seed esiRecords from esiDetails
+  const esiRecords: EsiDetails[] = (e.esiRecords as EsiDetails[]) ||
+    [{ id: `esi-${e.id}-0`, ...esiDetails }];
+
+  // Seed backgroundChecks from single backgroundCheck object
+  const bgRaw = e.backgroundCheck as BackgroundCheckRecord | undefined;
+  const backgroundChecks: BackgroundCheckRecord[] = (e.backgroundChecks as BackgroundCheckRecord[]) ||
+    (bgRaw ? [{ id: `bg-${e.id}-0`, ...bgRaw }] : []);
+
+  // Seed salaryHistory from existing flat salary fields
+  const salaryHistory: SalaryRecord[] = (e.salaryHistory as SalaryRecord[]) ||
+    (typeof e.grossSalary === "number" && (e.grossSalary as number) > 0 ? [{
+      id: `sal-${e.id}-0`,
+      effectiveDate: "",
+      basicSalary: typeof e.basicSalary === "number" ? e.basicSalary as number : 0,
+      hra: typeof e.hra === "number" ? e.hra as number : 0,
+      conveyance: typeof e.conveyance === "number" ? e.conveyance as number : 0,
+      medicalAllowance: typeof e.medicalAllowance === "number" ? e.medicalAllowance as number : 0,
+      specialAllowance: typeof e.specialAllowance === "number" ? e.specialAllowance as number : 0,
+      grossSalary: typeof e.grossSalary === "number" ? e.grossSalary as number : 0,
+      pf: typeof e.pf === "number" ? e.pf as number : 0,
+      tds: typeof e.tds === "number" ? e.tds as number : 0,
+      netSalary: typeof e.netSalary === "number" ? e.netSalary as number : 0,
+    }] : []);
+
   return {
     ...(rest as Omit<
       Employee,
@@ -1349,6 +1431,11 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
       | "esiDetails"
       | "accessCards"
       | "employeeDocuments"
+      | "bankAccounts"
+      | "pfRecords"
+      | "esiRecords"
+      | "backgroundChecks"
+      | "salaryHistory"
     >),
     workExperience,
     education,
@@ -1360,6 +1447,11 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
     esiDetails,
     accessCards,
     employeeDocuments,
+    bankAccounts,
+    pfRecords,
+    esiRecords,
+    backgroundChecks,
+    salaryHistory,
   } as Employee;
 }
 

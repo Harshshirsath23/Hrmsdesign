@@ -3,18 +3,12 @@ import {
   FileText, 
   Search, 
   Filter, 
-  Download, 
   Eye, 
+  Pencil,
   Archive,
-  RefreshCw,
   FileArchive,
-  ArrowUpDown,
-  ExternalLink,
   Users,
-  Copy,
-  FileSpreadsheet,
   Trash2,
-  X,
   Clock,
   CheckCircle2,
   XCircle,
@@ -31,8 +25,6 @@ import {
   TableHeader, 
   TableRow 
 } from "../../../../../components/ui/table";
-import { KebabMenu } from "../../../../../components/ui/KebabMenu";
-import { toast } from "sonner";
 import { LetterBatch, LetterStatus } from "./types";
 import { format } from "date-fns";
 import { cn } from "../../../../../components/ui/utils";
@@ -43,10 +35,11 @@ interface LetterHistoryProps {
   onRepublish: (batch: LetterBatch) => void;
   onDuplicate: (batch: LetterBatch) => void;
   onDeleteBatch?: (id: string) => void;
+  onEditBatch?: (batch: LetterBatch) => void;
   batches: LetterBatch[];
 }
 
-export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplicate, onDeleteBatch, batches }: LetterHistoryProps) {
+export function LetterHistory({ onViewDetails, onDeleteBatch, onEditBatch, batches }: LetterHistoryProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<LetterStatus | "All">("All");
 
@@ -81,31 +74,6 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
       return matchesSearch && matchesStatus;
     });
   }, [search, statusFilter]);
-
-  const handleAction = (action: string, batch: LetterBatch) => {
-    if (action === "Download ZIP" || action === "Download PDF") {
-      const element = document.createElement("a");
-      const file = new Blob([`Mock PDF/ZIP Letter content for Batch ID: \${batch.id}\nSubject: \${batch.subject}\nType: \${batch.letterType}`], { type: 'text/plain' });
-      element.href = URL.createObjectURL(file);
-      element.download = `\${batch.subject.replace(/\\s+/g, "_")}_\${batch.id}.\${action === "Download ZIP" ? "zip" : "pdf"}`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      toast.success(`\${action} downloaded successfully!`);
-    } else if (action === "Cancel Batch") {
-      if (batch.status === "Published" || batch.status === "Approved") {
-        toast.error("Cannot cancel a batch that is already approved or published.");
-      } else {
-        if (confirm("Are you sure you want to cancel this batch?")) {
-          toast.success("Batch cancelled successfully.");
-        }
-      }
-    } else if (action === "Delete Batch") {
-      onDeleteBatch?.(batch.id);
-    } else {
-      toast.info(`Action: \${action}`);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -148,7 +116,11 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
               const StatusIcon = config.icon;
 
               return (
-                <TableRow key={batch.id} className="border-border/50 group hover:bg-secondary/30 transition-colors">
+                <TableRow
+                  key={batch.id}
+                  onClick={() => onViewDetails(batch)}
+                  className="border-border/50 group hover:bg-secondary/30 transition-colors cursor-pointer"
+                >
                   <TableCell className="pl-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
@@ -185,29 +157,49 @@ export function LetterHistory({ onViewDetails, onPreview, onRepublish, onDuplica
                       <span className="text-xs font-bold text-muted-foreground">{batch.createdBy}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="pr-8 text-right">
-                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
+                  <TableCell
+                    className="pr-8 text-right"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="View"
+                        aria-label={`View ${batch.subject}`}
                         onClick={() => onViewDetails(batch)}
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+
+                      {onEditBatch && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Edit"
+                          aria-label={`Edit ${batch.subject}`}
+                          onClick={() => onEditBatch(batch)}
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600"
                         >
-                          <Eye size={14} />
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                        <KebabMenu 
-                          items={[
-                            { label: "Preview Letter", icon: FileText, onClick: () => onPreview(batch) },
-                            { label: "Download PDF", icon: Download, onClick: () => handleAction("Download PDF", batch) },
-                            { label: "Download ZIP", icon: FileArchive, onClick: () => handleAction("Download ZIP", batch) },
-                            { label: "Export Metadata", icon: FileSpreadsheet, separator: true, onClick: () => handleAction("Export Metadata", batch) },
-                            { label: "Re-publish", icon: RefreshCw, onClick: () => onRepublish(batch) },
-                            { label: "Duplicate", icon: Copy, onClick: () => onDuplicate(batch) },
-                            { label: "Cancel Batch", icon: X, separator: true, disabled: batch.status === "Published" || batch.status === "Approved", onClick: () => handleAction("Cancel Batch", batch) },
-                            { label: "Delete Batch", icon: Trash2, variant: "destructive", onClick: () => handleAction("Delete Batch", batch) },
-                          ]}
-                        />
-                      </div>
+                      )}
+
+                      {onDeleteBatch && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Delete"
+                          aria-label={`Delete ${batch.subject}`}
+                          onClick={() => onDeleteBatch(batch.id)}
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

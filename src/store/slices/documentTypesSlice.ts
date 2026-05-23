@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { DocumentTypeConfig } from "../../app/modules/employees/documentTypes/types";
+import { inferDocumentSection } from "../../app/modules/employees/documentTypes/types";
 import { buildDefaultDocumentTypes } from "../../app/modules/employees/documentTypes/defaultDocumentTypes";
 
 const STORAGE_KEY = "hrms_employee_document_types_v1";
@@ -10,7 +11,10 @@ function loadFromStorage(): DocumentTypeConfig[] {
     if (!raw) return buildDefaultDocumentTypes();
     const parsed = JSON.parse(raw) as DocumentTypeConfig[];
     if (!Array.isArray(parsed) || !parsed.length) return buildDefaultDocumentTypes();
-    return parsed;
+    return parsed.map((type) => ({
+      ...type,
+      documentSection: type.documentSection || inferDocumentSection(type.category || "General"),
+    }));
   } catch {
     return buildDefaultDocumentTypes();
   }

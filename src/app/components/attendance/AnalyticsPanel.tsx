@@ -28,7 +28,7 @@ export function AnalyticsPanel({ metrics, filters, setFilters }: AnalyticsPanelP
     { label: "Total Absent", value: metrics.totalAbsent, icon: UserX, color: "text-red-500", bg: "bg-red-500/10", tooltip: "Total man-days lost due to absence." },
     { label: "Total Holidays", value: metrics.holidays, icon: Calendar, color: "text-purple-500", bg: "bg-purple-500/10", tooltip: "Public holidays in the selected month." },
     { label: "Total Late", value: metrics.lateLogins, icon: AlertCircle, color: "text-amber-500", bg: "bg-amber-500/10", tooltip: "Employees who arrived after their scheduled time." },
-    { label: "Attendance %", value: `${metrics.avgAttendance.toFixed(1)}%`, icon: Percent, color: "text-slate-700", bg: "bg-slate-200/10", tooltip: "Overall monthly attendance percentage." },
+    { label: "Attendance %", value: `${metrics.avgAttendance.toFixed(1)}%`, icon: Percent, color: "text-emerald-500", bg: "bg-emerald-500/10", tooltip: "Overall monthly attendance percentage." },
     { label: "Employees", value: metrics.totalEmployees, icon: Users, color: "text-slate-500", bg: "bg-slate-500/10", tooltip: "Total employees considered in this report." },
   ];
 
@@ -99,9 +99,9 @@ export function AnalyticsPanel({ metrics, filters, setFilters }: AnalyticsPanelP
 
         {/* Status indicator */}
         <div className="mt-auto pt-6 border-t border-border/50">
-          <div className="p-4 rounded-2xl bg-secondary/5 border border-border">
-             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Health Check</p>
-             <p className="text-xs font-bold text-muted-foreground leading-relaxed">
+          <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-1">Health Check</p>
+             <p className="text-xs font-bold text-emerald-700 leading-relaxed">
                Attendance is trending <span className="underline decoration-2 underline-offset-2">upwards</span> by 4% compared to last month.
              </p>
           </div>

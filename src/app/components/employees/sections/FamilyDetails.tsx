@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Employee } from "../mockData";
-import { Users, User, CheckCircle2, AlertCircle, Phone, Heart, ShieldCheck, Edit2, Save, X } from "lucide-react";
+import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X, Plus } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  essMode?: boolean;
+  showAddButton?: boolean;
 }
 
 const RELATIONSHIP_SHADES: Record<string, string> = {
@@ -25,11 +28,42 @@ function StatusBadge({ icon: Icon, label, active }: { icon: any, label: string, 
   );
 }
 
-function EditableField({ label, value, onChange, isEditing }: { label: string; value: string; onChange?: (v: string) => void; isEditing: boolean }) {
+function EditableField({
+  label,
+  value,
+  onChange,
+  isEditing,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  isEditing: boolean;
+  options?: Array<{ value: string; label: string }>;
+}) {
+  const selectOptions = options
+    ? options.some((option) => option.value === value) || !value
+      ? options
+      : [{ value, label: value }, ...options]
+    : undefined;
+
   return (
     <div className="flex flex-col gap-1">
       <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</span>
-      {isEditing ? (
+      {isEditing && selectOptions?.length ? (
+        <select
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className="text-xs font-bold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <option value="">Select {label}</option>
+          {selectOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : isEditing ? (
         <input type="text" value={value} onChange={e => onChange?.(e.target.value)}
           className="text-xs font-bold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30" />
       ) : (
@@ -39,13 +73,31 @@ function EditableField({ label, value, onChange, isEditing }: { label: string; v
   );
 }
 
-export function FamilyDetails({ employee }: Props) {
+export function FamilyDetails({ employee, showAddButton = true }: Props) {
+  const relationOptions = useMasterOptions("Relation");
+  const genderOptions = useMasterOptions("Gender");
+  const bloodGroupOptions = useMasterOptions("BloodGroup");
   const [isEditing, setIsEditing] = useState(false);
   const [editedFamily, setEditedFamily] = useState(employee.family || []);
-  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const { handleAdminSave } = useAdminSync();
 
   const updateMember = (idx: number, field: string, value: any) => {
     setEditedFamily(prev => prev.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  };
+
+  const addFamilyMember = () => {
+    setEditedFamily(prev => [...prev, {
+      name: "",
+      relationship: "",
+      dob: "",
+      gender: "",
+      bloodGroup: "",
+      phone: "",
+      occupation: "",
+      isDependent: false,
+      isEmergencyContact: false,
+    }]);
+    setIsEditing(true);
   };
 
   const handleSave = async () => {
@@ -83,25 +135,6 @@ export function FamilyDetails({ employee }: Props) {
         </div>
 
         <div className="flex items-center gap-6">
-          <label className="flex items-center gap-2 cursor-pointer group">
-            <div className="relative flex items-center justify-center">
-              <input
-                type="checkbox"
-                checked={isEditable}
-                onChange={(e) => handleToggleEditAccess(employee, "family-details", e.target.checked)}
-                className="sr-only"
-              />
-              <div className={`w-4 h-4 rounded border transition-all duration-150 flex items-center justify-center ${
-                isEditable ? "bg-indigo-500 border-indigo-500" : "border-slate-300 bg-white"
-              }`}>
-                {isEditable && <Save className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
-              </div>
-            </div>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-              Allow Employee to Edit
-            </span>
-          </label>
-
           <div className="flex items-center gap-2">
             {isEditing ? (
               <>
@@ -114,9 +147,16 @@ export function FamilyDetails({ employee }: Props) {
                 </button>
               </>
             ) : (
-              <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
-                <Edit2 size={12} /> Edit Section
-              </button>
+              <>
+                {showAddButton ? (
+                  <button onClick={addFamilyMember} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                    <Plus size={12} /> Add New
+                  </button>
+                ) : null}
+                <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                  <Edit2 size={12} /> Edit Section
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -161,9 +201,10 @@ export function FamilyDetails({ employee }: Props) {
                     <EditableField label="Date of Birth" isEditing={isEditing}
                       value={member.dob ? member.dob : "—"}
                       onChange={v => updateMember(index, 'dob', v)} />
-                    <EditableField label="Gender" isEditing={isEditing} value={member.gender} onChange={v => updateMember(index, 'gender', v)} />
+                    <EditableField label="Relationship" isEditing={isEditing} value={member.relationship} onChange={v => updateMember(index, 'relationship', v)} options={relationOptions} />
+                    <EditableField label="Gender" isEditing={isEditing} value={member.gender} onChange={v => updateMember(index, 'gender', v)} options={genderOptions} />
                     <EditableField label="Age" isEditing={false} value={age !== "—" ? `${age} Years` : "—"} />
-                    <EditableField label="Blood Group" isEditing={isEditing} value={member.bloodGroup} onChange={v => updateMember(index, 'bloodGroup', v)} />
+                    <EditableField label="Blood Group" isEditing={isEditing} value={member.bloodGroup} onChange={v => updateMember(index, 'bloodGroup', v)} options={bloodGroupOptions} />
                     <EditableField label="Phone" isEditing={isEditing} value={member.phone} onChange={v => updateMember(index, 'phone', v)} />
                     <EditableField label="Occupation" isEditing={isEditing} value={member.occupation} onChange={v => updateMember(index, 'occupation', v)} />
                   </div>

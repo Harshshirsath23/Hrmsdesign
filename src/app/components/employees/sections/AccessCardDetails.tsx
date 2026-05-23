@@ -10,6 +10,7 @@ import {
 
 interface Props {
   employee: Employee;
+  showActions?: boolean;
 }
 
 function emptyCard(employee: Employee): AccessCardEntry {
@@ -28,7 +29,7 @@ function validateCards(cards: AccessCardEntry[]): Record<number, string> {
   return errors;
 }
 
-export function AccessCardDetails({ employee }: Props) {
+export function AccessCardDetails({ employee, showActions = true }: Props) {
   const { handleAdminSave } = useAdminSync();
   const [isEditing, setIsEditing] = useState(false);
   const baseline = useMemo(() => employee.accessCards || [], [employee.accessCards]);
@@ -84,16 +85,7 @@ export function AccessCardDetails({ employee }: Props) {
 
   const displayCards = isEditing ? cards : baseline;
 
-  const addButton = (
-    <button
-      type="button"
-      onClick={() => (isEditing ? addCard() : startEditAndAdd())}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-    >
-      <Plus className="w-3.5 h-3.5" />
-      Add Card
-    </button>
-  );
+  // No header buttons for employee view; editing should be controlled by admins.
 
   return (
     <div className="space-y-5 pb-24">
@@ -105,13 +97,26 @@ export function AccessCardDetails({ employee }: Props) {
         title="Access Cards"
         icon={Key}
         isEditing={isEditing}
-        onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={addButton}
+        onEdit={showActions ? startEdit : undefined}
+        headerExtra={showActions && !isEditing ? (
+          <button
+            type="button"
+            onClick={startEditAndAdd}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add
+          </button>
+        ) : null}
       >
         {!displayCards.length ? (
-          <EmptyStateCard icon={Key} title="No access cards" description="Use Add Card to register a building access card." />
+          <EmptyStateCard
+            icon={Key}
+            title="No access cards"
+            description="No access cards registered. Contact admin to add one."
+          />
         ) : (
           <div className="space-y-4">
             {displayCards.map((row, i) => (

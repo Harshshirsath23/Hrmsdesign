@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Users } from "lucide-react";
+import { Users, Plus } from "lucide-react";
 import { Employee, NomineeEntry } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import {
@@ -8,9 +8,11 @@ import {
   UploadField,
   EmptyStateCard,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
 const RELATIONSHIP_OPTIONS = [
@@ -73,8 +75,9 @@ function validateNominees(nominees: NomineeEntry[]): {
   return { rowErrors, formError };
 }
 
-export function NomineeDetails({ employee }: Props) {
+export function NomineeDetails({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const relationOptions = useMasterOptions("Relation");
   const [isEditing, setIsEditing] = useState(false);
   const baseline = useMemo(() => employee.nominees || [], [employee.nominees]);
   const [nominees, setNominees] = useState<NomineeEntry[]>(baseline);
@@ -124,6 +127,11 @@ export function NomineeDetails({ employee }: Props) {
     if (formError) setFormError(null);
   };
 
+  const addNominee = () => {
+    setNominees((rows) => [...rows, emptyNominee()]);
+    setIsEditing(true);
+  };
+
   const displayNominees = isEditing ? nominees : baseline;
 
   return (
@@ -144,6 +152,16 @@ export function NomineeDetails({ employee }: Props) {
         onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
+        headerExtra={showAddButton ? (
+          <button
+            type="button"
+            onClick={addNominee}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add New
+          </button>
+        ) : null}
       >
         {formError ? (
           <p className="mb-4 text-sm text-destructive font-medium">{formError}</p>
@@ -166,8 +184,7 @@ export function NomineeDetails({ employee }: Props) {
                     label="Relationship"
                     value={n.relationship}
                     editing={isEditing}
-                    type="select"
-                    options={RELATIONSHIP_OPTIONS}
+                    options={relationOptions.length ? relationOptions : RELATIONSHIP_OPTIONS}
                     error={rowErrors[idx]?.relationship}
                     onChange={(v) => updateNominee(idx, { relationship: v })}
                   />

@@ -280,7 +280,7 @@ export function FinesDamagesPage() {
         </div>
         <Button 
           onClick={activeTab === 'fines' ? openAddFine : openAddDamage}
-          className="h-10 px-5 rounded-xl bg-foreground text-primary-foreground text-[10px] font-black uppercase tracking-widest gap-2 hover:opacity-90 animate-pulse"
+          className="h-10 px-5 rounded-xl bg-foreground text-primary-foreground text-[10px] font-black uppercase tracking-widest gap-2 hover:opacity-90"
         >
           <Plus size={14} strokeWidth={3} /> {activeTab === 'fines' ? 'Record Fine' : 'Record Damage'}
         </Button>

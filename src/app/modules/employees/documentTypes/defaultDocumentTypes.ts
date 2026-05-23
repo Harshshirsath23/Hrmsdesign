@@ -1,5 +1,6 @@
 import { EMPLOYEE_DOCUMENT_KEYS } from "../../../components/employees/mockData";
 import type { DocumentTypeConfig } from "./types";
+import { inferDocumentSection } from "./types";
 
 const LABELS: Record<string, string> = {
   panCard: "PAN Card",
@@ -44,6 +45,7 @@ export function buildDefaultDocumentTypes(): DocumentTypeConfig[] {
   return EMPLOYEE_DOCUMENT_KEYS.map((id, index) => ({
     id,
     documentName: LABELS[id] || id,
+    documentSection: inferDocumentSection(CATEGORIES[id] || "General"),
     category: CATEGORIES[id] || "General",
     uploadType: FRONT_BACK.has(id) ? "frontBack" : MULTIPLE.has(id) ? "multiple" : "single",
     allowedFileTypes: ["pdf", "jpg", "png", "doc", "docx"],

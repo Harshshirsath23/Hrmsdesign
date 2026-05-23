@@ -23,12 +23,18 @@ import {
   UploadField,
   EmptyStateCard,
 } from "../employee-details";
+import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
 }
 
 type LangRow = NonNullable<Employee["languages"]>[number];
+
+const YES_NO_OPTIONS = [
+  { value: "Yes", label: "Yes" },
+  { value: "No", label: "No" },
+];
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "";
@@ -45,6 +51,26 @@ function formatDate(dateStr?: string) {
 
 export function EmployeeProfile({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const genderOptions = useMasterOptions("Gender");
+  const maritalStatusOptions = useMasterOptions("MaritalStatus");
+  const bloodGroupOptions = useMasterOptions("BloodGroup");
+  const nationalityOptions = useMasterOptions("Nationality");
+  const religionOptions = useMasterOptions("Religion");
+  const casteOptions = useMasterOptions("Caste");
+  const casteCategoryOptions = useMasterOptions("CasteCategory");
+  const countryOptions = useMasterOptions("Country");
+  const stateOptions = useMasterOptions("State");
+  const cityOptions = useMasterOptions("City");
+  const employeeCategoryOptions = useMasterOptions("EmployeeCategory");
+  const departmentOptions = useMasterOptions("Department");
+  const designationOptions = useMasterOptions("Designation");
+  const shiftOptions = useMasterOptions("ShiftGroup");
+  const workLocationOptions = useMasterOptions("OfficeLocation");
+  const employeeTypeOptions = useMasterOptions("EmployeeType");
+  const employeeStatusOptions = useMasterOptions("EmployeeStatus");
+  const languageOptions = useMasterOptions("Language");
+  const proficiencyOptions = useMasterOptions("ProficiencyLevel");
+  const relationOptions = useMasterOptions("Relation");
 
   const [personalEdit, setPersonalEdit] = useState(false);
   const [personal, setPersonal] = useState(employee);
@@ -229,43 +255,57 @@ export function EmployeeProfile({ employee }: Props) {
             label="Gender"
             value={personal.gender}
             editing={personalEdit}
+            placeholder="Select Gender"
             onChange={(v) => setPersonal((p) => ({ ...p, gender: v }))}
+            options={genderOptions}
           />
           <ProfileInfoField
             label="Marital Status"
             value={personal.maritalStatus}
             editing={personalEdit}
+            placeholder="Select Marital Status"
             onChange={(v) => setPersonal((p) => ({ ...p, maritalStatus: v }))}
+            options={maritalStatusOptions}
           />
           <ProfileInfoField
             label="Blood Group"
             value={personal.bloodGroup}
             editing={personalEdit}
+            placeholder="Select Blood Group"
             onChange={(v) => setPersonal((p) => ({ ...p, bloodGroup: v }))}
+            options={bloodGroupOptions}
           />
           <ProfileInfoField
             label="Nationality"
             value={personal.nationality}
             editing={personalEdit}
+            placeholder="Select Nationality"
             onChange={(v) => setPersonal((p) => ({ ...p, nationality: v }))}
+            options={nationalityOptions}
           />
           <ProfileInfoField
             label="Religion"
             value={personal.religion || ""}
             editing={personalEdit}
+            placeholder="Select Religion"
             onChange={(v) => setPersonal((p) => ({ ...p, religion: v }))}
+            options={religionOptions}
           />
           <ProfileInfoField
             label="Caste"
             value={personal.caste || ""}
             editing={personalEdit}
+            placeholder="Select Caste"
             onChange={(v) => setPersonal((p) => ({ ...p, caste: v }))}
+            options={casteOptions}
           />
           <ProfileInfoField
             label="Caste Category"
             value={personal.casteCategory || ""}
             editing={personalEdit}
+            placeholder="Select Caste Category"
             onChange={(v) => setPersonal((p) => ({ ...p, casteCategory: v }))}
+            options={casteCategoryOptions}
           />
           <ProfileInfoField
             label="Identification Mark"
@@ -274,19 +314,25 @@ export function EmployeeProfile({ employee }: Props) {
             onChange={(v) => setPersonal((p) => ({ ...p, identificationMark: v }))}
           />
           <ProfileInfoField
-            label="Physically Challenged (Yes/No)"
+            label="Physically Challenged"
             value={personal.isPhysicallyChallenged ? "Yes" : "No"}
             editing={personalEdit}
+            type="select"
+            options={YES_NO_OPTIONS}
+            placeholder="Select Physically Challenged"
             onChange={(v) =>
-              setPersonal((p) => ({ ...p, isPhysicallyChallenged: /^y/i.test(v.trim()) }))
+              setPersonal((p) => ({ ...p, isPhysicallyChallenged: v === "Yes" }))
             }
           />
           <ProfileInfoField
-            label="International Employee (Yes/No)"
+            label="International Employee"
             value={personal.isInternationalEmployee ? "Yes" : "No"}
             editing={personalEdit}
+            type="select"
+            options={YES_NO_OPTIONS}
+            placeholder="Select International Employee"
             onChange={(v) =>
-              setPersonal((p) => ({ ...p, isInternationalEmployee: /^y/i.test(v.trim()) }))
+              setPersonal((p) => ({ ...p, isInternationalEmployee: v === "Yes" }))
             }
           />
           <ProfileInfoField
@@ -348,21 +394,33 @@ export function EmployeeProfile({ employee }: Props) {
                   ["startDate", "Start Date"],
                   ["toDate", "To Date"],
                 ] as const
-              ).map(([key, label]) => (
-                <ProfileInfoField
-                  key={key}
-                  label={label}
-                  value={(addr.current?.[key] as string) || ""}
-                  editing={addressEdit}
-                  type={key.includes("Date") ? "date" : "text"}
-                  onChange={(v) =>
-                    setAddr((a) => ({
-                      ...a,
-                      current: { ...(a.current || {}), [key]: v } as Employee["currentAddress"],
-                    }))
-                  }
-                />
-              ))}
+              ).map(([key, label]) => {
+                const options =
+                  key === "city"
+                    ? cityOptions
+                    : key === "state"
+                      ? stateOptions
+                      : key === "country"
+                        ? countryOptions
+                        : undefined;
+
+                return (
+                  <ProfileInfoField
+                    key={key}
+                    label={label}
+                    value={(addr.current?.[key] as string) || ""}
+                    editing={addressEdit}
+                    type={key.includes("Date") ? "date" : "text"}
+                    options={options}
+                    onChange={(v) =>
+                      setAddr((a) => ({
+                        ...a,
+                        current: { ...(a.current || {}), [key]: v } as Employee["currentAddress"],
+                      }))
+                    }
+                  />
+                );
+              })}
               <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
                 <input
                   type="checkbox"
@@ -400,21 +458,33 @@ export function EmployeeProfile({ employee }: Props) {
                   ["startDate", "Start Date"],
                   ["toDate", "To Date"],
                 ] as const
-              ).map(([key, label]) => (
-                <ProfileInfoField
-                  key={`p-${key}`}
-                  label={label}
-                  value={(addr.permanent?.[key] as string) || ""}
-                  editing={addressEdit && !addr.same}
-                  type={key.includes("Date") ? "date" : "text"}
-                  onChange={(v) =>
-                    setAddr((a) => ({
-                      ...a,
-                      permanent: { ...(a.permanent || {}), [key]: v } as Employee["permanentAddress"],
-                    }))
-                  }
-                />
-              ))}
+              ).map(([key, label]) => {
+                const options =
+                  key === "city"
+                    ? cityOptions
+                    : key === "state"
+                      ? stateOptions
+                      : key === "country"
+                        ? countryOptions
+                        : undefined;
+
+                return (
+                  <ProfileInfoField
+                    key={`p-${key}`}
+                    label={label}
+                    value={(addr.permanent?.[key] as string) || ""}
+                    editing={addressEdit && !addr.same}
+                    type={key.includes("Date") ? "date" : "text"}
+                    options={options}
+                    onChange={(v) =>
+                      setAddr((a) => ({
+                        ...a,
+                        permanent: { ...(a.permanent || {}), [key]: v } as Employee["permanentAddress"],
+                      }))
+                    }
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -445,12 +515,14 @@ export function EmployeeProfile({ employee }: Props) {
             value={work.employeeCategory || ""}
             editing={workEdit}
             onChange={(v) => setWork((w) => ({ ...w, employeeCategory: v }))}
+            options={employeeCategoryOptions}
           />
           <ProfileInfoField
             label="Department"
             value={work.department}
             editing={workEdit}
             onChange={(v) => setWork((w) => ({ ...w, department: v }))}
+            options={departmentOptions}
           />
           <ProfileInfoField
             label="Team"
@@ -463,24 +535,28 @@ export function EmployeeProfile({ employee }: Props) {
             value={work.designation}
             editing={workEdit}
             onChange={(v) => setWork((w) => ({ ...w, designation: v }))}
+            options={designationOptions}
           />
           <ProfileInfoField
             label="Shift"
             value={work.shift || ""}
             editing={workEdit}
             onChange={(v) => setWork((w) => ({ ...w, shift: v }))}
+            options={shiftOptions}
           />
           <ProfileInfoField
             label="Work Location"
             value={work.location}
             editing={workEdit}
             onChange={(v) => setWork((w) => ({ ...w, location: v }))}
+            options={workLocationOptions}
           />
           <ProfileInfoField
             label="Employee Type"
             value={work.employeeType || ""}
             editing={workEdit}
             onChange={(v) => setWork((w) => ({ ...w, employeeType: v }))}
+            options={employeeTypeOptions}
           />
           <ProfileInfoField
             label="Confirmation Date"
@@ -494,6 +570,7 @@ export function EmployeeProfile({ employee }: Props) {
             value={work.employmentStatus || ""}
             editing={workEdit}
             onChange={(v) => setWork((w) => ({ ...w, employmentStatus: v }))}
+            options={employeeStatusOptions}
           />
           <ProfileInfoField
             label="Probation Period"
@@ -578,6 +655,7 @@ export function EmployeeProfile({ employee }: Props) {
                     onChange={(v) =>
                       setLanguages((rows) => rows.map((r, i) => (i === idx ? { ...r, language: v } : r)))
                     }
+                    options={languageOptions}
                   />
                   <div className="space-y-1.5">
                     <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">
@@ -593,9 +671,10 @@ export function EmployeeProfile({ employee }: Props) {
                         }
                         className="w-full rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm font-medium"
                       >
-                        {["Beginner", "Intermediate", "Advanced", "Native"].map((p) => (
-                          <option key={p} value={p}>
-                            {p}
+                        <option value="">Select Proficiency</option>
+                        {(proficiencyOptions.length ? proficiencyOptions : ["Beginner", "Intermediate", "Advanced", "Native"].map((p) => ({ value: p, label: p }))).map((p) => (
+                          <option key={p.value} value={p.value}>
+                            {p.label}
                           </option>
                         ))}
                       </select>
@@ -685,6 +764,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Relationship"
             value={emergency.ec?.relationship || emergency.med?.relationship || ""}
             editing={emEdit}
+            options={relationOptions}
             onChange={(v) =>
               setEmergency((e) => ({
                 ...e,
