@@ -4,9 +4,9 @@ type DashboardCardTone = 'brand' | 'success' | 'warning' | 'info';
 
 const toneStyles: Record<DashboardCardTone, { chip: string; ring: string }> = {
   brand: { chip: 'bg-brand-50 dark:bg-brand-500/10', ring: 'focus-visible:ring-brand-400/40' },
-  success: { chip: 'bg-emerald-50 dark:bg-emerald-500/10', ring: 'focus-visible:ring-emerald-400/35' },
-  warning: { chip: 'bg-amber-50 dark:bg-amber-500/10', ring: 'focus-visible:ring-amber-400/35' },
-  info: { chip: 'bg-sky-50 dark:bg-sky-500/10', ring: 'focus-visible:ring-sky-400/35' },
+  success: { chip: 'bg-[#EEF4FF] dark:bg-[#8B5CF6]/10', ring: 'focus-visible:ring-indigo-400/35' },
+  warning: { chip: 'bg-[#EEF4FF] dark:bg-[#6366F1]/10', ring: 'focus-visible:ring-violet-400/35' },
+  info: { chip: 'bg-[#EEF4FF] dark:bg-[#3B82F6]/10', ring: 'focus-visible:ring-blue-400/30' },
 };
 
 interface DashboardCardProps {
@@ -28,6 +28,7 @@ export function DashboardCard({ label, value, icon, tone, hint, onClick }: Dashb
         'surface-card group relative w-full overflow-hidden text-left',
         'focus-visible:outline-none focus-visible:ring-2',
         styles.ring,
+        'hover:drop-shadow-[0_0_18px_rgba(99,102,241,0.18)]',
       )}
     >
       <div className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-gradient-to-br from-surface-50 to-transparent dark:from-white/5 dark:to-transparent" />
@@ -40,7 +41,12 @@ export function DashboardCard({ label, value, icon, tone, hint, onClick }: Dashb
               <p className="mt-2 text-2xs font-medium text-surface-500 dark:text-white/45">{hint}</p>
             ) : null}
           </div>
-          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110', styles.chip)}>
+          <div
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110',
+              styles.chip,
+            )}
+          >
             {icon}
           </div>
         </div>
