@@ -60,6 +60,31 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
     setSelectedDates([]);
   };
 
+  const getRegularizationMeta = (record?: DailyAttendance) => {
+    if (!record) {
+      return { label: "No record", className: "needs-missing", dots: ["attendance-dot-missing"] };
+    }
+    if (!record.firstIn || !record.lastOut) {
+      return { label: "Missing punch", className: "needs-missing", dots: ["attendance-dot-missing"] };
+    }
+    if (record.approvalPending) {
+      return { label: "Pending", className: "needs-pending", dots: ["attendance-dot-present"] };
+    }
+    if (record.isLate) {
+      return { label: `Late ${record.lateMins}m`, className: "needs-late", dots: ["attendance-dot-late"] };
+    }
+    if (record.earlyExitMins > 0) {
+      return { label: `Early ${record.earlyExitMins}m`, className: "needs-early", dots: ["attendance-dot-early"] };
+    }
+    if (record.status === "Half Day") {
+      return { label: "Half day", className: "needs-halfday", dots: ["attendance-dot-halfday"] };
+    }
+    if (record.status === "Absent") {
+      return { label: "Absent", className: "needs-absent", dots: ["attendance-dot-absent"] };
+    }
+    return { label: record.status, className: "", dots: ["attendance-dot-present"] };
+  };
+
   const selectedCount = selectedDates.length;
   const selectedDateLabel = selectedCount === 1
     ? selectedDates[0]
@@ -82,19 +107,19 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Left Column: Calendar Selection & Info */}
       <div className="lg:col-span-5 space-y-6">
-        <div className="p-8 rounded-[3.5rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-2xl">
+        <div className="attendance-regularization-panel p-8">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-xl font-black text-foreground tracking-tight">{format(currentNavDate, "MMMM yyyy")}</h3>
             <div className="flex gap-2">
               <button 
                 onClick={() => setCurrentNavDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-                className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 shadow-sm hover:scale-110 active:scale-95 transition-all"
+                className="attendance-nav-button p-3 transition-all"
               >
                 <ChevronLeft size={20} />
               </button>
               <button 
                 onClick={() => setCurrentNavDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-                className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 shadow-sm hover:scale-110 active:scale-95 transition-all"
+                className="attendance-nav-button p-3 transition-all"
               >
                 <ChevronRight size={20} />
               </button>
@@ -111,18 +136,33 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
               const isCurrentMonth = isSameMonth(day, monthStart);
               const isFuture = isAfter(day, new Date());
               const locked = isDateLocked(day);
+              const dayRecord = records.find((record) => record.date === dateKey);
+              const meta = getRegularizationMeta(dayRecord);
+              const needsAction = isCurrentMonth && !isFuture && Boolean(dayRecord?.approvalPending || dayRecord?.isLate || dayRecord?.earlyExitMins || dayRecord?.isHalfDay || dayRecord?.isAbsent || !dayRecord?.firstIn || !dayRecord?.lastOut);
 
               return (
                 <button
                   key={i}
                   disabled={!isCurrentMonth || isFuture}
                   onClick={() => toggleSelectedDate(day, isCurrentMonth, isFuture)}
-                  className={`aspect-square relative flex flex-col items-center justify-center rounded-2xl text-xs font-bold transition-all ${
-                    !isCurrentMonth || isFuture ? "opacity-10 cursor-not-allowed" : "hover:bg-emerald-500/10"
-                  } ${isSel ? "bg-emerald-500 text-white shadow-xl scale-110 z-10" : "text-foreground bg-white/20 dark:bg-slate-800/20 border border-white/20 dark:border-white/5"}`}
+                  className={`attendance-regularization-day relative flex flex-col text-xs font-semibold transition-all ${
+                    !isCurrentMonth || isFuture ? "opacity-10 cursor-not-allowed" : ""
+                  } ${isSel ? "is-selected z-10" : "text-foreground"} ${locked ? "is-locked" : ""} ${
+                    needsAction ? `needs-regularization ${meta.className}` : ""
+                  }`}
                 >
-                  {format(day, "d")}
-                  {locked && !isSel && isCurrentMonth && <Lock size={8} className="absolute top-1 right-1 text-rose-500/50" />}
+                  <span className="attendance-reg-day-top">
+                    <span>{format(day, "d")}</span>
+                    <span className="attendance-dot-row">
+                      {isCurrentMonth && !isFuture && meta.dots.map((dot) => (
+                        <span key={dot} className={`attendance-status-dot ${dot}`} />
+                      ))}
+                    </span>
+                  </span>
+                  <span className="attendance-reg-day-label">
+                    {isCurrentMonth && !isFuture ? meta.label : ""}
+                  </span>
+                  {locked && !isSel && isCurrentMonth && <Lock size={10} className="absolute top-2 right-2 text-rose-500/60" />}
                 </button>
               );
             })}
@@ -136,11 +176,11 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-6 rounded-[2.5rem] bg-black/5 dark:bg-white/5 border border-white/10 space-y-4"
+              className="attendance-selected-panel p-6 space-y-4"
             >
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500"><CalendarIcon size={18} /></div>
+                  <div className="attendance-section-icon p-2.5 rounded-xl"><CalendarIcon size={18} /></div>
                   <div>
                     <h4 className="text-xs font-black text-foreground uppercase tracking-tight">Selected Dates</h4>
                     <p className="text-[9px] font-bold text-muted-foreground uppercase">{selectedDateLabel}</p>
@@ -158,7 +198,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
               <div className="grid gap-2 text-[11px] text-muted-foreground">
                 {selectedDates.slice(0, 5).map((date) => (
                   <div key={date} className="inline-flex items-center gap-2 rounded-2xl bg-white/20 dark:bg-slate-800/20 px-3 py-2 text-xs font-black text-foreground">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="w-2 h-2 rounded-full bg-violet-500" />
                     {format(parseISO(date), "EEE, dd MMM")}
                   </div>
                 ))}
@@ -169,7 +209,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20 flex flex-col items-center text-center">
-                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 mb-1.5"><LogIn size={16} /></div>
+                  <div className="p-2 rounded-lg bg-violet-500/10 text-violet-500 mb-1.5"><LogIn size={16} /></div>
                   <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Punch In</p>
                   <p className="text-base font-black text-foreground leading-tight">{selectedRecord?.firstIn || "No Punch"}</p>
                 </div>
@@ -182,7 +222,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
 
               <div className="flex items-center justify-between p-3 px-4 rounded-xl bg-white/40 dark:bg-slate-800/40 border border-white/20">
                 <div className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full ${selectedRecord ? "bg-emerald-500" : "bg-rose-500"}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full ${selectedRecord ? "bg-violet-500" : "bg-rose-500"}`} />
                   <span className="text-[10px] font-black text-foreground uppercase tracking-tighter">{selectedRecord?.status || "No Record"}</span>
                 </div>
                 <span className="text-[9px] font-black text-muted-foreground uppercase">Shift: 09-18</span>
@@ -201,7 +241,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
 
       {/* Right Column: Correction Form */}
       <div className="lg:col-span-6 xl:col-span-5">
-        <div className="p-8 rounded-[2.5rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-2xl h-fit">
+        <div className="attendance-regularization-panel p-8 h-fit">
           {selectedCount === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center opacity-30 py-12">
               <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
@@ -247,7 +287,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
           ) : (
             <form className="space-y-6">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+                <div className="w-1.5 h-6 bg-violet-500 rounded-full" />
                 <div>
                   <h3 className="text-lg font-black text-foreground">Submit Bulk Regularization</h3>
                   <p className="text-xs text-muted-foreground">{selectedCount} selected date(s) will be included in this request.</p>
@@ -259,7 +299,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Request Type</label>
                   <select 
                     disabled={isLocked}
-                    className="w-full px-5 py-3 bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 rounded-2xl text-xs font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10 appearance-none disabled:opacity-50 transition-all shadow-sm"
+                    className="attendance-form-control w-full px-5 py-3 text-xs font-semibold appearance-none disabled:opacity-50 transition-all"
                   >
                     <option>Missing Punch</option>
                     <option>Late Arrival Justification</option>
@@ -272,7 +312,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Requested Status</label>
                   <select 
                     disabled={isLocked}
-                    className="w-full px-5 py-3 bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 rounded-2xl text-xs font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10 appearance-none disabled:opacity-50 transition-all shadow-sm"
+                    className="attendance-form-control w-full px-5 py-3 text-xs font-semibold appearance-none disabled:opacity-50 transition-all"
                   >
                     <option>Present</option>
                     <option>Half Day</option>
@@ -287,7 +327,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
                   <input 
                     type="time" 
                     disabled={isLocked}
-                    className="w-full px-5 py-3 bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 rounded-2xl text-xs font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-50 transition-all shadow-sm" 
+                    className="attendance-form-control w-full px-5 py-3 text-xs font-semibold disabled:opacity-50 transition-all" 
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -295,7 +335,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
                   <input 
                     type="time" 
                     disabled={isLocked}
-                    className="w-full px-5 py-3 bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 rounded-2xl text-xs font-black focus:outline-none focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-50 transition-all shadow-sm" 
+                    className="attendance-form-control w-full px-5 py-3 text-xs font-semibold disabled:opacity-50 transition-all" 
                   />
                 </div>
               </div>
@@ -317,7 +357,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
                         value={perDateComments[date] || ""}
                         onChange={(e) => setPerDateComments((prev) => ({ ...prev, [date]: e.target.value }))}
                         placeholder="Enter reason for this date"
-                        className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 rounded-lg text-xs font-medium focus:outline-none focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-50 transition-all resize-none"
+                        className="attendance-form-control w-full px-4 py-3 text-xs font-medium disabled:opacity-50 transition-all resize-none"
                       />
                     </div>
                   ))}
@@ -327,7 +367,7 @@ export function RegularizationTab({ records, initialDate, readOnly = false }: Re
               <button 
                 type="button"
                 disabled={isLocked}
-                className="w-full py-4 bg-emerald-500 text-white rounded-[2rem] font-black text-sm shadow-xl shadow-emerald-500/20 hover:bg-emerald-600 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2"
+                className="attendance-submit-button w-full py-4 text-white rounded-[2rem] font-semibold text-sm transition-all disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2"
               >
                 <Send size={18} />
                 Submit Request

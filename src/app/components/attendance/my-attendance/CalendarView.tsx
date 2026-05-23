@@ -37,10 +37,21 @@ export function CalendarView({
 
   const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
 
+  const getRegularizationReason = (record?: DailyAttendance) => {
+    if (!record) return "";
+    if (!record.firstIn || !record.lastOut) return "Missing punch";
+    if (record.isLate) return "Late login";
+    if (record.earlyExitMins > 0) return "Early logout";
+    if (record.status === "Half Day") return "Half day";
+    if (record.status === "Absent") return "Absent";
+    if (record.approvalPending) return "Pending request";
+    return "";
+  };
+
   return (
-    <div className="glassmorph-card glass-shine overflow-hidden shadow-2xl rounded-[3rem]">
+    <div className="attendance-calendar-shell overflow-hidden">
       {/* Weekday Headers */}
-      <div className="grid grid-cols-7 bg-white/10 dark:bg-white/5 px-3">
+      <div className="attendance-weekdays grid grid-cols-7 px-3">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
 <div
             key={day}
@@ -52,12 +63,12 @@ export function CalendarView({
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-7 min-h-[600px] gap-3 p-3">
+      <div className="attendance-calendar-grid grid grid-cols-7 min-h-[600px] gap-3 p-3">
         {calendarDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
           const record = records.find((r) => r.date === dateStr);
           const isCurrentMonth = isSameMonth(day, monthStart);
-          const isTodayDate = isToday(day) || format(day, "yyyy-MM-dd") === "2026-05-12";
+          const isTodayDate = isToday(day);
           const isFuture = isAfter(day, new Date());
 
           const statusDots = record ? getStatusDots(record) : [];
@@ -68,6 +79,7 @@ export function CalendarView({
                 record.date.includes(searchTerm)));
 
           const isSelected = selectedDate === dateStr;
+          const regularizationReason = getRegularizationReason(record);
 
           return (
             <motion.button
@@ -81,95 +93,114 @@ export function CalendarView({
                 setSelectedDate(dateStr);
                 onSwipeDetails?.(record);
               }}
-              className={`relative min-h-[120px] p-4 calendar-tile transition-all group rounded-[26px] border border-white/10 dark:border-white/5 ${
+              className={`attendance-day-card relative min-h-[172px] p-4 calendar-tile transition-all group ${
                 !isCurrentMonth
-                  ? "bg-black/5 dark:bg-white/5 opacity-20"
-                  : "text-left bg-white/10 dark:bg-white/5 hover:bg-white/30 dark:hover:bg-white/10"
+                  ? "is-muted opacity-20"
+                  : "text-left"
               } ${
-                isSelected ? "shadow-xl shadow-emerald-500/10" : ""
-              } ${isTodayDate && !isSelected ? "ring-1 ring-emerald-500/25" : ""}`}
+                isSelected ? "is-selected" : ""
+              } ${isTodayDate && !isSelected ? "is-today" : ""} ${regularizationReason ? "needs-regularization" : ""} ${
+                record?.isLate ? "needs-late" : ""
+              } ${record?.earlyExitMins && record.earlyExitMins > 0 ? "needs-early" : ""} ${
+                record?.status === "Half Day" ? "needs-halfday" : ""
+              } ${record?.status === "Absent" ? "needs-absent" : ""} ${
+                record && (!record.firstIn || !record.lastOut) ? "needs-missing" : ""
+              } ${record?.approvalPending ? "needs-pending" : ""}`}
               whileHover={{
-                y: -2,
-                scale: isSelected ? 1.01 : 1.02,
+                y: isCurrentMonth ? -2 : 0,
+                scale: isCurrentMonth ? 1.01 : 1,
               }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
               {/* Date Number */}
-              <div className="flex items-center justify-between mb-2">
-<span
-                    className={`flex items-center justify-center w-9 h-9 rounded-full text-sm font-semibold transition-all ${
+              <div className="attendance-day-top flex items-center justify-between">
+                <span
+                    className={`attendance-date-orb flex items-center justify-center w-9 h-9 rounded-full text-sm font-semibold transition-all ${
                     isSelected
-                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                      ? "is-active"
                       : isTodayDate
-                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                        : "text-foreground group-hover:bg-emerald-500/10"
+                        ? "is-active"
+                        : "text-foreground"
                   }`}
                 >
                   {format(day, "d")}
                 </span>
 
-                {/* Status Dots */}
-                <div className="flex gap-1">
+                <div className="attendance-dot-row flex gap-1">
                   {statusDots.map((dotColor, i) => (
-                    <div key={i} className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                    <span key={i} className={`attendance-status-dot ${dotColor}`} />
                   ))}
                 </div>
               </div>
 
-              {/* Punch Data / Roster (for future dates) */}
               {isCurrentMonth && (
-                <div className="space-y-1.5">
+                <div className="attendance-day-body">
                   {isFuture ? (
-                    <div className="flex flex-col opacity-40">
-<span className="text-[9px] font-semibold text-muted-foreground uppercase leading-none mb-1">
+                    <div className="attendance-shift-block opacity-60">
+                      <span className="attendance-cell-label">
                         Roster Shift
                       </span>
-                      <span className="text-[11px] font-black text-foreground leading-tight">
+                      <span className="attendance-cell-value">
                         09:00 - 18:00
                       </span>
                     </div>
                   ) : record ? (
                     <>
                       <div
-                        className={`text-[10px] font-black px-2 py-0.5 rounded-md inline-block uppercase tracking-tighter ${getStatusColor(
+                        className={`attendance-status-pill text-[10px] font-semibold px-2.5 py-1 inline-flex uppercase tracking-tighter ${getStatusColor(
                           record.status
                         )}`}
                       >
                         {record.status}
                       </div>
 
-                      {record.firstIn && (
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">
+                      <div className="attendance-time-grid">
+                        <div className="attendance-time-item">
+                          <span className="attendance-cell-label">
                             In
                           </span>
-                          <span className="text-[11px] font-black text-foreground leading-tight">
-                            {record.firstIn}
+                          <span className="attendance-cell-value">
+                            {record.firstIn || "--:--"}
                           </span>
                         </div>
-                      )}
 
-                      {record.lastOut && (
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">
+                        <div className="attendance-time-item">
+                          <span className="attendance-cell-label">
                             Out
                           </span>
-                          <span className="text-[11px] font-black text-foreground leading-tight">
-                            {record.lastOut}
+                          <span className="attendance-cell-value">
+                            {record.lastOut || "--:--"}
                           </span>
                         </div>
-                      )}
+                      </div>
 
-                      {record.workHours > 0 && (
-                        <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
-                          <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400">
-                            {record.workHours.toFixed(1)}h
+                      <div className="attendance-shift-block">
+                        <span className="attendance-cell-label">Shift</span>
+                        <span className="attendance-cell-value">{record.shiftName || "09:00 - 18:00"}</span>
+                      </div>
+
+                      <div className="attendance-day-footer">
+                        <span className="attendance-hours-pill">
+                          {record.workHours > 0 ? `${record.workHours.toFixed(1)}h` : "--"}
+                        </span>
+                        {regularizationReason && (
+                          <span className="attendance-regularization-chip">
+                            {regularizationReason}
                           </span>
-{record.lateMins > 0 && (
-                            <span className="text-[9px] font-semibold text-rose-500">LATE</span>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
+
+                      <div className="attendance-extra-line">
+                        {record.lateMins > 0 && (
+                          <span className="attendance-mini-flag flag-late">Late {record.lateMins}m</span>
+                        )}
+                        {record.earlyExitMins > 0 && (
+                          <span className="attendance-mini-flag flag-early">Early {record.earlyExitMins}m</span>
+                        )}
+                        {record.approvalPending && (
+                          <span className="attendance-mini-flag flag-pending">Pending</span>
+                        )}
+                      </div>
                     </>
                   ) : null}
                 </div>

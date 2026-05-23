@@ -73,12 +73,13 @@ export function MyAttendanceModule({
   };
 
   return (
-    <div className="space-y-6 pb-12 glassmorph">
+    <div className="attendance-workspace space-y-7 pb-12">
       {showTitle ? (
-        <div className="flex items-center justify-between">
+        <div className="attendance-hero flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black text-foreground tracking-tight">{title}</h1>
-            <p className="text-sm text-muted-foreground font-medium mt-1">{subtitle}</p>
+            <p className="attendance-kicker">Attendance intelligence</p>
+            <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight">{title}</h1>
+            <p className="text-sm text-muted-foreground font-medium mt-2 max-w-2xl">{subtitle}</p>
           </div>
         </div>
       ) : null}
@@ -87,7 +88,7 @@ export function MyAttendanceModule({
       <SummaryCards metrics={metrics} />
 
       {/* Filters & View Switcher */}
-      <div className="sticky top-4 z-50">
+      <div className="sticky top-4 z-50 attendance-sticky-tools">
         <Filters
           view={view}
           onViewChange={(newView) => {
@@ -139,9 +140,9 @@ export function MyAttendanceModule({
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-20 glassmorph-card"
+                className="attendance-empty flex flex-col items-center justify-center py-20"
             >
-              <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center mb-4">
+              <div className="w-24 h-24 rounded-[2rem] flex items-center justify-center mb-4 attendance-empty-icon">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
                   <rect x="3" y="4" width="18" height="16" rx="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
@@ -162,12 +163,12 @@ export function MyAttendanceModule({
 
       {/* Analytics & Trends Section */}
       {view !== "regularization" && (
-        <div className="pt-8 border-t border-white/50 dark:border-white/10">
+        <div className="attendance-analytics pt-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-500 shadow-sm">
+            <div className="attendance-section-icon p-2.5 rounded-2xl shadow-sm">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
             </div>
-            <h2 className="text-2xl font-black text-foreground tracking-tight">Performance Analytics</h2>
+            <h2 className="text-2xl font-semibold text-foreground tracking-tight">Performance Analytics</h2>
           </div>
           <AttendanceCharts records={employeeRecords} />
         </div>

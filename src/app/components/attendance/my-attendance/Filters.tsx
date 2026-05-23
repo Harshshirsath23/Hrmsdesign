@@ -6,9 +6,7 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Search,
-  Sparkles
 } from "lucide-react";
-import { motion } from "motion/react";
 
 interface FiltersProps {
   view: "calendar" | "list" | "regularization";
@@ -41,10 +39,10 @@ export function Filters({
   };
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-[2.5rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl">
+    <div className="attendance-filterbar flex flex-col md:flex-row items-center justify-between gap-4 p-3">
       <div className="flex items-center gap-3">
         {/* View Switcher */}
-        <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-2xl">
+        <div className="attendance-segment flex p-1">
           {[
             { id: "calendar", icon: CalendarIcon, label: "Calendar" },
             { id: "list", icon: List, label: "List" },
@@ -53,9 +51,9 @@ export function Filters({
             <button
               key={v.id}
               onClick={() => onViewChange(v.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+              className={`attendance-segment-button flex items-center gap-2 px-4 py-2 text-xs font-semibold transition-all ${
                 view === v.id 
-                  ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" 
+                  ? "is-active" 
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -67,26 +65,26 @@ export function Filters({
 
         {/* Date Navigator */}
         {view !== "regularization" && (
-          <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 p-1 rounded-2xl">
+          <div className="attendance-month-nav flex items-center gap-2 p-1">
             <button 
               onClick={handlePrevMonth}
-              className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all"
+              className="attendance-nav-button p-2 transition-all"
             >
               <ChevronLeft size={16} />
             </button>
-            <h3 className="text-sm font-black text-foreground min-w-[120px] text-center">
+            <h3 className="text-sm font-semibold text-foreground min-w-[120px] text-center">
               {format(currentDate, "MMMM yyyy")}
             </h3>
             <button 
               onClick={handleNextMonth}
-              className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all"
+              className="attendance-nav-button p-2 transition-all"
             >
               <ChevronRight size={16} />
             </button>
             <div className="w-[1px] h-4 bg-foreground/10 mx-1" />
             <button 
               onClick={handleToday}
-              className="px-3 py-1.5 text-[10px] font-black hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all uppercase tracking-widest"
+              className="attendance-today-button px-3 py-1.5 text-[10px] font-semibold transition-all uppercase tracking-widest"
             >
               Today
             </button>
@@ -103,7 +101,7 @@ export function Filters({
             placeholder="Search date, status, shift..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full md:w-64 pl-12 pr-4 py-3 rounded-2xl bg-black/5 dark:bg-white/5 border-none text-xs font-bold focus:ring-2 focus:ring-emerald-500/20"
+            className="attendance-search-input w-full md:w-64 pl-12 pr-4 py-3 text-xs font-medium"
           />
         </div>
 

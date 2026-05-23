@@ -25,11 +25,11 @@ export function ListView({ records, onSwipeDetails, onRegularize, readOnly = fal
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[3rem] overflow-hidden border border-white/50 dark:border-white/10 shadow-2xl bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl">
+      <div className="attendance-list-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-black/5 dark:bg-white/5">
+              <tr>
                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</th>
                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Timing</th>
                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Work Mode</th>
@@ -38,49 +38,49 @@ export function ListView({ records, onSwipeDetails, onRegularize, readOnly = fal
                 <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/20 dark:divide-white/5">
+            <tbody>
               {sortedRecords.map((record, idx) => (
                 <motion.tr 
                   key={record.date}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className="group hover:bg-white/40 dark:hover:bg-white/5 transition-all cursor-pointer"
+                  className="attendance-list-row group transition-all cursor-pointer"
                   onClick={() => onSwipeDetails(record)}
                 >
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-foreground">{format(parseISO(record.date), "dd MMM, yyyy")}</span>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{format(parseISO(record.date), "EEEE")}</span>
+                      <span className="text-sm font-semibold text-foreground">{format(parseISO(record.date), "dd MMM, yyyy")}</span>
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">{format(parseISO(record.date), "EEEE")}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">In</span>
-                        <span className="text-sm font-black text-emerald-600">{record.firstIn || "--:--"}</span>
+                        <span className="text-sm font-semibold text-violet-600 dark:text-violet-300">{record.firstIn || "--:--"}</span>
                       </div>
                       <div className="w-[1px] h-6 bg-foreground/10" />
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none">Out</span>
-                        <span className="text-sm font-black text-rose-600">{record.lastOut || "--:--"}</span>
+                        <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-300">{record.lastOut || "--:--"}</span>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-2">
                       {record.workMode === "Office" ? <Fingerprint size={14} className="text-blue-500" /> : <Monitor size={14} className="text-purple-500" />}
-                      <span className="text-xs font-black text-foreground">{record.workMode || "Office"}</span>
+                      <span className="text-xs font-semibold text-foreground">{record.workMode || "Office"}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-foreground">{record.workHours.toFixed(1)}h</span>
-                      {record.overtime > 0 && <span className="text-[9px] font-black text-emerald-500">+{record.overtime}m OT</span>}
+                      <span className="text-sm font-semibold text-foreground">{record.workHours.toFixed(1)}h</span>
+                      {record.overtime > 0 && <span className="text-[9px] font-semibold text-violet-500">+{record.overtime}m OT</span>}
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${getStatusColor(record.status)}`}>
+                    <span className={`attendance-status-pill px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest shadow-sm ${getStatusColor(record.status)}`}>
                       {record.status}
                     </span>
                   </td>
@@ -88,14 +88,14 @@ export function ListView({ records, onSwipeDetails, onRegularize, readOnly = fal
                     <div className="flex items-center justify-end gap-2">
                       <button 
                         onClick={(e) => { e.stopPropagation(); onSwipeDetails(record); }}
-                        className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 shadow-sm hover:scale-110 active:scale-95 transition-all text-muted-foreground hover:text-emerald-500"
+                        className="attendance-row-action p-2.5 transition-all text-muted-foreground"
                       >
                         <Eye size={16} />
                       </button>
                       {!readOnly && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); onRegularize(record.date); }}
-                          className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-white/50 dark:border-white/10 shadow-sm hover:scale-110 active:scale-95 transition-all text-muted-foreground hover:text-emerald-500"
+                          className="attendance-row-action p-2.5 transition-all text-muted-foreground"
                         >
                           <Send size={16} />
                         </button>

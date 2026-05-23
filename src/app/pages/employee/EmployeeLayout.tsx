@@ -15,6 +15,7 @@ import {
   UserRoundCog,
   Sun,
   Moon,
+  Search,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -77,19 +78,19 @@ export function EmployeeLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="app-shell flex h-screen overflow-hidden bg-background text-foreground">
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
-        className={`flex flex-col flex-shrink-0 bg-card border-r border-border
+        className={`app-sidebar flex flex-col flex-shrink-0 bg-card border-r border-border
           transition-all duration-200 ease-in-out overflow-hidden
           ${collapsed ? "w-[72px]" : "w-60"}`}
       >
         {/* Logo */}
         <div
-          className={`h-16 flex items-center flex-shrink-0 border-b border-border
+          className={`app-sidebar-logo h-16 flex items-center flex-shrink-0 border-b border-border
           ${collapsed ? "justify-center px-0" : "px-5 gap-3"}`}
         >
-          <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="app-brand-mark w-8 h-8 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
 
@@ -126,7 +127,7 @@ export function EmployeeLayout() {
                 key={path}
                 onClick={() => navigate(path)}
                 title={collapsed ? label : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                className={`app-nav-item ${active ? "active" : ""} w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-all duration-150 relative
                   ${active
                     ? "bg-secondary text-foreground font-semibold"
@@ -135,7 +136,7 @@ export function EmployeeLayout() {
                   ${collapsed ? "justify-center" : ""}`}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-r-full" />
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-full shadow-[0_0_16px_rgba(108,99,255,.55)]" />
                 )}
 
                 <Icon className="w-[18px] h-[18px] flex-shrink-0" />
@@ -155,7 +156,7 @@ export function EmployeeLayout() {
           <button
             onClick={() => setCollapsed(!collapsed)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-              text-muted-foreground hover:bg-secondary hover:text-foreground
+              text-muted-foreground hover:bg-secondary hover:text-foreground app-nav-item
               transition-all duration-150 ${collapsed ? "justify-center" : ""}`}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -179,7 +180,7 @@ export function EmployeeLayout() {
           ) : (
             <div className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary transition-colors">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <div className="premium-avatar w-8 h-8 rounded-lg bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
                   {user?.initials}
                 </div>
 
@@ -209,7 +210,7 @@ export function EmployeeLayout() {
       {/* ── Main area ────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+        <header className="app-topbar h-16 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-30">
           <div>
             <h1 className="text-base font-semibold text-foreground">
               {currentPage}
@@ -226,9 +227,18 @@ export function EmployeeLayout() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="app-search hidden md:flex items-center gap-2 px-3">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                className="h-full flex-1 border-0 bg-transparent p-0 text-sm shadow-none outline-none placeholder:text-muted-foreground"
+                placeholder="Search anything"
+                aria-label="Global search"
+              />
+            </div>
+
             <button
               onClick={toggleTheme}
-              className="w-9 h-9 flex items-center justify-center rounded-lg border border-border
+              className="app-icon-button w-9 h-9 flex items-center justify-center rounded-lg border border-border
                 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               title={isDark ? "Light mode" : "Dark mode"}
             >
@@ -242,7 +252,7 @@ export function EmployeeLayout() {
             <button
               type="button"
               onClick={() => navigate("/employee/leaves/notifications")}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border
+              className="app-icon-button relative flex h-9 w-9 items-center justify-center rounded-lg border border-border
                 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               title="Notifications"
             >
@@ -254,10 +264,19 @@ export function EmployeeLayout() {
               />
             </button>
 
+            <button
+              type="button"
+              className="app-icon-button flex h-9 w-9 items-center justify-center rounded-lg border border-border
+                text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Calendar"
+            >
+              <CalendarDays className="h-4 w-4" />
+            </button>
+
             <div className="w-px h-6 bg-border mx-1" />
 
             <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-border bg-secondary">
-              <div className="w-7 h-7 rounded-md bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold">
+              <div className="premium-avatar w-7 h-7 rounded-md bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold">
                 {user?.initials}
               </div>
 
@@ -269,7 +288,7 @@ export function EmployeeLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
+        <main className="app-main flex-1 overflow-x-hidden overflow-y-auto bg-background">
           <Outlet />
         </main>
       </div>

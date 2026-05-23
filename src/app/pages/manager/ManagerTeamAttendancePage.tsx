@@ -155,45 +155,46 @@ export function ManagerTeamAttendancePage() {
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6 glassmorph">
-      <div className="flat-card bg-card p-5">
+    <div className="attendance-liquid team-attendance-page space-y-7 p-4 md:p-6">
+      <div className="attendance-hero p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Team Attendance</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="attendance-kicker">Team pulse</p>
+            <h1 className="text-3xl font-semibold text-foreground tracking-tight">Team Attendance</h1>
+            <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
               Search team members, review daily attendance, and open the full attendance history.
             </p>
           </div>
           {selectedEmployee ? (
             <div className="flex flex-wrap gap-2">
-              <button onClick={exportExcel} className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-3 text-sm font-semibold text-white hover:bg-emerald-700">
+              <button onClick={exportExcel} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
                 <FileSpreadsheet className="h-4 w-4" /> Excel
               </button>
-              <button onClick={exportPdf} className="inline-flex h-9 items-center gap-2 rounded-md bg-rose-600 px-3 text-sm font-semibold text-white hover:bg-rose-700">
+              <button onClick={exportPdf} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
                 <FileDown className="h-4 w-4" /> PDF
               </button>
-              <button onClick={exportCsv} className="inline-flex h-9 items-center gap-2 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700">
+              <button onClick={exportCsv} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
                 <Download className="h-4 w-4" /> CSV
               </button>
             </div>
           ) : null}
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_160px_auto]">
+        <div className="attendance-team-toolbar mt-5 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_160px_auto]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by employee name or ID"
-              className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+              className="attendance-form-control h-10 w-full pl-9 pr-3 text-sm text-foreground outline-none"
             />
           </div>
 
           <select
             value={department}
             onChange={(event) => setDepartment(event.target.value)}
-            className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+            className="attendance-form-control h-10 px-3 text-sm text-foreground outline-none"
           >
             {departments.map((option) => (
               <option key={option} value={option} className="bg-card text-foreground">
@@ -205,7 +206,7 @@ export function ManagerTeamAttendancePage() {
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+            className="attendance-form-control h-10 px-3 text-sm text-foreground outline-none"
           >
             {statuses.map((option) => (
               <option key={option} value={option} className="bg-card text-foreground">
@@ -214,16 +215,16 @@ export function ManagerTeamAttendancePage() {
             ))}
           </select>
 
-          <div className="inline-flex rounded-md border border-border bg-secondary p-1">
+          <div className="attendance-segment inline-flex p-1">
             <button
               onClick={() => setView("card")}
-              className={cn("inline-flex h-8 items-center gap-2 rounded px-3 text-sm font-semibold", view === "card" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+              className={cn("attendance-segment-button inline-flex h-8 items-center gap-2 px-3 text-sm font-semibold", view === "card" ? "is-active" : "text-muted-foreground hover:text-foreground")}
             >
               <Users className="h-4 w-4" /> Card View
             </button>
             <button
               onClick={() => setView("list")}
-              className={cn("inline-flex h-8 items-center gap-2 rounded px-3 text-sm font-semibold", view === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+              className={cn("attendance-segment-button inline-flex h-8 items-center gap-2 px-3 text-sm font-semibold", view === "list" ? "is-active" : "text-muted-foreground hover:text-foreground")}
             >
               <List className="h-4 w-4" /> List View
             </button>
@@ -245,7 +246,7 @@ export function ManagerTeamAttendancePage() {
                   if (event.key === "Enter" || event.key === " ") openAttendanceModal(employee.id);
                 }}
                 className={cn(
-                  "flat-card flat-card-hover cursor-pointer bg-card p-5 text-left transition-all glassmorph-card glass-shine",
+                  "attendance-team-card cursor-pointer p-5 text-left transition-all",
                   selected && "border-primary bg-primary/10 ring-2 ring-primary/30",
                 )}
               >
@@ -266,14 +267,14 @@ export function ManagerTeamAttendancePage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-2 rounded-md bg-secondary/60 p-3">
+                <div className="attendance-mini-metrics mt-4 grid grid-cols-3 gap-2 p-3">
                   <MiniMetric label="Punch In" value={employee.today?.firstIn || "No Punch In"} />
                   <MiniMetric label="Punch Out" value={employee.today?.lastOut || "No Punch Out"} />
                   <MiniMetric label="Hours" value={formatHours(employee.today?.workHours)} />
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                  <button type="button" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }} className="inline-flex h-8 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground">
+                  <button type="button" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }} className="attendance-submit-button inline-flex h-8 flex-1 items-center justify-center gap-2 text-sm font-semibold text-primary-foreground">
                     <Eye className="h-4 w-4" /> View Attendance
                   </button>
 
@@ -283,7 +284,7 @@ export function ManagerTeamAttendancePage() {
           })}
         </div>
       ) : (
-        <div className="flat-card overflow-hidden bg-card">
+        <div className="attendance-list-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -303,7 +304,7 @@ export function ManagerTeamAttendancePage() {
                   <tr
                     key={employee.id}
                     onClick={() => openAttendanceModal(employee.id)}
-                    className={cn("cursor-pointer hover:bg-secondary/70", employee.id === selectedEmployeeId && "bg-primary/10")}
+                    className={cn("attendance-list-row cursor-pointer", employee.id === selectedEmployeeId && "bg-primary/10")}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -326,7 +327,7 @@ export function ManagerTeamAttendancePage() {
                     <td className="px-4 py-3 text-sm">{formatHours(employee.today?.workHours)}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
-                        <button className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }}>View Attendance</button>
+                        <button className="attendance-submit-button px-3 py-1.5 text-xs font-semibold text-primary-foreground" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }}>View Attendance</button>
 
                       </div>
                     </td>
@@ -339,7 +340,7 @@ export function ManagerTeamAttendancePage() {
       )}
 
       {!selectedEmployee ? (
-        <div className="flat-card flex min-h-[260px] items-center justify-center bg-card p-8 text-center">
+        <div className="attendance-empty flex min-h-[260px] items-center justify-center p-8 text-center">
           <div>
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-muted-foreground">
               <Users className="h-6 w-6" />
@@ -357,7 +358,7 @@ export function ManagerTeamAttendancePage() {
           title="Attendance Details"
           className="max-w-[100vw] w-full md:max-w-[90vw] xl:max-w-[85vw]"
         >
-          <div className="flex flex-col xl:flex-row gap-6 mb-8 p-6 bg-secondary/30 rounded-2xl border border-border shadow-sm">
+          <div className="attendance-modal-profile flex flex-col xl:flex-row gap-6 mb-8 p-6">
             {/* Profile Info */}
             <div className="flex items-center gap-5 xl:w-1/3">
               <img src={selectedEmployee.avatar} alt={selectedEmployee.name} className="h-20 w-20 rounded-full border-4 border-card shadow-sm object-cover" />
@@ -378,27 +379,27 @@ export function ManagerTeamAttendancePage() {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 flex-1">
-              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Punch In</p>
                 <p className="text-sm font-semibold text-foreground">{selectedEmployee.today?.firstIn || "--:--"}</p>
               </div>
-              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Punch Out</p>
                 <p className="text-sm font-semibold text-foreground">{selectedEmployee.today?.lastOut || "--:--"}</p>
               </div>
-              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Working Hours</p>
                 <p className="text-sm font-semibold text-foreground">{formatHours(selectedEmployee.today?.workHours)}</p>
               </div>
-              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Late By</p>
                 <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">{selectedEmployee.today?.lateMins ? `${selectedEmployee.today.lateMins}m` : "-"}</p>
               </div>
-              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Early Out</p>
                 <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">{selectedEmployee.today?.earlyExitMins ? `${selectedEmployee.today.earlyExitMins}m` : "-"}</p>
               </div>
-              <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col justify-center">
+                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Overtime</p>
                 <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{selectedEmployee.today?.otMins ? `${selectedEmployee.today.otMins}m` : "-"}</p>
               </div>

@@ -87,30 +87,30 @@ export const calculateMetrics = (records: DailyAttendance[]): AttendanceMetrics 
 
 export const getStatusColor = (status: string) => {
   switch (status) {
-    case "Present": return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
-    case "Absent": return "text-rose-500 bg-rose-500/10 border-rose-500/20";
-    case "Leave": return "text-amber-500 bg-amber-500/10 border-amber-500/20";
-    case "Holiday": return "text-sky-500 bg-sky-500/10 border-sky-500/20";
-    case "Week Off": return "text-slate-500 bg-slate-500/10 border-slate-500/20";
-    case "Half Day": return "text-orange-500 bg-orange-500/10 border-orange-500/20";
-    case "Work From Home": return "text-purple-500 bg-purple-500/10 border-purple-500/20";
-    default: return "text-slate-500 bg-slate-500/10 border-slate-500/20";
+    case "Present": return "attendance-status-present";
+    case "Absent": return "attendance-status-absent";
+    case "Leave": return "attendance-status-leave";
+    case "Holiday": return "attendance-status-holiday";
+    case "Week Off": return "attendance-status-weekoff";
+    case "Half Day": return "attendance-status-halfday";
+    case "Work From Home": return "attendance-status-present";
+    default: return "attendance-status-weekoff";
   }
 };
 
 export const getStatusDots = (record: DailyAttendance) => {
   const dots: string[] = [];
   
-  if (record.status === "Present") dots.push("bg-emerald-500");
-  if (record.status === "Absent") dots.push("bg-rose-500");
-  if (record.status === "Leave") dots.push("bg-amber-500");
-  if (record.status === "Half Day") dots.push("bg-orange-500");
-  if (record.status === "Holiday") dots.push("bg-sky-500");
-  if (record.status === "Week Off") dots.push("bg-slate-400");
-  if (record.status === "Work From Home") dots.push("bg-purple-500");
+  if (record.status === "Present") dots.push("attendance-dot-present");
+  if (record.status === "Absent") dots.push("attendance-dot-absent");
+  if (record.status === "Leave") dots.push("attendance-dot-holiday");
+  if (record.status === "Half Day") dots.push("attendance-dot-halfday");
+  if (record.status === "Holiday") dots.push("attendance-dot-holiday");
+  if (record.status === "Week Off") dots.push("attendance-dot-weekoff");
+  if (record.status === "Work From Home") dots.push("attendance-dot-present");
   
-  if (record.isLate) dots.push("bg-rose-600"); // Orange-red
-  if (record.earlyExitMins && record.earlyExitMins > 0) dots.push("bg-violet-500"); // Purple
+  if (record.isLate) dots.push("attendance-dot-late");
+  if (record.earlyExitMins && record.earlyExitMins > 0) dots.push("attendance-dot-early");
   
   return Array.from(new Set(dots)); // Unique dots
 };
