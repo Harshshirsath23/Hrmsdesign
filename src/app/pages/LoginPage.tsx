@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { useAuth, UserRole } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 
 /* =========================
    FOREST GREEN THEME
@@ -114,10 +115,8 @@ const DEMO: Record<
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-
-  const [theme, setTheme] = useState<"light" | "dark">(
-    "light"
-  );
+  const { isDark, toggleTheme } = useTheme();
+  const theme = isDark ? "dark" : "light";
 
   const c = COLORS[theme];
 
@@ -1093,13 +1092,7 @@ export function LoginPage() {
 
                 <button
                   className="theme-toggle"
-                  onClick={() =>
-                    setTheme(
-                      theme === "light"
-                        ? "dark"
-                        : "light"
-                    )
-                  }
+                  onClick={toggleTheme}
                 >
                   {theme === "light" ? (
                     <Moon size={18} />

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { setGlobalTheme } from '../lib/theme';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ModuleKey = 'dashboard' | 'employees' | 'attendance' | 'leave' | 'payroll' | 'documents' | 'forms' | 'ai' | 'biometric' | 'lifecycle' | 'settings' | 'canteen' | 'profile';
@@ -44,7 +45,10 @@ export const useUIStore = create<UIState>()(
       moduleViews: { employees: 'admin', attendance: 'admin', leave: 'employee' },
       portal: 'hrms',
       selectedEmployeeCode: null,
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => {
+        if (theme === 'light' || theme === 'dark') setGlobalTheme(theme);
+        set({ theme });
+      },
       openModule: (module) => set({ activeModule: module, panelOpen: true, currentPage: 'dashboard' }),
       closeModule: () => set({ panelOpen: false, currentPage: 'dashboard' }),
       navigateTo: (page) => set({ currentPage: page, panelOpen: false }),
