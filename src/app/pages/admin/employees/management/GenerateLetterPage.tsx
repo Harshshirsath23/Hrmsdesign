@@ -4,14 +4,10 @@ import {
   History, 
   Plus, 
   Send, 
-  Archive, 
-  ChevronRight, 
-  Download, 
   CheckCircle2,
   Clock,
   AlertCircle,
-  X,
-  Printer
+  X
 } from "lucide-react";
 import { cn } from "../../../../components/ui/utils";
 import { LetterWizard } from "./LetterManagement/LetterWizard";
@@ -21,7 +17,6 @@ import { LetterTemplatePanel } from "./LetterManagement/LetterTemplatePanel";
 import { LetterBatch } from "./LetterManagement/types";
 import { MOCK_HISTORY } from "./LetterManagement/mockData";
 import { Button } from "../../../../components/ui/button";
-import { KebabMenu } from "../../../../components/ui/KebabMenu";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 import { employees } from "../../../../components/employees/mockData";
@@ -71,6 +66,18 @@ export function GenerateLetterPage() {
       persistBatches(updated);
       toast.success("Letter batch deleted successfully.");
     }
+  };
+
+  const handleEditBatch = (batch: LetterBatch) => {
+    setInitialData({ ...batch });
+    setWizardStep(batch.currentStep && batch.currentStep > 1 ? batch.currentStep : 1);
+    setView("wizard");
+  };
+
+  const handleUpdateBatch = (updatedBatch: LetterBatch) => {
+    const updated = batches.map(b => b.id === updatedBatch.id ? { ...b, ...updatedBatch } : b);
+    persistBatches(updated);
+    setSelectedBatch(updatedBatch);
   };
 
   const handlePreview = (batch: LetterBatch) => {
@@ -176,17 +183,6 @@ export function GenerateLetterPage() {
                 Generate New Letter
               </Button>
             )}
-            <div className="h-8 w-px bg-border mx-2" />
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl border border-border">
-              <Download size={18} />
-            </Button>
-            <KebabMenu 
-              items={[
-                { label: "Export Metadata", icon: FileText, onClick: () => toast.info("Exporting all metadata...") },
-                { label: "Bulk Print", icon: Printer, onClick: () => window.print() },
-                { label: "Archive History", icon: Archive, separator: true, onClick: () => toast.success("History archived") },
-              ]}
-            />
           </div>
         </div>
       )}
@@ -211,6 +207,7 @@ export function GenerateLetterPage() {
               onRepublish={handleRepublish}
               onDuplicate={handleDuplicate}
               onDeleteBatch={handleDeleteBatch}
+              onEditBatch={handleEditBatch}
               batches={batches}
             />
           )}
@@ -219,6 +216,8 @@ export function GenerateLetterPage() {
             <LetterDetails 
               batch={selectedBatch} 
               onBack={() => setView("history")} 
+              onUpdateBatch={handleUpdateBatch}
+              onDeleteBatch={handleDeleteBatch}
             />
           )}
 

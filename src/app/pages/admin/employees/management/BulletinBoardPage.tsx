@@ -13,7 +13,6 @@ import {
   ShieldCheck, 
   Download,
   Info,
-  HelpCircle,
   Database,
   Tag,
   ArrowRight,
@@ -148,10 +147,6 @@ export function BulletinBoardPage() {
               className="h-8 w-32 border-none bg-transparent text-xs font-bold p-0 focus-visible:ring-0" 
             />
           </div>
-          <Button variant="outline" className="h-11 px-6 rounded-2xl border-border text-xs font-black uppercase tracking-widest">
-            <HelpCircle className="w-4 h-4 mr-2" />
-            Help
-          </Button>
           <Button 
             onClick={() => {
               setEditBulletin(null);
