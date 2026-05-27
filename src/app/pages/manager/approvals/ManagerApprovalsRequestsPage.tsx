@@ -711,7 +711,7 @@ export default function ManagerApprovalsRequestsPage() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Approvals Inbox</h1>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <select
+          {/* <select
             value={workflowType}
             onChange={(e) => {
               const value = e.target.value;
@@ -728,7 +728,7 @@ export default function ManagerApprovalsRequestsPage() {
             <option value="Multi-level approval">Approval Configuration</option>
             <option value="Delegate Approval Authority">Delegate Approval Authority</option>
             <option value="Approval Workflow Configuration">Approval Workflow Configuration</option>
-          </select>
+          </select> */}
           <Button variant="outline" size="sm" onClick={() => { setLocalRows(MOCK_REQUESTS.map((r) => ({ ...r, source: "local" as RowSource }))); refreshTeam(); }}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh

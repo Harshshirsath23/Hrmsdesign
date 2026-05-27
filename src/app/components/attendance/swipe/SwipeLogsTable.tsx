@@ -45,7 +45,7 @@ export function SwipeLogsTable({ logs, onSelectSwipe }: SwipeLogsTableProps) {
             <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee</th>
             <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Swipe Intelligence</th>
             <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Device & Source</th>
-            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Verification</th>
+            {/* <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Verification</th> */}
             <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Location</th>
             <th className="px-6 py-3"></th>
           </tr>
@@ -109,7 +109,7 @@ export function SwipeLogsTable({ logs, onSelectSwipe }: SwipeLogsTableProps) {
               </td>
 
               {/* Verification */}
-              <td className="px-6 py-4">
+              {/* <td className="px-6 py-4">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className={cn(
@@ -122,7 +122,7 @@ export function SwipeLogsTable({ logs, onSelectSwipe }: SwipeLogsTableProps) {
                     <span className="text-[10px] font-bold text-emerald-500 ml-5">{log.faceMatchScore}% Match</span>
                   )}
                 </div>
-              </td>
+              </td> */}
 
               {/* Location */}
               <td className="px-6 py-4">
