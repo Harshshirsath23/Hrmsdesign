@@ -199,19 +199,19 @@ export function AttendanceDashboard() {
       </div>
 
       {/* Row 3: Today's Status & Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div className="lg:col-span-3 flex flex-col gap-6">
+        {/* <div className="lg:col-span-2">
           <WhosInToday 
             data={todayStats.whosIn} 
             filters={whosInFilters} 
             setFilters={setWhosInFilters} 
           />
-        </div>
+        </div> */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           <TodayAttendanceOverview stats={todayStats.overview} />
           
           {/* Monthly Attendance Trend Sparkline */}
-          <Card className="shadow-sm border-border">
+          {/* <Card className="shadow-sm border-border">
             <CardHeader className="pb-2 border-b border-border/50">
               <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
                 Monthly Attendance Trend (%)
@@ -240,7 +240,7 @@ export function AttendanceDashboard() {
                 </ResponsiveContainer>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </div>

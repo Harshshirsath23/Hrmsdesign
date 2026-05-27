@@ -389,10 +389,10 @@ export function AttendanceMatrixPage() {
             </div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
               Attendance Matrix
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
+              {/* <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[10px] font-black text-emerald-600 uppercase">Live Monitor</span>
-              </div>
+              </div> */}
             </h2>
           </div>
 

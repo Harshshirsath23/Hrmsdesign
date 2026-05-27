@@ -151,17 +151,17 @@ function CalendarView({ records, month, year }: { records: AttendanceRecordAPI[]
     <div className="flex flex-col gap-4 lg:flex-row">
       {/* Calendar grid */}
       <div className="min-w-0 flex-1">
-        <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-surface-200 bg-surface-200 dark:border-white/10 dark:bg-white/10">
+        <div className="hrms-reference-calendar grid grid-cols-7 gap-2 rounded-3xl border border-white/60 bg-white/60 p-4 shadow-sm backdrop-blur-[18px] dark:border-white/10 dark:bg-slate-900/70">
           {/* Day headers */}
           {DAY_NAMES.map((d) => (
-            <div key={d} className="bg-surface-50 py-2 text-center text-xs font-semibold text-surface-600 dark:bg-surface-200 dark:text-white/50">
+            <div key={d} className="py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-300">
               {d}
             </div>
           ))}
           {/* Day cells */}
           {cells.map((day, idx) => {
             if (day === null) {
-              return <div key={`empty-${idx}`} className="h-20 bg-surface-0 dark:bg-surface-50" />;
+              return <div key={`empty-${idx}`} className="h-24 rounded-2xl border border-slate-200/70 bg-white/35 dark:border-white/5 dark:bg-slate-950/20" />;
             }
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const rec = recordMap[dateStr];
@@ -175,29 +175,28 @@ function CalendarView({ records, month, year }: { records: AttendanceRecordAPI[]
                 type="button"
                 onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                 className={cn(
-                  'relative h-20 bg-surface-0 p-1.5 text-left transition-colors hover:bg-surface-50 dark:bg-surface-50 dark:hover:bg-white/5',
-                  isSelected && 'ring-2 ring-brand-500 ring-inset',
-                  sc?.bg && rec?.status !== 'NOT_COMPUTED' && sc.bg,
+                  'relative h-24 rounded-2xl border border-slate-200/70 bg-white/70 p-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,.72)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-white dark:border-white/5 dark:bg-slate-950/30 dark:hover:bg-slate-800/55',
+                  isSelected && 'border-brand-500/30 ring-1 ring-brand-500/20',
                 )}
               >
                 <span className={cn(
-                  'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium',
-                  isToday ? 'bg-brand-600 text-white' : 'text-surface-700 dark:text-white/70',
+                  'absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold',
+                  isToday ? 'bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-[0_8px_18px_rgba(37,99,235,.24),0_0_0_7px_rgba(99,102,241,.10)]' : 'text-slate-500 dark:text-slate-200',
                 )}>
                   {day}
                 </span>
                 {rec && rec.status !== 'NOT_COMPUTED' && (
-                  <div className="mt-0.5">
-                    <span className={cn('text-2xs font-bold', sc?.color)}>{sc?.short}</span>
+                  <div className="mt-9 space-y-1">
+                    <span className={cn('inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold', sc?.color)}>{sc?.short}</span>
                     {rec.first_in && (
-                      <p className="text-2xs text-surface-500 dark:text-white/30 truncate">
+                      <p className="truncate text-[10px] text-slate-500 dark:text-slate-300">
                         {formatTime(rec.first_in)}
                       </p>
                     )}
                   </div>
                 )}
                 {rec && rec.late_mins > 0 && (
-                  <div className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-orange-500" title={`Late ${rec.late_mins} min`} />
+                  <div className="absolute bottom-2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-[#FACC15]" title={`Late ${rec.late_mins} min`} />
                 )}
               </button>
             );
