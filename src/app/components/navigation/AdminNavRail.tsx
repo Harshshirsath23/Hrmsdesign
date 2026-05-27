@@ -1,5 +1,6 @@
 import { ChevronDown, Menu, Search, X } from "lucide-react";
 import { useEffect, useRef, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { cn } from "../ui/utils";
 import type { AdminNavMenuItem } from "./AdminFloatingMenu";
@@ -21,17 +22,41 @@ function TopNavDropdown<T extends string>({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; height: number } | null>(null);
+  const portalRef = useRef<HTMLDivElement | null>(null);
   const isGroupActive = group.items.some((i) => i.id === active);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const clickedInsideTrigger = ref.current && ref.current.contains(target);
+      const clickedInsidePortal = portalRef.current && portalRef.current.contains(target);
+      if (!clickedInsideTrigger && !clickedInsidePortal) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const compute = () => {
+      const el = ref.current;
+      if (!el) return setCoords(null);
+      const btn = el.querySelector("button");
+      if (!btn) return setCoords(null);
+      const r = (btn as HTMLElement).getBoundingClientRect();
+      setCoords({ top: r.top + window.scrollY, left: r.left + window.scrollX, height: r.height });
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", compute, true);
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute, true);
+    };
+  }, [open]);
 
   return (
     <div ref={ref} className="relative">
@@ -54,9 +79,14 @@ function TopNavDropdown<T extends string>({
         />
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 mt-1.5 z-50 min-w-[200px] rounded-xl border border-border bg-card shadow-lg py-1.5">
-          {group.items.map((item) => {
+      {open && coords &&
+        createPortal(
+          <div
+            ref={(el) => (portalRef.current = el)}
+            style={{ top: coords.top + coords.height + 6, left: coords.left, position: "absolute", zIndex: 99997 }}
+            className="min-w-[200px] rounded-xl border border-border bg-card shadow-lg py-1.5"
+          >
+            {group.items.map((item) => {
             const Icon = item.icon;
             const isActive = active === item.id;
             return (
@@ -86,9 +116,10 @@ function TopNavDropdown<T extends string>({
                 )}
               </button>
             );
-          })}
-        </div>
-      )}
+            })}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

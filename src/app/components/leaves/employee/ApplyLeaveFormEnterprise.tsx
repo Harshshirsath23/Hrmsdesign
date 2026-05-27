@@ -1,69 +1,14 @@
-import type { ElementType, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, FileUp, MessageSquare, Phone, Send, Shield } from "lucide-react";
+import { FileUp, Plus, X, ChevronDown } from "lucide-react";
+
 import type { LeaveBalanceAPI } from "../../../modules/leaves/types";
-import { useApplyLeave, useLeaveTypes } from "../../../modules/leaves/useLeaves";
+import {
+  useApplyLeave,
+  useLeaveTypes,
+} from "../../../modules/leaves/useLeaves";
+
 import { Button } from "../../ui/button";
 import { cn } from "../../ui/utils";
-import { LeaveTypePill } from "./LeaveTypePill";
-
-function SectionHeading({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: ElementType;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="mb-3 flex items-start gap-3">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl border border-border bg-secondary">
-        <Icon className="h-4 w-4 text-foreground" aria-hidden />
-      </div>
-      <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
-      </div>
-    </div>
-  );
-}
-
-function FormSection({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon: ElementType;
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="pb-6">
-      <SectionHeading icon={Icon} title={title} description={description} />
-      {children}
-      <div className="mt-6 h-px bg-border" />
-    </section>
-  );
-}
-
-const ACCEPTED_MIMES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
-const ACCEPTED_EXTS = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"];
-
-function isAcceptedAttachment(file: File) {
-  const name = file.name.toLowerCase();
-  const extOk = ACCEPTED_EXTS.some((ext) => name.endsWith(ext));
-  const mimeOk = ACCEPTED_MIMES.has(file.type);
-  return extOk || mimeOk;
-}
 
 export function ApplyLeaveFormEnterprise({
   employee,
@@ -71,509 +16,754 @@ export function ApplyLeaveFormEnterprise({
   prefillLeaveType,
   onSuccess,
 }: {
-  employee: { employee_code: string; employee_name: string };
+  employee: {
+    employee_code: string;
+    employee_name: string;
+  };
   balances: LeaveBalanceAPI[];
   prefillLeaveType?: string;
   onSuccess: () => void;
 }) {
   const { data: leaveTypes = [] } = useLeaveTypes();
+
   const applyLeave = useApplyLeave(employee);
 
   const [leaveType, setLeaveType] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [fromHalf, setFromHalf] = useState<"FULL" | "AM" | "PM">("FULL");
-  const [toHalf, setToHalf] = useState<"FULL" | "AM" | "PM">("FULL");
+
+  const [fromSession, setFromSession] =
+    useState<"1" | "2">("1");
+
+  const [toSession, setToSession] =
+    useState<"1" | "2">("2");
+
+  const [ccTo, setCcTo] = useState<string[]>([]);
+
   const [reason, setReason] = useState("");
-  const [contactDuringLeave, setContactDuringLeave] = useState("");
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
-  const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState<string | null>(null);
-  const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
-  const submitModeRef = useRef<"DRAFT" | "SUBMITTED">("SUBMITTED");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [contactDuringLeave, setContactDuringLeave] =
+    useState("");
+
+  const [attachment, setAttachment] =
+    useState<File | null>(null);
+
+  const [attachmentError, setAttachmentError] =
+    useState<string | null>(null);
+
+  const [isDraggingAttachment, setIsDraggingAttachment] =
+    useState(false);
+
+  const fileInputRef =
+    useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!prefillLeaveType) return;
-    if (leaveTypes.some((lt) => lt.id === prefillLeaveType)) {
+
+    if (
+      leaveTypes.some(
+        (lt) => lt.id === prefillLeaveType
+      )
+    ) {
       setLeaveType(prefillLeaveType);
     }
   }, [prefillLeaveType, leaveTypes]);
 
-  useEffect(() => {
-    return () => {
-      if (attachmentPreviewUrl) URL.revokeObjectURL(attachmentPreviewUrl);
-    };
-  }, [attachmentPreviewUrl]);
-
-  const handleAttachmentFile = (f: File | null) => {
+  const handleAttachmentFile = (
+    f: File | null
+  ) => {
     if (!f) {
       setAttachment(null);
       setAttachmentError(null);
-      setAttachmentPreviewUrl(null);
+
       return;
     }
-    if (!isAcceptedAttachment(f)) {
-      setAttachmentError("Unsupported file type. Upload PDF, JPG, PNG, DOC, or DOCX.");
+
+    const acceptedExts = [
+      ".pdf",
+      ".xls",
+      ".xlsx",
+      ".doc",
+      ".docx",
+      ".txt",
+      ".ppt",
+      ".pptx",
+      ".gif",
+      ".jpg",
+      ".jpeg",
+      ".png",
+    ];
+
+    const name = f.name.toLowerCase();
+
+    const isAccepted = acceptedExts.some((ext) =>
+      name.endsWith(ext)
+    );
+
+    if (!isAccepted) {
+      setAttachmentError(
+        "Unsupported file type. Upload PDF, XLS, XLSX, DOC, DOCX, TXT, PPT, PPTX, GIF, JPG, JPEG, PNG."
+      );
+
       setAttachment(null);
-      setAttachmentPreviewUrl(null);
+
       return;
     }
+
     setAttachmentError(null);
+
     setAttachment(f);
-    setAttachmentPreviewUrl(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
   };
 
   const totalDays = useMemo(() => {
     if (!fromDate || !toDate) return 0;
+
     const from = new Date(fromDate);
+
     const to = new Date(toDate);
+
     if (to < from) return 0;
-    let days = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    if (fromHalf !== "FULL") days -= 0.5;
-    if (toHalf !== "FULL" && fromDate !== toDate) days -= 0.5;
-    return Math.max(days, 0.5);
-  }, [fromDate, toDate, fromHalf, toHalf]);
+
+    return (
+      Math.ceil(
+        (to.getTime() - from.getTime()) /
+          (1000 * 60 * 60 * 24)
+      ) + 1
+    );
+  }, [fromDate, toDate]);
 
   const selectedBalance = useMemo(() => {
     if (!leaveType) return null;
-    return balances.find((b) => b.leave_type === leaveType) ?? null;
+
+    return (
+      balances.find(
+        (b) => b.leave_type === leaveType
+      ) ?? null
+    );
   }, [leaveType, balances]);
 
-  const selectedType = useMemo(
-    () => leaveTypes.find((lt) => lt.id === leaveType) ?? null,
-    [leaveTypes, leaveType],
-  );
-
   const exceedsBalance = selectedBalance
-    ? totalDays > Number(selectedBalance.available || 0)
+    ? totalDays >
+      Number(selectedBalance.available || 0)
     : false;
-  const attachmentPayload = attachment ? attachment.name : undefined;
 
   const canSubmit =
-    !!leaveType && !!fromDate && !!toDate && !!reason.trim() && totalDays > 0 && !exceedsBalance;
+    !!leaveType &&
+    !!fromDate &&
+    !!toDate &&
+    !!reason.trim() &&
+    totalDays > 0 &&
+    !exceedsBalance;
 
-  const selectedLeaveName =
-    selectedType?.name ?? selectedBalance?.leave_type_detail.name ?? "Selected leave";
-  const selectedLeaveCode = selectedType?.code ?? selectedBalance?.leave_type_detail.code ?? "";
-  const selectedLeaveLabel = selectedLeaveCode
-    ? `${selectedLeaveName} (${selectedLeaveCode})`
-    : selectedLeaveName;
+  const handleAddCc = () => {
+    console.log("Add CC");
+  };
 
-  const applyingRangeLabel =
-    fromDate && toDate
-      ? `${new Date(fromDate).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-        })} → ${new Date(toDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
-      : "—";
-
-  const sessionLabel =
-    fromHalf === "FULL" && toHalf === "FULL"
-      ? "Full days"
-      : `${fromHalf === "FULL" ? "Full" : fromHalf === "AM" ? "First half" : "Second half"} → ${
-          toHalf === "FULL" ? "Full" : toHalf === "AM" ? "First half" : "Second half"
-        }`;
-
-  const totalVisibleBalance = selectedBalance
-    ? Number(selectedBalance.used) + Number(selectedBalance.available)
-    : 0;
-  const usedPercent =
-    totalVisibleBalance > 0
-      ? Math.round((Number(selectedBalance?.used || 0) / totalVisibleBalance) * 100)
-      : 0;
-  const remainingAfterApproval = selectedBalance
-    ? Math.max(0, Number(selectedBalance.available) - totalDays)
-    : 0;
-  const expiryDate = selectedBalance?.period_end ? new Date(selectedBalance.period_end) : null;
-  const expiryLabel = expiryDate
-    ? expiryDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-    : "—";
-  const expiryDays = expiryDate
-    ? Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : null;
-  const carryExpirySoon =
-    selectedBalance?.carry_forwarded && expiryDays !== null && expiryDays > 0 && expiryDays <= 15;
+  const handleRemoveCc = (email: string) => {
+    setCcTo((prev) =>
+      prev.filter((e) => e !== email)
+    );
+  };
 
   return (
-    <form
-      className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 rounded-3xl border border-border bg-card p-4 sm:p-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const submitMode = submitModeRef.current;
-        if (submitMode === "SUBMITTED" && !canSubmit) return;
-        if (
-          submitMode === "DRAFT" &&
-          (!leaveType || !fromDate || !toDate || !reason.trim() || totalDays <= 0)
-        )
-          return;
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-3">
+        {/* Main Form */}
+        <div className="xl:col-span-2">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            {/* Header */}
+            <div className="border-b border-slate-200 px-6 py-5">
+              <h2 className="text-2xl font-semibold text-slate-900">
+                Leave Application
+              </h2>
 
-        applyLeave.mutate(
-          {
-            leave_type: leaveType,
-            from_date: fromDate,
-            to_date: toDate,
-            from_half: fromHalf,
-            to_half: toHalf,
-            total_days: totalDays,
-            reason: reason.trim(),
-            contact_during_leave: contactDuringLeave.trim() || undefined,
-            document_url: attachmentPayload,
-            status: submitMode,
-          },
-          {
-            onSuccess: () => {
-              setLeaveType("");
-              setFromDate("");
-              setToDate("");
-              setFromHalf("FULL");
-              setToHalf("FULL");
-              setReason("");
-              setContactDuringLeave("");
-              setAttachment(null);
-              setAttachmentError(null);
-              setAttachmentPreviewUrl(null);
-              onSuccess();
-            },
-          },
-        );
-      }}
-    >
-      <div className="space-y-5">
-        <FormSection icon={Shield} title="Leave type">
-          <select
-            value={leaveType}
-            onChange={(e) => setLeaveType(e.target.value)}
-            className="flat-input w-full cursor-pointer appearance-none rounded-2xl border border-border bg-background px-3 py-3 text-sm"
-            required
-          >
-            <option value="">Select leave type</option>
-            {leaveTypes.map((lt) => (
-              <option key={lt.id} value={lt.id}>
-                {lt.name} ({lt.code})
-              </option>
-            ))}
-          </select>
-        </FormSection>
+              <p className="mt-1 text-sm text-slate-500">
+                All fields marked{" "}
+                <span className="text-red-500">*</span>{" "}
+                are required
+              </p>
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From date</p>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="mt-3 w-full rounded-2xl border border-border bg-card px-3 py-3 text-sm"
-              required
-            />
-          </div>
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To date</p>
-            <input
-              type="date"
-              value={toDate}
-              min={fromDate || undefined}
-              onChange={(e) => setToDate(e.target.value)}
-              className="mt-3 w-full rounded-2xl border border-border bg-card px-3 py-3 text-sm"
-              required
-            />
-          </div>
-        </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From session</p>
-            <select
-              value={fromHalf}
-              onChange={(e) => setFromHalf(e.target.value as "FULL" | "AM" | "PM")}
-              className="mt-3 w-full cursor-pointer appearance-none rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+                if (!canSubmit) return;
+
+                applyLeave.mutate(
+                  {
+                    leave_type: leaveType,
+
+                    from_date: fromDate,
+
+                    to_date: toDate,
+
+                    from_half:
+                      fromSession === "1"
+                        ? "AM"
+                        : "PM",
+
+                    to_half:
+                      toSession === "1"
+                        ? "AM"
+                        : "PM",
+
+                    total_days: totalDays,
+
+                    reason: reason.trim(),
+
+                    contact_during_leave:
+                      contactDuringLeave.trim() ||
+                      undefined,
+
+                    document_url: attachment?.name,
+
+                    status: "SUBMITTED",
+                  },
+                  {
+                    onSuccess: () => {
+                      setLeaveType("");
+                      setFromDate("");
+                      setToDate("");
+
+                      setFromSession("1");
+                      setToSession("2");
+
+                      setReason("");
+
+                      setContactDuringLeave("");
+
+                      setAttachment(null);
+
+                      setAttachmentError(null);
+
+                      setCcTo([]);
+
+                      onSuccess();
+                    },
+                  }
+                );
+              }}
+              className="space-y-6 p-6"
             >
-              <option value="FULL">Full day</option>
-              <option value="AM">First half</option>
-              <option value="PM">Second half</option>
-            </select>
-          </div>
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To session</p>
-            <select
-              value={toHalf}
-              onChange={(e) => setToHalf(e.target.value as "FULL" | "AM" | "PM")}
-              className="mt-3 w-full cursor-pointer appearance-none rounded-2xl border border-border bg-card px-3 py-3 text-sm"
-            >
-              <option value="FULL">Full day</option>
-              <option value="AM">First half</option>
-              <option value="PM">Second half</option>
-            </select>
-          </div>
-        </div>
+              {/* Leave Type */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Leave Type{" "}
+                  <span className="text-red-500">
+                    *
+                  </span>
+                </label>
 
-        <FormSection icon={MessageSquare} title="Reason">
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-            className="flat-input w-full resize-none rounded-2xl border border-border bg-background px-3 py-3 text-sm"
-            placeholder="Enter your reason"
-            required
-          />
-        </FormSection>
+                <div className="relative">
+                  <select
+                    value={leaveType}
+                    onChange={(e) =>
+                      setLeaveType(e.target.value)
+                    }
+                    className="h-12 w-full appearance-none rounded-lg border border-slate-300 bg-white px-4 pr-10 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                    required
+                  >
+                    <option value="">
+                      Select leave type
+                    </option>
 
-        <FormSection icon={FileUp} title="Attachment">
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
-            }}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              setIsDraggingAttachment(true);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDraggingAttachment(true);
-            }}
-            onDragLeave={() => setIsDraggingAttachment(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDraggingAttachment(false);
-              const f = e.dataTransfer.files?.[0] ?? null;
-              handleAttachmentFile(f);
-            }}
-            className={cn(
-              "rounded-2xl border border-dashed px-4 py-6 transition-colors cursor-pointer select-none",
-              isDraggingAttachment
-                ? "border-foreground/40 bg-secondary/25"
-                : "border-border bg-background hover:border-foreground/50",
-            )}
-          >
-            <div className="flex flex-col items-center gap-2 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-secondary">
-                <FileUp className="h-4 w-4 text-foreground" aria-hidden />
+                    {leaveTypes.map((lt) => (
+                      <option
+                        key={lt.id}
+                        value={lt.id}
+                      >
+                        {lt.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">Drag & drop, or click to browse.</p>
-              <p className="text-[11px] text-muted-foreground">PDF, JPG, PNG, DOC, DOCX</p>
 
-              {attachment ? (
-                <div className="mt-3 w-full">
-                  {attachmentPreviewUrl && (
-                    <img
-                      src={attachmentPreviewUrl}
-                      alt="Attachment preview"
-                      className="mx-auto h-20 w-20 rounded-2xl border border-border bg-background object-cover"
-                    />
-                  )}
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {attachment.name}
-                    </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 rounded-full border border-border bg-background hover:bg-secondary/40"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAttachmentFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
+              {/* Dates */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* From */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    From Date{" "}
+                    <span className="text-red-500">
+                      *
+                    </span>
+                  </label>
+
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) =>
+                      setFromDate(e.target.value)
+                    }
+                    className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                    required
+                  />
+
+                  <div className="relative mt-3">
+                    <select
+                      value={fromSession}
+                      onChange={(e) =>
+                        setFromSession(
+                          e.target
+                            .value as "1" | "2"
+                        )
+                      }
+                      className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-white px-4 pr-10 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                     >
-                      Remove
-                    </Button>
+                      <option value="1">
+                        Session 1 (Morning)
+                      </option>
+
+                      <option value="2">
+                        Session 2 (Afternoon)
+                      </option>
+                    </select>
+
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   </div>
                 </div>
-              ) : (
-                <p className="mt-1 text-[11px] text-muted-foreground">No file attached.</p>
-              )}
-            </div>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={(e) => {
-              const f = e.target.files?.[0] ?? null;
-              handleAttachmentFile(f);
-            }}
-          />
-          {attachmentError && (
-            <p className="mt-3 rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {attachmentError}
-            </p>
-          )}
-        </FormSection>
 
-        <FormSection icon={Phone} title="Contact details">
-          <input
-            type="text"
-            value={contactDuringLeave}
-            onChange={(e) => setContactDuringLeave(e.target.value)}
-            className="flat-input w-full rounded-2xl border border-border bg-background px-3 py-3 text-sm"
-            placeholder="Phone or email"
-          />
-        </FormSection>
+                {/* To */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    To Date{" "}
+                    <span className="text-red-500">
+                      *
+                    </span>
+                  </label>
 
-        <div className="rounded-2xl border border-border bg-background p-4 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Total days</span>
-            <span className="font-semibold text-foreground">
-              {totalDays > 0 ? `${totalDays}` : "—"}
-            </span>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span>Balance after request</span>
-            <span>
-              {selectedBalance
-                ? `${Math.max(0, Number(selectedBalance.available) - totalDays)} days`
-                : "—"}
-            </span>
-          </div>
-        </div>
+                  <input
+                    type="date"
+                    value={toDate}
+                    min={fromDate || undefined}
+                    onChange={(e) =>
+                      setToDate(e.target.value)
+                    }
+                    className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                    required
+                  />
 
-        {applyLeave.isError && (
-          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-3 text-sm text-destructive">
-            {(applyLeave.error as Error)?.message || "Failed to submit leave application."}
-          </div>
-        )}
+                  <div className="relative mt-3">
+                    <select
+                      value={toSession}
+                      onChange={(e) =>
+                        setToSession(
+                          e.target
+                            .value as "1" | "2"
+                        )
+                      }
+                      className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-white px-4 pr-10 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                    >
+                      <option value="1">
+                        Session 1 (Morning)
+                      </option>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <Button
-            type="submit"
-            variant="outline"
-            className="h-11 rounded-full border-border font-semibold"
-            disabled={
-              applyLeave.isPending ||
-              !leaveType ||
-              !fromDate ||
-              !toDate ||
-              !reason.trim() ||
-              totalDays <= 0
-            }
-            onClick={() => {
-              submitModeRef.current = "DRAFT";
-            }}
-          >
-            Save draft
-          </Button>
-          <Button
-            type="submit"
-            className="h-11 rounded-full bg-foreground font-semibold text-primary-foreground hover:bg-foreground/90"
-            disabled={applyLeave.isPending || !canSubmit}
-            onClick={() => {
-              submitModeRef.current = "SUBMITTED";
-            }}
-          >
-            <Send className="mr-2 h-4 w-4" />
-            {applyLeave.isPending ? "Submitting…" : "Submit for approval"}
-          </Button>
-        </div>
-      </div>
+                      <option value="2">
+                        Session 2 (Afternoon)
+                      </option>
+                    </select>
 
-      <aside className="lg:sticky lg:top-6">
-        <div className="space-y-4">
-          <div className="rounded-3xl border border-border bg-background p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="mt-2 text-base font-semibold text-foreground">{selectedLeaveLabel}</p>
+                    <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  </div>
+                </div>
               </div>
-              {selectedType && <LeaveTypePill code={selectedType.code} />}
-            </div>
 
-            <div className="mt-5 space-y-4">
-              <div className="rounded-full bg-border/50 h-2 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-foreground"
-                  style={{ width: `${usedPercent}%` }}
+              {/* Applying To + CC */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Applying To */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Applying To
+                  </label>
+
+                  <div className="flex h-12 items-center rounded-lg border border-slate-300 bg-white px-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                      {employee.employee_name
+                        .charAt(0)
+                        .toUpperCase()}
+                    </div>
+
+                    <span className="ml-3 text-sm font-medium text-slate-800">
+                      {employee.employee_code}
+                    </span>
+
+                    <ChevronDown className="ml-auto h-4 w-4 text-slate-500" />
+                  </div>
+                </div>
+
+                {/* CC */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    CC To
+                  </label>
+
+                  <div className="flex min-h-[48px] flex-wrap items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2">
+                    {ccTo.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={handleAddCc}
+                        className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-indigo-600"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add recipients
+                      </button>
+                    ) : (
+                      <>
+                        {ccTo.map((email) => (
+                          <div
+                            key={email}
+                            className="flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1 text-sm"
+                          >
+                            <span>{email}</span>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRemoveCc(email)
+                              }
+                              className="text-slate-500 hover:text-red-600"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Contact During Leave
+                </label>
+
+                <input
+                  type="text"
+                  value={contactDuringLeave}
+                  onChange={(e) =>
+                    setContactDuringLeave(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Phone number or alternate contact"
+                  className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                 />
               </div>
-              <div className="text-sm font-medium text-foreground">
-                {Number(selectedBalance?.used || 0)} used /{" "}
-                {Number(selectedBalance?.available || 0)} available
-              </div>
-            </div>
 
-            <div className="mt-5 grid gap-3 text-sm text-foreground">
-              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
-                <span className="text-muted-foreground">Total allocated</span>
-                <span className="font-semibold">
-                  {selectedBalance ? Number(selectedBalance.total_allocated) : "—"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
-                <span className="text-muted-foreground">Used</span>
-                <span className="font-semibold">
-                  {selectedBalance ? Number(selectedBalance.used) : "—"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
-                <span className="text-muted-foreground">Remaining available</span>
-                <span className="font-semibold">
-                  {selectedBalance ? Number(selectedBalance.available) : "—"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-3 py-3">
-                <span className="text-muted-foreground">Expiry date</span>
-                <span className="font-semibold">{selectedBalance ? expiryLabel : "—"}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs text-muted-foreground">
-              <div>Applying: {applyingRangeLabel}</div>
-              <div>Total: {totalDays > 0 ? `${totalDays} days` : "—"}</div>
-              <div>Session: {sessionLabel}</div>
-              <div>Holidays/weekends excluded when applicable.</div>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {exceedsBalance && (
-                <div className="rounded-2xl border border-amber-200/80 bg-amber-100/70 px-3 py-2 text-sm text-amber-900">
-                  Insufficient balance for selected dates.
-                </div>
-              )}
-              {!exceedsBalance &&
-                selectedBalance &&
-                remainingAfterApproval <= 1 &&
-                remainingAfterApproval >= 0 && (
-                  <div className="rounded-2xl border border-amber-200/80 bg-amber-100/70 px-3 py-2 text-sm text-amber-900">
-                    Only {remainingAfterApproval} day remaining after this request.
-                  </div>
-                )}
-              {carryExpirySoon && (
-                <div className="rounded-2xl border border-amber-200/80 bg-amber-100/70 px-3 py-2 text-sm text-amber-900">
-                  {selectedBalance?.carry_forwarded} carry-forward leaves expire in {expiryDays}{" "}
-                  days.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-background p-4 text-sm shadow-sm">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
-              Other leave types
-            </p>
-            <div className="mt-3 grid gap-2">
-              {balances.map((balance) => (
-                <div
-                  key={balance.id}
-                  className="flex items-center justify-between rounded-2xl border border-border bg-secondary/50 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {balance.leave_type_detail.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{balance.leave_type_detail.code}</p>
-                  </div>
-                  <span className="text-sm font-semibold text-foreground">
-                    {Number(balance.available)} left
+              {/* Reason */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Reason{" "}
+                  <span className="text-red-500">
+                    *
                   </span>
+                </label>
+
+                <textarea
+                  value={reason}
+                  onChange={(e) =>
+                    setReason(e.target.value)
+                  }
+                  rows={5}
+                  placeholder="Briefly describe the reason for your leave..."
+                  className="w-full resize-none rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                  required
+                />
+              </div>
+
+              {/* Attachment */}
+              <div>
+                <div className="mb-3 flex items-center gap-2">
+                  <FileUp className="h-4 w-4 text-slate-700" />
+
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Attachment
+                  </label>
                 </div>
-              ))}
-            </div>
+
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    fileInputRef.current?.click()
+                  }
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+
+                    setIsDraggingAttachment(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+
+                    setIsDraggingAttachment(true);
+                  }}
+                  onDragLeave={() =>
+                    setIsDraggingAttachment(false)
+                  }
+                  onDrop={(e) => {
+                    e.preventDefault();
+
+                    setIsDraggingAttachment(false);
+
+                    const f =
+                      e.dataTransfer.files?.[0] ??
+                      null;
+
+                    handleAttachmentFile(f);
+                  }}
+                  className={cn(
+                    "rounded-xl border-2 border-dashed p-8 text-center transition-all",
+                    isDraggingAttachment
+                      ? "border-indigo-500 bg-indigo-50"
+                      : "border-slate-300 bg-slate-50 hover:border-indigo-300"
+                  )}
+                >
+                  {attachment ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-slate-800">
+                        {attachment.name}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+
+                          handleAttachmentFile(null);
+
+                          if (
+                            fileInputRef.current
+                          ) {
+                            fileInputRef.current.value =
+                              "";
+                          }
+                        }}
+                        className="text-xs font-medium text-red-600 hover:text-red-700"
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-200">
+                        <FileUp className="h-5 w-5 text-slate-600" />
+                      </div>
+
+                      <p className="text-sm font-medium text-slate-700">
+                        Drop file here or browse
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        PDF, DOC, XLS, PPT, JPG,
+                        PNG, GIF — up to 10 MB
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.xls,.xlsx,.doc,.docx,.txt,.ppt,.pptx,.gif,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const f =
+                      e.target.files?.[0] ?? null;
+
+                    handleAttachmentFile(f);
+                  }}
+                />
+
+                {attachmentError && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {attachmentError}
+                  </p>
+                )}
+              </div>
+
+              {/* Error */}
+              {applyLeave.isError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {(applyLeave.error as Error)
+                    ?.message ||
+                    "Failed to submit leave application."}
+                </div>
+              )}
+
+              {/* Footer Buttons */}
+              <div className="flex justify-end gap-3 border-t border-slate-200 pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 rounded-lg border-slate-300 px-6"
+                  onClick={() => {
+                    setLeaveType("");
+                    setFromDate("");
+                    setToDate("");
+
+                    setReason("");
+
+                    setContactDuringLeave("");
+
+                    setAttachment(null);
+
+                    setAttachmentError(null);
+
+                    setCcTo([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    applyLeave.isPending ||
+                    !canSubmit
+                  }
+                  className="h-11 rounded-lg bg-indigo-600 px-6 text-white hover:bg-indigo-700"
+                >
+                  {applyLeave.isPending
+                    ? "Submitting..."
+                    : "Submit Application"}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
-      </aside>
-    </form>
+
+        {/* Sidebar */}
+        <div className="space-y-4 xl:col-span-1">
+          {/* Balance */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 text-white">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-100">
+                Leave Balance
+              </p>
+
+              <h3 className="mt-1 text-xl font-semibold">
+                {selectedBalance
+                  ?.leave_type_detail?.name ||
+                  "Select a leave type"}
+              </h3>
+            </div>
+
+            <div className="p-5">
+              {selectedBalance ? (
+                <div className="space-y-5">
+                  <div className="rounded-xl bg-slate-50 p-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                      <span className="text-sm text-slate-500">
+                        Used
+                      </span>
+
+                      <span className="text-lg font-semibold text-slate-900">
+                        {Number(
+                          selectedBalance.used
+                        )}{" "}
+                        days
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3">
+                      <span className="text-sm text-slate-500">
+                        Available
+                      </span>
+
+                      <span className="text-lg font-semibold text-slate-900">
+                        {Number(
+                          selectedBalance.available
+                        )}{" "}
+                        days
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
+                    <span className="text-sm text-slate-500">
+                      After this request
+                    </span>
+
+                    <span className="text-lg font-semibold text-slate-900">
+                      {Math.max(
+                        0,
+                        Number(
+                          selectedBalance.available
+                        ) - totalDays
+                      )}{" "}
+                      days
+                    </span>
+                  </div>
+
+                  {totalDays > 0 && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                      Applying for{" "}
+                      <span className="font-semibold">
+                        {totalDays}
+                      </span>{" "}
+                      {totalDays === 1
+                        ? "day"
+                        : "days"}
+                    </div>
+                  )}
+
+                  {totalDays >
+                    Number(
+                      selectedBalance.available
+                    ) && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      Insufficient balance. Only{" "}
+                      {selectedBalance.available}{" "}
+                      days available.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                    <FileUp className="h-5 w-5 text-slate-500" />
+                  </div>
+
+                  <p className="text-sm text-slate-500">
+                    Choose a leave type to see
+                    your balance
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Heads Up */}
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-amber-700">
+              Heads Up
+            </h4>
+
+            <ul className="mt-3 space-y-2 text-sm text-amber-800">
+              <li>
+                • Apply at least 1 day in
+                advance for planned leaves
+              </li>
+
+              <li>
+                • Medical leaves may require a
+                certificate
+              </li>
+
+              <li>
+                • Your manager will be notified
+                automatically
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

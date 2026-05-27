@@ -88,6 +88,7 @@ export function ApplicationsHistoryTable({
   const [rangeEnd, setRangeEnd] = useState("");
   const [detail, setDetail] = useState<LeaveApplicationAPI | null>(null);
   const [editLeave, setEditLeave] = useState<LeaveApplicationAPI | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState({
     leaveType: "",
     from_date: "",
@@ -115,9 +116,21 @@ export function ApplicationsHistoryTable({
     openEditLeave(app);
   };
 
-  const handleSaveEdit = async () => {
-    console.log("Save mock edit:", editLeave?.id, editForm);
-    setEditLeave(null);
+  const handleSaveEdit = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    setIsSaving(true);
+    try {
+      console.log("Save mock edit:", editLeave?.id, editForm);
+      // Simulate validation and API call
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setEditLeave(null);
+    } catch (error) {
+      console.error("Error saving leave edit:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancelLeave = async (app: LeaveApplicationAPI) => {
@@ -468,9 +481,10 @@ export function ApplicationsHistoryTable({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
           onClick={() => setEditLeave(null)}
         >
-          <div
+          <form
             className="relative bg-background border border-border rounded-xl shadow-xl flex flex-col w-[92vw] max-w-md max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
+            onSubmit={handleSaveEdit}
           >
             {/* Header */}
             <div className="border-b border-border bg-card px-5 py-4 flex items-start justify-between gap-3 flex-shrink-0">
@@ -565,17 +579,17 @@ export function ApplicationsHistoryTable({
             <div className="border-t border-border bg-card px-5 py-4 flex flex-wrap items-center justify-end gap-3 flex-shrink-0">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setEditLeave(null)}
               >
                 Cancel
               </Button>
-              <Button type="button" size="sm" onClick={handleSaveEdit}>
-                Save changes
+              <Button type="submit" size="sm" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

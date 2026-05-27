@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import { ApplyLeaveFormEnterprise } from "../../../components/leaves/employee/ApplyLeaveFormEnterprise";
+import { MyApplicationsView } from "../../../components/leaves/employee/MyApplicationsView";
 import { leaveApplyNavTabs } from "../../../modules/leaves/leavePortalConfig";
 import type { LeavePortalDataContextValue } from "../LeavePortalDataContext";
 
@@ -20,15 +21,17 @@ export function LeaveApplyPage({
   const prefill = params.get("type") ?? undefined;
   const navTabs = leaveApplyNavTabs(basePath);
 
+  // Determine if we're on the applications route
+  const isApplicationsView = location.pathname.includes("/applications");
+
   return (
     <div className="space-y-6">
       <header className="rounded-3xl border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Apply for leave</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Structured request with live balance preview and approval routing context.
-            </p>
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              {isApplicationsView ? "My Applications" : "Apply for leave"}
+            </h1>
           </div>
         </div>
 
@@ -38,7 +41,8 @@ export function LeaveApplyPage({
               key={tab.label}
               to={tab.path}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                location.pathname === tab.path
+                (isApplicationsView && tab.label !== "Apply") ||
+                (!isApplicationsView && tab.label === "Apply")
                   ? "border-foreground bg-foreground text-primary-foreground"
                   : "border-border bg-background text-foreground hover:border-foreground/70"
               }`}
@@ -49,15 +53,22 @@ export function LeaveApplyPage({
         </div>
       </header>
 
-      <ApplyLeaveFormEnterprise
-        employee={{ employee_code: employeeCode, employee_name: employeeName }}
-        balances={balances}
-        prefillLeaveType={prefill}
-        onSuccess={() => {
-          refreshAll();
-          navigate(`${basePath}/applications`);
-        }}
-      />
+      {isApplicationsView ? (
+        <MyApplicationsView balances={balances} />
+      ) : (
+        <ApplyLeaveFormEnterprise
+          employee={{ employee_code: employeeCode, employee_name: employeeName }}
+          balances={balances}
+          prefillLeaveType={prefill}
+          onSuccess={() => {
+            refreshAll();
+            // Navigate to applications after successful submission
+            setTimeout(() => {
+              navigate(`${basePath}/applications`);
+            }, 500);
+          }}
+        />
+      )}
     </div>
   );
 }
