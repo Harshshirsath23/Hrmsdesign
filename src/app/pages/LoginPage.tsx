@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 
 import { useAuth, UserRole } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
 
 /* =========================
    FOREST GREEN THEME
@@ -25,27 +24,35 @@ import { useTheme } from "../context/ThemeContext";
 
 const COLORS = {
   light: {
-    bg: "#F6F7FB",
+    bg: "#F0F9FF",
     panel: "rgba(255,255,255,.72)",
-    soft: "rgba(243,244,250,.62)",
-    primary: "#6C63FF",
-    secondary: "#A78BFA",
-    dark: "#6366F1",
-    text: "#1f2937",
-    muted: "#6B7280",
-    border: "rgba(99,102,241,.1)",
+    soft: "rgba(224,242,254,.55)",
+
+    /* OCEAN BLUE THEME */
+    primary: "#0284C7",
+    secondary: "#06B6D4",
+    dark: "#0369A1",
+
+    text: "#0F172A",
+    muted: "#64748B",
+
+    border: "rgba(2,132,199,.14)",
   },
 
   dark: {
-    bg: "#0F172A",
-    panel: "rgba(30,41,59,.75)",
-    soft: "rgba(30,41,59,.56)",
-    primary: "#8B5CF6",
-    secondary: "#6366F1",
-    dark: "#7C3AED",
+    bg: "#020617",
+    panel: "rgba(15,23,42,.78)",
+    soft: "rgba(15,23,42,.58)",
+
+    /* OCEAN BLUE DARK */
+    primary: "#0EA5E9",
+    secondary: "#06B6D4",
+    dark: "#0284C7",
+
     text: "#F8FAFC",
     muted: "#CBD5E1",
-    border: "rgba(196,181,253,.14)",
+
+    border: "rgba(56,189,248,.18)",
   },
 };
 
@@ -115,8 +122,10 @@ const DEMO: Record<
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
-  const theme = isDark ? "dark" : "light";
+
+  const [theme, setTheme] = useState<"light" | "dark">(
+    "light"
+  );
 
   const c = COLORS[theme];
 
@@ -246,9 +255,9 @@ export function LoginPage() {
         min-height:100vh;
         background:${c.bg};
         background-image:
-          radial-gradient(circle at calc(14% + var(--parallax-x, 0px)) calc(-4% + var(--parallax-y, 0px)), rgba(196,181,253,.44), transparent 34%),
-          radial-gradient(circle at calc(86% - var(--parallax-x, 0px)) calc(8% - var(--parallax-y, 0px)), rgba(99,102,241,.22), transparent 32%),
-          radial-gradient(circle at 52% 104%, rgba(221,214,254,.42), transparent 40%);
+          radial-gradient(circle at calc(14% + var(--parallax-x, 0px)) calc(-4% + var(--parallax-y, 0px)), rgba(6,182,212,.44), transparent 34%),
+          radial-gradient(circle at calc(86% - var(--parallax-x, 0px)) calc(8% - var(--parallax-y, 0px)), rgba(2,132,199,.22), transparent 32%),
+          radial-gradient(circle at 52% 104%, rgba(6,182,212,.42), transparent 40%);
         position:relative;
         overflow:hidden;
         --parallax-x:0px;
@@ -272,7 +281,7 @@ export function LoginPage() {
         inset:0;
         background-image:
           radial-gradient(circle, rgba(255,255,255,.58) 0 1px, transparent 1.5px),
-          radial-gradient(circle, rgba(124,58,237,.22) 0 1px, transparent 1.5px);
+          radial-gradient(circle, rgba(2,132,199,.22) 0 1px, transparent 1.5px);
         background-size:90px 90px, 140px 140px;
         background-position:12px 18px, 42px 54px;
         opacity:.42;
@@ -315,15 +324,15 @@ export function LoginPage() {
           radial-gradient(
             160px circle at var(--mouse-x) var(--mouse-y),
             rgba(255,255,255,.95),
-            rgba(196,181,253,.88) 24%,
-            rgba(108,99,255,.74) 42%,
+            rgba(6,182,212,.88) 24%,
+            rgba(2,132,199,.74) 42%,
             transparent 66%
           ),
           linear-gradient(
             135deg,
             rgba(255,255,255,.16),
-            rgba(167,139,250,.22) 34%,
-            rgba(99,102,241,.2) 68%,
+            rgba(2,132,199,.22) 34%,
+            rgba(2,132,199,.2) 68%,
             rgba(255,255,255,.14)
           );
         opacity:var(--glow-opacity);
@@ -345,8 +354,8 @@ export function LoginPage() {
         background:
           radial-gradient(
             190px circle at calc(var(--mouse-x) + 14px) calc(var(--mouse-y) + 14px),
-            rgba(221,214,254,.88),
-            rgba(108,99,255,.5) 36%,
+            rgba(6,182,212,.88),
+            rgba(2,132,199,.5) 36%,
             transparent 68%
           );
         opacity:var(--glow-opacity);
@@ -362,7 +371,7 @@ export function LoginPage() {
 
       .shape:hover{
         box-shadow:
-          0 0 34px rgba(108,99,255,.22),
+          0 0 34px rgba(2,132,199,.22),
           inset 0 0 0 1px rgba(255,255,255,.18);
       }
 
@@ -431,7 +440,7 @@ export function LoginPage() {
         -webkit-backdrop-filter:blur(28px) saturate(145%);
 
         box-shadow:
-          0 30px 80px rgba(76,29,149,.13),
+          0 30px 80px rgba(3,105,161,.13),
           inset 0 1px 0 rgba(255,255,255,.75);
 
         animation:login-card-in .7s cubic-bezier(.2,.8,.2,1) both;
@@ -459,7 +468,7 @@ export function LoginPage() {
         border-radius:42% 58% 50% 50%;
         background:
           radial-gradient(circle at 34% 28%, rgba(255,255,255,.82), transparent 18%),
-          linear-gradient(135deg, rgba(124,58,237,.72), rgba(99,102,241,.5), rgba(196,181,253,.62));
+          linear-gradient(135deg, rgba(2,132,199,.72), rgba(2,132,199,.5), rgba(6,182,212,.62));
         filter:blur(.2px);
         opacity:.7;
         animation:liquid-blob 9s ease-in-out infinite;
@@ -477,7 +486,7 @@ export function LoginPage() {
         border:1px solid rgba(255,255,255,.42);
         backdrop-filter:blur(18px);
         -webkit-backdrop-filter:blur(18px);
-        box-shadow:0 24px 56px rgba(76,29,149,.16);
+        box-shadow:0 24px 56px rgba(3,105,161,.16);
         transform:rotate(12deg);
         animation:float-card 6s ease-in-out infinite;
       }
@@ -557,7 +566,7 @@ export function LoginPage() {
         backdrop-filter:blur(18px);
         -webkit-backdrop-filter:blur(18px);
         box-shadow:
-          0 18px 40px rgba(76,29,149,.08),
+          0 18px 40px rgba(3,105,161,.08),
           inset 0 1px 0 rgba(255,255,255,.65);
 
         transition:.3s ease;
@@ -567,7 +576,7 @@ export function LoginPage() {
         transform:translateY(-6px);
         background:rgba(255,255,255,.55);
         box-shadow:
-          0 22px 48px rgba(76,29,149,.13),
+          0 22px 48px rgba(3,105,161,.13),
           inset 0 1px 0 rgba(255,255,255,.82);
       }
 
@@ -706,7 +715,7 @@ export function LoginPage() {
       .role-btn.active{
         background:linear-gradient(135deg, ${c.primary}, ${c.secondary});
         color:white;
-        box-shadow:0 12px 26px rgba(108,99,255,.22);
+        box-shadow:0 12px 26px rgba(2,132,199,.22);
       }
 
       /* FORM */
@@ -762,7 +771,7 @@ export function LoginPage() {
       .input:focus{
         border-color:${c.primary};
         background:rgba(255,255,255,.58);
-        box-shadow:0 0 0 4px rgba(108,99,255,.12);
+        box-shadow:0 0 0 4px rgba(2,132,199,.12);
       }
 
       .input::placeholder{
@@ -848,7 +857,7 @@ export function LoginPage() {
 
       .submit-btn:hover{
         transform:translateY(-2px);
-        box-shadow:0 18px 38px rgba(108,99,255,.28);
+        box-shadow:0 18px 38px rgba(2,132,199,.28);
       }
 
       .demo-box{
@@ -865,7 +874,7 @@ export function LoginPage() {
         -webkit-backdrop-filter:blur(18px);
         box-shadow:
           inset 0 1px 0 rgba(255,255,255,.65),
-          0 16px 38px rgba(76,29,149,.08);
+          0 16px 38px rgba(3,105,161,.08);
       }
 
       .demo-title{
@@ -1092,7 +1101,13 @@ export function LoginPage() {
 
                 <button
                   className="theme-toggle"
-                  onClick={toggleTheme}
+                  onClick={() =>
+                    setTheme(
+                      theme === "light"
+                        ? "dark"
+                        : "light"
+                    )
+                  }
                 >
                   {theme === "light" ? (
                     <Moon size={18} />
