@@ -43,12 +43,16 @@ import { Button } from "../../../components/ui/button";
 import { KebabMenu } from "../../../components/ui/KebabMenu";
 import { useEmployee } from "../../../context/EmployeeContext";
 import * as XLSX from "xlsx";
+import { MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
 import {
-  MOCK_MATRIX_DATA,
-  MOCK_DEPARTMENTS,
-  MOCK_DESIGNATIONS,
-  MOCK_EMPLOYEES
-} from "../../../modules/attendance/mockData";
+  useMatrixDepartments,
+  useMatrixGrid,
+  useMatrixImport,
+  useMatrixLive,
+  useMatrixSummary,
+  useUpdateMatrixDayStatus,
+} from "../../../modules/attendance/hooks";
+import { parseISO } from "date-fns";
 import { cn } from "../../../components/ui/utils";
 import { toast } from "sonner";
 import {
@@ -202,8 +206,9 @@ const PersonalAttendanceCalendar = ({ emp, month }: any) => {
 
 export function AttendanceMatrixPage() {
   const { selectEmployee } = useEmployee();
-  const [data, setData] = useState(MOCK_MATRIX_DATA || []);
-  const [selectedMonth, setSelectedMonth] = useState(new Date(2026, 4, 1)); // May 2026
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [liveMonitor, setLiveMonitor] = useState(true);
 
   // Grid Configuration State
   const [gridConfig, setGridConfig] = useState({
@@ -215,8 +220,37 @@ export function AttendanceMatrixPage() {
   const [filters, setFilters] = useState({
     search: "",
     department: "all",
-    designation: "all"
+    designation: "all",
   });
+
+  const year = selectedMonth.getFullYear();
+  const month = selectedMonth.getMonth() + 1;
+
+  const gridQuery = useMatrixGrid({
+    year,
+    month,
+    department_id: filters.department !== "all" ? filters.department : undefined,
+    search: filters.search || undefined,
+    page: currentPage,
+    page_size: 25,
+  });
+  const summaryQuery = useMatrixSummary(year, month);
+  const departmentsQuery = useMatrixDepartments();
+  useMatrixLive(liveMonitor);
+  const updateStatusMutation = useUpdateMatrixDayStatus();
+  const importMutation = useMatrixImport();
+
+  const data = gridQuery.data?.employees ?? [];
+  const monthDays = useMemo(() => {
+    if (gridQuery.data?.monthDays?.length) return gridQuery.data.monthDays;
+    try {
+      const start = startOfMonth(selectedMonth);
+      const end = endOfMonth(selectedMonth);
+      return eachDayOfInterval({ start, end });
+    } catch {
+      return [];
+    }
+  }, [gridQuery.data, selectedMonth]);
 
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showDrawer, setShowDrawer] = useState(false);
@@ -225,59 +259,27 @@ export function AttendanceMatrixPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importPreview, setImportPreview] = useState<any[] | null>(null);
 
-  // Performance: Month Days Calculation
-  const monthDays = useMemo(() => {
-    try {
-      const start = startOfMonth(selectedMonth);
-      const end = endOfMonth(selectedMonth);
-      return eachDayOfInterval({ start, end });
-    } catch (e) {
-      return [];
-    }
-  }, [selectedMonth]);
+  const filteredData = data;
 
-  // --- Filtering Logic ---
-  const filteredData = useMemo(() => {
-    if (!data) return [];
-    return data.filter(emp => {
-      // 1. Search Logic (Name, ID, Dept)
-      const searchStr = filters.search.toLowerCase();
-      const nameMatch = !filters.search ||
-        emp.name?.toLowerCase().includes(searchStr) ||
-        emp.id?.toLowerCase().includes(searchStr) ||
-        emp.department?.toLowerCase().includes(searchStr);
-
-      // 2. Department Logic
-      const deptMatch = filters.department === "all" || emp.department === filters.department;
-
-      return nameMatch && deptMatch;
-    });
-  }, [data, filters]);
-
-  // --- Attendance Logic ---
-  const handleUpdateAttendance = useCallback((emp: any, dateKey: string, newStatus?: string) => {
-    if (newStatus) {
-      setData(prev => prev.map(item => {
-        if (item.id === emp.id) {
-          const updated = { ...item };
-          const oldStatus = updated.attendance[dateKey]?.status || "MR";
-          updated.attendance[dateKey] = {
-            ...updated.attendance[dateKey],
-            status: newStatus,
-            history: [
-              ...(updated.attendance[dateKey]?.history || []),
-              { time: format(new Date(), "yyyy-MM-dd HH:mm"), user: "Admin", action: "Manual Update", from: oldStatus, to: newStatus }
-            ]
-          };
-          return updated;
-        }
-        return item;
-      }));
-      toast.success(`Updated ${emp.name} to ${newStatus}`);
-    } else {
-      toast.info("Select a status from right-click menu");
-    }
-  }, []);
+  const handleUpdateAttendance = useCallback(
+    (emp: { id: string; name: string }, dateKey: string, newStatus?: string) => {
+      if (!newStatus) {
+        toast.info("Select a status from right-click menu");
+        return;
+      }
+      updateStatusMutation.mutate(
+        { employeeId: emp.id, date: dateKey, status_code: newStatus },
+        {
+          onSuccess: () => {
+            toast.success(`Updated ${emp.name} to ${newStatus}`);
+            gridQuery.refetch();
+          },
+          onError: (err) => toast.error((err as Error).message),
+        },
+      );
+    },
+    [updateStatusMutation, gridQuery],
+  );
 
   const openDrawer = useCallback((emp: any) => {
     setSelectedEmployee(emp);
@@ -314,64 +316,31 @@ export function AttendanceMatrixPage() {
     if (!file) return;
 
     setIsImporting(true);
-    const toastId = toast.loading("Processing Excel file...");
+    const toastId = toast.loading("Uploading matrix file…");
 
-    try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-        setImportPreview(json);
-        setShowImportModal(false);
-        setIsImporting(false);
-        toast.dismiss(toastId);
-        toast.info(`Parsed ${json.length} records. Please confirm the updates.`);
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (error) {
-      setIsImporting(false);
-      toast.dismiss(toastId);
-      toast.error("Failed to parse Excel file");
-    }
+    importMutation.mutate(
+      { file, year, month },
+      {
+        onSuccess: (res) => {
+          toast.dismiss(toastId);
+          setShowImportModal(false);
+          setIsImporting(false);
+          toast.success(res.message ?? `Import queued (job ${res.job_id})`);
+          gridQuery.refetch();
+        },
+        onError: (err) => {
+          toast.dismiss(toastId);
+          setIsImporting(false);
+          toast.error((err as Error).message);
+        },
+      },
+    );
   };
 
   const confirmImport = () => {
-    if (!importPreview) return;
-    setData(prev => {
-      const newData = [...prev];
-      let updatedCount = 0;
-      importPreview.forEach(row => {
-        const empId = row["ID"] || row["Employee ID"];
-        const empIndex = newData.findIndex(e => e.id === empId);
-        if (empIndex !== -1) {
-          Object.keys(row).forEach(col => {
-            if (col.includes("-")) {
-              const [d, m, y] = col.split("-");
-              const dateKey = `${y}-${m}-${d}`;
-              const newStatus = row[col];
-              if (STATUS_CODES[newStatus]) {
-                newData[empIndex].attendance[dateKey] = {
-                  ...newData[empIndex].attendance[dateKey],
-                  status: newStatus,
-                  history: [
-                    ...(newData[empIndex].attendance[dateKey]?.history || []),
-                    { time: format(new Date(), "yyyy-MM-dd HH:mm"), user: "Admin", action: "Bulk Import", from: newData[empIndex].attendance[dateKey]?.status || "-", to: newStatus }
-                  ]
-                };
-                updatedCount++;
-              }
-            }
-          });
-        }
-      });
-      toast.success(`Updated ${updatedCount} records from Excel!`);
-      return newData;
-    });
     setImportPreview(null);
+    gridQuery.refetch();
+    toast.success("Import submitted — refresh grid when processing completes.");
   };
 
   return (
@@ -419,8 +388,18 @@ export function AttendanceMatrixPage() {
             >
               <Upload className="w-3.5 h-3.5 text-blue-500" /> IMPORT EXCEL
             </Button>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800); }}>
-              <RefreshCw className={cn("w-4 h-4 text-slate-400", isRefreshing && "animate-spin text-emerald-500")} />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-xl"
+              onClick={() => {
+                setIsRefreshing(true);
+                Promise.all([gridQuery.refetch(), summaryQuery.refetch()]).finally(() =>
+                  setIsRefreshing(false),
+                );
+              }}
+            >
+              <RefreshCw className={cn("w-4 h-4 text-slate-400", (isRefreshing || gridQuery.isFetching) && "animate-spin text-emerald-500")} />
             </Button>
             <KebabMenu
               items={[
@@ -455,7 +434,9 @@ export function AttendanceMatrixPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                {MOCK_DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                {(departmentsQuery.data?.departments ?? []).map((d) => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -466,12 +447,60 @@ export function AttendanceMatrixPage() {
       <div className="flex-1 overflow-hidden flex flex-col p-6 space-y-6 bg-slate-50/50">
         {/* Statistics Widgets */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <StatCard title="Total Present" value="142" sub="+12 Today" color="emerald" icon={<CheckCircle2 />} />
-          <StatCard title="Total Absent" value="12" sub="-2 Change" color="red" icon={<XCircle />} />
-          <StatCard title="On Leave" value="8" sub="4 Pending" color="orange" icon={<Calendar />} />
-          <StatCard title="Holidays" value="0" sub="Next: 15 May" color="purple" icon={<Zap />} />
-          <StatCard title="Avg Hours" value="8.4h" sub="92% Goal" color="blue" icon={<Clock />} />
-          <StatCard title="Punctuality" value="94%" sub="+1.2% Gain" color="cyan" icon={<TrendingUp />} />
+          <StatCard
+            title="Total Present"
+            value={String(summaryQuery.data?.total_present ?? "—")}
+            sub={summaryQuery.data ? `+${summaryQuery.data.present_change_today} Today` : ""}
+            color="emerald"
+            icon={<CheckCircle2 />}
+          />
+          <StatCard
+            title="Total Absent"
+            value={String(summaryQuery.data?.total_absent ?? "—")}
+            sub={summaryQuery.data ? `${summaryQuery.data.absent_change_today} Change` : ""}
+            color="red"
+            icon={<XCircle />}
+          />
+          <StatCard
+            title="On Leave"
+            value={String(summaryQuery.data?.on_leave ?? "—")}
+            sub={summaryQuery.data ? `${summaryQuery.data.leave_pending_count} Pending` : ""}
+            color="orange"
+            icon={<Calendar />}
+          />
+          <StatCard
+            title="Holidays"
+            value={String(summaryQuery.data?.holidays_remaining ?? "—")}
+            sub={
+              summaryQuery.data?.next_holiday_date
+                ? `Next: ${format(parseISO(summaryQuery.data.next_holiday_date), "d MMM")}`
+                : ""
+            }
+            color="purple"
+            icon={<Zap />}
+          />
+          <StatCard
+            title="Avg Hours"
+            value={summaryQuery.data ? `${summaryQuery.data.avg_hours}h` : "—"}
+            sub={
+              summaryQuery.data
+                ? `${Math.round((summaryQuery.data.avg_hours / summaryQuery.data.avg_hours_goal) * 100)}% Goal`
+                : ""
+            }
+            color="blue"
+            icon={<Clock />}
+          />
+          <StatCard
+            title="Punctuality"
+            value={summaryQuery.data ? `${summaryQuery.data.punctuality_percent}%` : "—"}
+            sub={
+              summaryQuery.data
+                ? `${summaryQuery.data.punctuality_change >= 0 ? "+" : ""}${summaryQuery.data.punctuality_change}%`
+                : ""
+            }
+            color="cyan"
+            icon={<TrendingUp />}
+          />
         </div>
 
         {/* Main Matrix Grid Container */}
