@@ -43,16 +43,12 @@ import { Button } from "../../../components/ui/button";
 import { KebabMenu } from "../../../components/ui/KebabMenu";
 import { useEmployee } from "../../../context/EmployeeContext";
 import * as XLSX from "xlsx";
-import { MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
 import {
-  useMatrixDepartments,
-  useMatrixGrid,
-  useMatrixImport,
-  useMatrixLive,
-  useMatrixSummary,
-  useUpdateMatrixDayStatus,
-} from "../../../modules/attendance/hooks";
-import { parseISO } from "date-fns";
+  MOCK_MATRIX_DATA,
+  MOCK_DEPARTMENTS,
+  MOCK_DESIGNATIONS,
+  MOCK_EMPLOYEES
+} from "../../../modules/attendance/mockData";
 import { cn } from "../../../components/ui/utils";
 import { toast } from "sonner";
 import {
@@ -206,9 +202,8 @@ const PersonalAttendanceCalendar = ({ emp, month }: any) => {
 
 export function AttendanceMatrixPage() {
   const { selectEmployee } = useEmployee();
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [currentPage, setCurrentPage] = useState(1);
-  const [liveMonitor, setLiveMonitor] = useState(true);
+  const [data, setData] = useState(MOCK_MATRIX_DATA || []);
+  const [selectedMonth, setSelectedMonth] = useState(new Date(2026, 4, 1)); // May 2026
 
   // Grid Configuration State
   const [gridConfig, setGridConfig] = useState({
@@ -220,37 +215,8 @@ export function AttendanceMatrixPage() {
   const [filters, setFilters] = useState({
     search: "",
     department: "all",
-    designation: "all",
+    designation: "all"
   });
-
-  const year = selectedMonth.getFullYear();
-  const month = selectedMonth.getMonth() + 1;
-
-  const gridQuery = useMatrixGrid({
-    year,
-    month,
-    department_id: filters.department !== "all" ? filters.department : undefined,
-    search: filters.search || undefined,
-    page: currentPage,
-    page_size: 25,
-  });
-  const summaryQuery = useMatrixSummary(year, month);
-  const departmentsQuery = useMatrixDepartments();
-  useMatrixLive(liveMonitor);
-  const updateStatusMutation = useUpdateMatrixDayStatus();
-  const importMutation = useMatrixImport();
-
-  const data = gridQuery.data?.employees ?? [];
-  const monthDays = useMemo(() => {
-    if (gridQuery.data?.monthDays?.length) return gridQuery.data.monthDays;
-    try {
-      const start = startOfMonth(selectedMonth);
-      const end = endOfMonth(selectedMonth);
-      return eachDayOfInterval({ start, end });
-    } catch {
-      return [];
-    }
-  }, [gridQuery.data, selectedMonth]);
 
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showDrawer, setShowDrawer] = useState(false);
@@ -259,27 +225,59 @@ export function AttendanceMatrixPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importPreview, setImportPreview] = useState<any[] | null>(null);
 
-  const filteredData = data;
+  // Performance: Month Days Calculation
+  const monthDays = useMemo(() => {
+    try {
+      const start = startOfMonth(selectedMonth);
+      const end = endOfMonth(selectedMonth);
+      return eachDayOfInterval({ start, end });
+    } catch (e) {
+      return [];
+    }
+  }, [selectedMonth]);
 
-  const handleUpdateAttendance = useCallback(
-    (emp: { id: string; name: string }, dateKey: string, newStatus?: string) => {
-      if (!newStatus) {
-        toast.info("Select a status from right-click menu");
-        return;
-      }
-      updateStatusMutation.mutate(
-        { employeeId: emp.id, date: dateKey, status_code: newStatus },
-        {
-          onSuccess: () => {
-            toast.success(`Updated ${emp.name} to ${newStatus}`);
-            gridQuery.refetch();
-          },
-          onError: (err) => toast.error((err as Error).message),
-        },
-      );
-    },
-    [updateStatusMutation, gridQuery],
-  );
+  // --- Filtering Logic ---
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    return data.filter(emp => {
+      // 1. Search Logic (Name, ID, Dept)
+      const searchStr = filters.search.toLowerCase();
+      const nameMatch = !filters.search ||
+        emp.name?.toLowerCase().includes(searchStr) ||
+        emp.id?.toLowerCase().includes(searchStr) ||
+        emp.department?.toLowerCase().includes(searchStr);
+
+      // 2. Department Logic
+      const deptMatch = filters.department === "all" || emp.department === filters.department;
+
+      return nameMatch && deptMatch;
+    });
+  }, [data, filters]);
+
+  // --- Attendance Logic ---
+  const handleUpdateAttendance = useCallback((emp: any, dateKey: string, newStatus?: string) => {
+    if (newStatus) {
+      setData(prev => prev.map(item => {
+        if (item.id === emp.id) {
+          const updated = { ...item };
+          const oldStatus = updated.attendance[dateKey]?.status || "MR";
+          updated.attendance[dateKey] = {
+            ...updated.attendance[dateKey],
+            status: newStatus,
+            history: [
+              ...(updated.attendance[dateKey]?.history || []),
+              { time: format(new Date(), "yyyy-MM-dd HH:mm"), user: "Admin", action: "Manual Update", from: oldStatus, to: newStatus }
+            ]
+          };
+          return updated;
+        }
+        return item;
+      }));
+      toast.success(`Updated ${emp.name} to ${newStatus}`);
+    } else {
+      toast.info("Select a status from right-click menu");
+    }
+  }, []);
 
   const openDrawer = useCallback((emp: any) => {
     setSelectedEmployee(emp);
@@ -316,47 +314,80 @@ export function AttendanceMatrixPage() {
     if (!file) return;
 
     setIsImporting(true);
-    const toastId = toast.loading("Uploading matrix file…");
+    const toastId = toast.loading("Processing Excel file...");
 
-    importMutation.mutate(
-      { file, year, month },
-      {
-        onSuccess: (res) => {
-          toast.dismiss(toastId);
-          setShowImportModal(false);
-          setIsImporting(false);
-          toast.success(res.message ?? `Import queued (job ${res.job_id})`);
-          gridQuery.refetch();
-        },
-        onError: (err) => {
-          toast.dismiss(toastId);
-          setIsImporting(false);
-          toast.error((err as Error).message);
-        },
-      },
-    );
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        setImportPreview(json);
+        setShowImportModal(false);
+        setIsImporting(false);
+        toast.dismiss(toastId);
+        toast.info(`Parsed ${json.length} records. Please confirm the updates.`);
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      setIsImporting(false);
+      toast.dismiss(toastId);
+      toast.error("Failed to parse Excel file");
+    }
   };
 
   const confirmImport = () => {
+    if (!importPreview) return;
+    setData(prev => {
+      const newData = [...prev];
+      let updatedCount = 0;
+      importPreview.forEach(row => {
+        const empId = row["ID"] || row["Employee ID"];
+        const empIndex = newData.findIndex(e => e.id === empId);
+        if (empIndex !== -1) {
+          Object.keys(row).forEach(col => {
+            if (col.includes("-")) {
+              const [d, m, y] = col.split("-");
+              const dateKey = `${y}-${m}-${d}`;
+              const newStatus = row[col];
+              if (STATUS_CODES[newStatus]) {
+                newData[empIndex].attendance[dateKey] = {
+                  ...newData[empIndex].attendance[dateKey],
+                  status: newStatus,
+                  history: [
+                    ...(newData[empIndex].attendance[dateKey]?.history || []),
+                    { time: format(new Date(), "yyyy-MM-dd HH:mm"), user: "Admin", action: "Bulk Import", from: newData[empIndex].attendance[dateKey]?.status || "-", to: newStatus }
+                  ]
+                };
+                updatedCount++;
+              }
+            }
+          });
+        }
+      });
+      toast.success(`Updated ${updatedCount} records from Excel!`);
+      return newData;
+    });
     setImportPreview(null);
-    gridQuery.refetch();
-    toast.success("Import submitted — refresh grid when processing completes.");
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950/50 relative overflow-hidden">
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
       {/* Header Section */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-4 shadow-sm z-[40] sticky top-0">
+      <div className="bg-card border-b border-border px-6 py-4 space-y-4 shadow-sm z-[40] sticky top-0">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
               <Home className="w-3 h-3" />
               <ChevronRight className="w-3 h-3" />
               <span>Attendance</span>
               <ChevronRight className="w-3 h-3" />
               <span className="text-emerald-500 font-black">Attendance Matrix</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
               Attendance Matrix
               {/* <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -366,7 +397,7 @@ export function AttendanceMatrixPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-xl p-1 border border-slate-200 dark:border-slate-800 mr-2">
+            <div className="flex items-center bg-secondary rounded-xl p-1 border border-border mr-2">
               <Button variant="ghost" size="sm" className="h-8 text-[11px] font-bold rounded-lg px-3" onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}>
                 <ChevronRight className="w-3.5 h-3.5 rotate-180" />
               </Button>
@@ -388,18 +419,8 @@ export function AttendanceMatrixPage() {
             >
               <Upload className="w-3.5 h-3.5 text-blue-500" /> IMPORT EXCEL
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-xl"
-              onClick={() => {
-                setIsRefreshing(true);
-                Promise.all([gridQuery.refetch(), summaryQuery.refetch()]).finally(() =>
-                  setIsRefreshing(false),
-                );
-              }}
-            >
-              <RefreshCw className={cn("w-4 h-4 text-slate-400", (isRefreshing || gridQuery.isFetching) && "animate-spin text-emerald-500")} />
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800); }}>
+              <RefreshCw className={cn("w-4 h-4 text-slate-400", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
             <KebabMenu
               items={[
@@ -419,9 +440,9 @@ export function AttendanceMatrixPage() {
         {/* Filter/Search Bar */}
         <div className="flex items-center gap-4 py-1">
           <div className="flex-1 max-w-[350px] relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              className="pl-9 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-xs shadow-inner"
+              className="pl-9 h-10 rounded-xl bg-secondary border-transparent focus:bg-background transition-all font-bold text-xs shadow-inner"
               placeholder="Search by Employee Name, ID, or Dept..."
               value={filters.search}
               onChange={e => setFilters({ ...filters, search: e.target.value })}
@@ -434,9 +455,7 @@ export function AttendanceMatrixPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                {(departmentsQuery.data?.departments ?? []).map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                ))}
+                {MOCK_DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
               </SelectContent>
             </Select>
 
@@ -444,111 +463,63 @@ export function AttendanceMatrixPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col p-6 space-y-6 bg-slate-50/50">
+      <div className="flex-1 overflow-hidden flex flex-col p-6 space-y-6 bg-secondary/30">
         {/* Statistics Widgets */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <StatCard
-            title="Total Present"
-            value={String(summaryQuery.data?.total_present ?? "—")}
-            sub={summaryQuery.data ? `+${summaryQuery.data.present_change_today} Today` : ""}
-            color="emerald"
-            icon={<CheckCircle2 />}
-          />
-          <StatCard
-            title="Total Absent"
-            value={String(summaryQuery.data?.total_absent ?? "—")}
-            sub={summaryQuery.data ? `${summaryQuery.data.absent_change_today} Change` : ""}
-            color="red"
-            icon={<XCircle />}
-          />
-          <StatCard
-            title="On Leave"
-            value={String(summaryQuery.data?.on_leave ?? "—")}
-            sub={summaryQuery.data ? `${summaryQuery.data.leave_pending_count} Pending` : ""}
-            color="orange"
-            icon={<Calendar />}
-          />
-          <StatCard
-            title="Holidays"
-            value={String(summaryQuery.data?.holidays_remaining ?? "—")}
-            sub={
-              summaryQuery.data?.next_holiday_date
-                ? `Next: ${format(parseISO(summaryQuery.data.next_holiday_date), "d MMM")}`
-                : ""
-            }
-            color="purple"
-            icon={<Zap />}
-          />
-          <StatCard
-            title="Avg Hours"
-            value={summaryQuery.data ? `${summaryQuery.data.avg_hours}h` : "—"}
-            sub={
-              summaryQuery.data
-                ? `${Math.round((summaryQuery.data.avg_hours / summaryQuery.data.avg_hours_goal) * 100)}% Goal`
-                : ""
-            }
-            color="blue"
-            icon={<Clock />}
-          />
-          <StatCard
-            title="Punctuality"
-            value={summaryQuery.data ? `${summaryQuery.data.punctuality_percent}%` : "—"}
-            sub={
-              summaryQuery.data
-                ? `${summaryQuery.data.punctuality_change >= 0 ? "+" : ""}${summaryQuery.data.punctuality_change}%`
-                : ""
-            }
-            color="cyan"
-            icon={<TrendingUp />}
-          />
+          <StatCard title="Total Present" value="142" sub="+12 Today" color="emerald" icon={<CheckCircle2 />} />
+          <StatCard title="Total Absent" value="12" sub="-2 Change" color="red" icon={<XCircle />} />
+          <StatCard title="On Leave" value="8" sub="4 Pending" color="orange" icon={<Calendar />} />
+          <StatCard title="Holidays" value="0" sub="Next: 15 May" color="purple" icon={<Zap />} />
+          <StatCard title="Avg Hours" value="8.4h" sub="92% Goal" color="blue" icon={<Clock />} />
+          <StatCard title="Punctuality" value="94%" sub="+1.2% Gain" color="cyan" icon={<TrendingUp />} />
         </div>
 
         {/* Main Matrix Grid Container */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] shadow-2xl overflow-hidden flex flex-col relative group/matrix ring-1 ring-slate-200/50">
+        <div className="bg-card border border-border rounded-[32px] shadow-2xl overflow-hidden flex flex-col relative group/matrix ring-1 ring-border/50">
           <div className="flex-1 overflow-auto custom-scrollbar relative">
             <table className="w-full text-left border-collapse table-fixed">
               <thead className="sticky top-0 z-[30]">
-                <tr className="bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800">
+                <tr className="bg-secondary/90 backdrop-blur-xl border-b border-border">
                   <th className={cn(
-                    "w-[240px] px-6 py-5 border-r border-slate-200 z-[35] bg-slate-50 transition-all duration-300",
+                    "w-[240px] px-6 py-5 border-r border-border z-[35] bg-secondary transition-all duration-300",
                     gridConfig.stickyEmployee ? "sticky left-0 shadow-md" : "relative"
                   )}>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Employee Details</span>
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.1em]">Employee Details</span>
                       <span className="text-[9px] font-bold text-emerald-500 uppercase mt-1">Found {filteredData.length} records</span>
                     </div>
                   </th>
                   {monthDays.map((day, idx) => (
-                    <th key={idx} className="w-[50px] text-center py-3 border-r border-slate-100 dark:border-slate-800">
+                    <th key={idx} className="w-[50px] text-center py-3 border-r border-border">
                       <div className="flex flex-col items-center">
                         <span className={cn(
                           "text-[14px] font-black leading-tight",
-                          (day.getDay() === 0 || day.getDay() === 6) ? "text-red-400" : "text-slate-900 dark:text-slate-100"
+                          (day.getDay() === 0 || day.getDay() === 6) ? "text-red-400" : "text-foreground"
                         )}>
                           {format(day, "dd")}
                         </span>
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">
+                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">
                           {format(day, "EEE")}
                         </span>
                       </div>
                     </th>
                   ))}
                   {gridConfig.showSummaries && (
-                    <th className="sticky right-0 z-[30] bg-slate-50 dark:bg-slate-800 w-[160px] px-4 py-4 text-center border-l border-slate-200 dark:border-slate-700 shadow-[-5px_0_15px_rgba(0,0,0,0.02)]">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">P | A | L</span>
+                    <th className="sticky right-0 z-[30] bg-secondary w-[160px] px-4 py-4 text-center border-l border-border shadow-[-5px_0_15px_rgba(0,0,0,0.02)]">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">P | A | L</span>
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-border">
                 {filteredData.map((emp, empIdx) => (
                   <tr key={emp.id} className={cn(
-                    "group transition-all duration-200 border-b border-slate-100 dark:border-slate-800",
+                    "group transition-all duration-200 border-b border-border",
                     gridConfig.density === 'compact' ? 'h-10' : gridConfig.density === 'relaxed' ? 'h-20' : 'h-14',
-                    "hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
+                    "hover:bg-secondary/50"
                   )}>
                     <td className={cn(
-                      "z-[20] bg-white dark:bg-slate-900 group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800 border-r border-slate-200 dark:border-slate-800 px-6 cursor-pointer transition-all duration-300",
+                      "z-[20] bg-card group-hover:bg-secondary/80 border-r border-border px-6 cursor-pointer transition-all duration-300",
                       gridConfig.stickyEmployee ? "sticky left-0 shadow-[5px_0_15px_rgba(0,0,0,0.02)]" : "relative shadow-none",
                       gridConfig.density === 'relaxed' ? 'py-5' : gridConfig.density === 'compact' ? 'py-1' : 'py-3'
                     )} onClick={() => selectEmployee(emp.id)}>
@@ -557,15 +528,15 @@ export function AttendanceMatrixPage() {
                           {emp.name?.[0]}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 transition-colors">{emp.name}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate">
+                          <span className="text-[11px] font-black text-foreground truncate group-hover:text-emerald-600 transition-colors">{emp.name}</span>
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter truncate">
                             {emp.id} • {emp.department}
                           </span>
                         </div>
                       </div>
                     </td>
                     {monthDays.map((day, dIdx) => (
-                      <td key={dIdx} className="p-1 border-r border-slate-50 dark:border-slate-800">
+                      <td key={dIdx} className="p-1 border-r border-border">
                         <MatrixCell
                           emp={emp}
                           day={day}
@@ -575,7 +546,7 @@ export function AttendanceMatrixPage() {
                       </td>
                     ))}
                     {gridConfig.showSummaries && (
-                      <td className="sticky right-0 z-[20] bg-white dark:bg-slate-900 group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800 border-l border-slate-200 dark:border-slate-800 px-4 py-3 shadow-[-5px_0_15px_rgba(0,0,0,0.02)]">
+                      <td className="sticky right-0 z-[20] bg-card group-hover:bg-secondary/80 border-l border-border px-4 py-3 shadow-[-5px_0_15px_rgba(0,0,0,0.02)]">
                         <div className="flex items-center justify-around">
                           <div className="flex flex-col items-center">
                             <span className="text-[12px] font-black text-emerald-600">{emp.summary?.P || 0}</span>
@@ -599,9 +570,9 @@ export function AttendanceMatrixPage() {
           </div>
 
           {/* Footer Legend & Settings Bar */}
-          <div className="bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-xl px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="bg-secondary/90 backdrop-blur-xl px-6 py-4 border-t border-border flex items-center justify-between">
             <div className="flex items-center gap-6">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                 <ShieldCheck className="w-3 h-3" /> Grid Legend:
               </span>
               {Object.entries(STATUS_CODES).slice(0, 8).map(([code, cfg]: any) => (
@@ -807,17 +778,17 @@ function StatCard({ title, value, sub, icon, color }: any) {
   return (
     <motion.div
       whileHover={{ y: -5 }}
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-[28px] shadow-sm space-y-4 transition-all cursor-default relative overflow-hidden group"
+      className="bg-card border border-border p-5 rounded-[28px] shadow-sm space-y-4 transition-all cursor-default relative overflow-hidden group"
     >
-      <div className="absolute top-0 right-0 w-20 h-20 bg-slate-50 dark:bg-slate-800/50 rounded-bl-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-500" />
+      <div className="absolute top-0 right-0 w-20 h-20 bg-secondary rounded-bl-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-500" />
       <div className="flex items-center justify-between relative z-10">
         <div className={cn("p-2.5 rounded-2xl border", colors[color])}>
           {icon && typeof icon === 'object' ? { ...icon, props: { ...icon.props, className: "w-5 h-5" } } : icon}
         </div>
-        <span className="text-2xl font-black text-slate-900 dark:text-slate-100">{value}</span>
+        <span className="text-2xl font-black text-foreground">{value}</span>
       </div>
       <div className="relative z-10 space-y-0.5">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
+        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{title}</p>
         <p className={cn("text-[10px] font-bold", color === 'red' ? 'text-red-400' : 'text-emerald-500')}>{sub}</p>
       </div>
     </motion.div>

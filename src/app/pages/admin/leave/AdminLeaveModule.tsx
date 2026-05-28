@@ -134,7 +134,7 @@ export function AdminLeaveModule() {
   }, []);
 
   return (
-    <div className="p-8 space-y-8 bg-slate-50/50 dark:bg-slate-950 min-h-full">
+    <div className="p-8 space-y-8 bg-background min-h-full">
       {/* Header */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-black text-foreground tracking-tight">{header.label}</h1>

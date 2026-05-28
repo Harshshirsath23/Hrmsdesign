@@ -12,9 +12,6 @@ import {
   Trash2,
   UploadCloud,
   X,
-  ChevronDown,
-  ChevronRight,
-  FileSpreadsheet,
 } from "lucide-react";
 import type { EmployeeDocumentMeta } from "../../../components/employees/mockData";
 import type { DocumentTypeConfig } from "./types";
@@ -46,12 +43,48 @@ function parseStorageKey(storageKey: string, typeId: string): string | null {
   return storageKey.replace(`${typeId}_`, "");
 }
 
+const DOCUMENT_SECTIONS = [
+  {
+    id: "personal",
+    title: "Personal Documents",
+    description: "Identity, KYC and address records",
+    documentSection: "Personal",
+    Icon: ShieldCheck,
+  },
+  {
+    id: "official",
+    title: "Official Documents",
+    description: "Payroll, statutory, insurance and HR records",
+    documentSection: "Official",
+    Icon: Landmark,
+  },
+  {
+    id: "company",
+    title: "Company Documents",
+    description: "Onboarding, employment and company-issued letters",
+    documentSection: "Company",
+    Icon: BriefcaseBusiness,
+  },
+] as const;
+
+const FALLBACK_SECTION = {
+  id: "other",
+  title: "Other Documents",
+  description: "Additional employee records",
+  documentSection: "Company",
+  Icon: FileText,
+};
+
 const DOCUMENT_FILTERS: { id: DocumentFilter; label: string; description: string }[] = [
   { id: "all", label: "All", description: "Every configured document" },
   { id: "personal", label: "Personal", description: "Documents assigned to the Personal section" },
   { id: "official", label: "Official", description: "Documents assigned to the Official section" },
   { id: "company", label: "Company", description: "Documents assigned to the Company section" },
 ];
+
+function getDocumentSection(type: DocumentTypeConfig) {
+  return DOCUMENT_SECTIONS.find((section) => section.documentSection === type.documentSection) || FALLBACK_SECTION;
+}
 
 function formatBytes(bytes?: number) {
   if (!bytes) return "";
@@ -79,17 +112,7 @@ export function EmployeeDocumentsGrid({
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [err, setErr] = useState<string | null>(null);
   const [previewMeta, setPreviewMeta] = useState<EmployeeDocumentMeta | null>(null);
-  const [frontBackPreview, setFrontBackPreview] = useState<{
-    front: EmployeeDocumentMeta | null;
-    back: EmployeeDocumentMeta | null;
-    docName: string;
-  } | null>(null);
   const [activeFilter, setActiveFilter] = useState<DocumentFilter>("all");
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-
-  const toggleRow = (id: string) => {
-    setExpandedRows((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
   const filteredDocumentTypes = useMemo(() => {
     if (activeFilter === "all") return documentTypes;
@@ -99,6 +122,25 @@ export function EmployeeDocumentsGrid({
   const filteredStorageKeys = useMemo(() => filteredDocumentTypes.flatMap(getStorageKeys), [filteredDocumentTypes]);
   const filteredUploadedCount = filteredStorageKeys.filter((key) => docs[key]?.fileName).length;
   const filteredRequiredCount = filteredDocumentTypes.filter((type) => type.mandatory).length;
+
+  const groupedDocumentTypes = useMemo(() => {
+    const buckets = new Map<string, { section: ReturnType<typeof getDocumentSection>; types: DocumentTypeConfig[] }>();
+
+    filteredDocumentTypes
+      .slice()
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .forEach((type) => {
+        const section = getDocumentSection(type);
+        const existing = buckets.get(section.id);
+        if (existing) {
+          existing.types.push(type);
+        } else {
+          buckets.set(section.id, { section, types: [type] });
+        }
+      });
+
+    return [...buckets.values()];
+  }, [filteredDocumentTypes]);
 
   const readFile = useCallback(
     (file: File, storageKey: string, type: DocumentTypeConfig) => {
@@ -157,29 +199,9 @@ export function EmployeeDocumentsGrid({
     onChange(n);
   };
 
-  const downloadAll = (type: DocumentTypeConfig) => {
-    const keys = getStorageKeys(type);
-    keys.forEach((key) => {
-      const meta = docs[key];
-      if (meta?.fileName && meta?.dataUrl) {
-        download(meta);
-      }
-    });
-  };
-
-  const deleteAll = (type: DocumentTypeConfig) => {
-    if (!window.confirm(`Delete all files for "${type.documentName}"?`)) return;
-    const keys = getStorageKeys(type);
-    const n = { ...docs };
-    keys.forEach((key) => {
-      delete n[key];
-    });
-    onChange(n);
-  };
-
   if (!documentTypes.length) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground font-medium">
+      <p className="py-8 text-center text-sm text-muted-foreground">
         No document types configured. Add a document type to get started.
       </p>
     );
@@ -188,21 +210,17 @@ export function EmployeeDocumentsGrid({
   return (
     <>
       {err ? (
-        <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive flex items-center justify-between">
-          <span>{err}</span>
-          <button type="button" onClick={() => setErr(null)} className="text-destructive hover:opacity-80">
-            <X className="h-4 w-4" />
-          </button>
+        <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+          {err}
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        {/* Category filters header */}
-        <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-border bg-background p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Document Category</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
+              <p className="mt-1 text-sm font-medium text-foreground">
                 {DOCUMENT_FILTERS.find((filter) => filter.id === activeFilter)?.description}
               </p>
             </div>
@@ -216,9 +234,9 @@ export function EmployeeDocumentsGrid({
                     type="button"
                     onClick={() => setActiveFilter(filter.id)}
                     className={[
-                      "rounded-full border px-4 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer",
+                      "rounded-full border px-4 py-2 text-xs font-black uppercase tracking-widest transition-colors",
                       active
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground",
                     ].join(" ")}
                   >
@@ -231,7 +249,7 @@ export function EmployeeDocumentsGrid({
             <select
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as DocumentFilter)}
-              className="h-10 rounded-lg border border-border bg-card px-3 text-xs font-bold text-foreground md:hidden"
+              className="h-10 rounded-lg border border-border bg-card px-3 text-xs font-black uppercase tracking-widest text-foreground md:hidden"
             >
               {DOCUMENT_FILTERS.map((filter) => (
                 <option key={filter.id} value={filter.id}>
@@ -241,426 +259,201 @@ export function EmployeeDocumentsGrid({
             </select>
 
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground lg:justify-end">
-              <span className="rounded-full border border-border bg-card px-3 py-1.5 font-bold">
+              <span className="rounded-full border border-border bg-card px-3 py-1.5">
                 {filteredUploadedCount}/{filteredStorageKeys.length} Uploaded
               </span>
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700 font-bold">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700">
                 {filteredRequiredCount} Required
               </span>
             </div>
           </div>
         </div>
 
-        {/* Unified Document Table */}
-        <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
-              <thead className="bg-secondary/40 border-b border-border text-xs font-black uppercase tracking-widest text-muted-foreground select-none">
-                <tr>
-                  <th scope="col" className="w-8 py-3.5 pl-4"></th>
-                  <th scope="col" className="px-6 py-3.5">Document Name</th>
-                  <th scope="col" className="px-6 py-3.5">Category</th>
-                  <th scope="col" className="px-6 py-3.5">Uploaded Files</th>
-                  <th scope="col" className="px-6 py-3.5">Status</th>
-                  <th scope="col" className="px-6 py-3.5 text-right pr-6">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {filteredDocumentTypes.map((type) => {
+        {groupedDocumentTypes.map(({ section, types }) => {
+          const SectionIcon = section.Icon;
+          const storageKeys = types.flatMap(getStorageKeys);
+          const uploadedCount = storageKeys.filter((key) => docs[key]?.fileName).length;
+          const requiredCount = types.filter((type) => type.mandatory).length;
+
+          return (
+            <section key={section.id} className="overflow-hidden rounded-2xl border border-border bg-background">
+              <div className="flex flex-col gap-4 border-b border-border bg-secondary/20 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-sm ring-1 ring-border">
+                    <SectionIcon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-foreground">{section.title}</h3>
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">{section.description}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  <span className="rounded-full border border-border bg-card px-3 py-1.5">
+                    {uploadedCount}/{storageKeys.length} Uploaded
+                  </span>
+                  {requiredCount ? (
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700">
+                      {requiredCount} Required
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2 2xl:grid-cols-3">
+                {types.map((type) => {
                   const typeStorageKeys = getStorageKeys(type);
-                  const isExpandable = type.uploadType !== "single";
-                  const isExpanded = !!expandedRows[type.id];
                   const accept = fileTypesToAccept(type.allowedFileTypes);
                   const completeCount = typeStorageKeys.filter((key) => docs[key]?.fileName).length;
-                  const allUploaded = completeCount === typeStorageKeys.length;
-                  const singleKey = typeStorageKeys[0];
-                  const singleMeta = docs[singleKey];
 
                   return (
-                    <>
-                      <tr
-                        key={type.id}
-                        className={[
-                          "hover:bg-secondary/15 transition-colors group",
-                          isExpanded ? "bg-secondary/5" : "",
-                        ].join(" ")}
-                      >
-                        {/* Expand Icon */}
-                        <td className="py-4 pl-4">
-                          {isExpandable ? (
+                    <div key={type.id} className="flex min-h-48 flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-bold text-foreground">{type.documentName}</p>
+                            {type.mandatory ? (
+                              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-rose-600">
+                                Required
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {type.category} - {completeCount}/{typeStorageKeys.length} files
+                          </p>
+                        </div>
+                        {showTypeControls ? (
+                          <div className="flex flex-shrink-0 items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => toggleRow(type.id)}
-                              className="p-1 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                              title="Edit document type"
+                              className="rounded-md border border-border p-1.5 hover:bg-secondary"
+                              onClick={() => onEditType?.(type)}
                             >
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
+                              <Pencil className="h-3.5 w-3.5" />
                             </button>
-                          ) : null}
-                        </td>
-
-                        {/* Document Name */}
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-foreground">{type.documentName}</span>
-                              {type.mandatory && (
-                                <span className="rounded-full bg-rose-50 border border-rose-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-600">
-                                  Required
-                                </span>
-                              )}
-                            </div>
-                            {/* If single upload type, show filename under the name */}
-                            {!isExpandable && singleMeta?.fileName && (
-                              <span className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-xs font-mono">
-                                📄 {singleMeta.fileName} ({formatBytes(singleMeta.sizeBytes)})
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Category */}
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center rounded-md bg-secondary/80 border border-border/70 px-2.5 py-0.5 text-xs font-bold text-foreground">
-                            {type.category}
-                          </span>
-                        </td>
-
-                        {/* Uploaded Files Count */}
-                        <td className="px-6 py-4 font-mono text-xs font-semibold text-muted-foreground">
-                          {completeCount}/{typeStorageKeys.length} files
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-6 py-4">
-                          <span
-                            className={[
-                              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold border",
-                              type.status === "Active"
-                                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                                : "bg-zinc-50 border-zinc-200 text-zinc-600",
-                            ].join(" ")}
-                          >
-                            <span
-                              className={[
-                                "h-1.5 w-1.5 rounded-full",
-                                type.status === "Active" ? "bg-emerald-500" : "bg-zinc-400",
-                              ].join(" ")}
-                            />
-                            {type.status}
-                          </span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-6 py-4 text-right pr-6">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* If single type and uploaded */}
-                            {!isExpandable && singleMeta?.fileName && (
-                              <>
-                                <button
-                                  type="button"
-                                  title="Preview"
-                                  className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                  onClick={() => previewDocument(singleMeta)}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  title="Download"
-                                  className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                  onClick={() => download(singleMeta)}
-                                >
-                                  <Download className="h-4 w-4" />
-                                </button>
-                              </>
-                            )}
-
-                            {/* Front/Back multi-view button */}
-                            {type.uploadType === "frontBack" && completeCount > 0 && (
+                            {!type.isSystem ? (
                               <button
                                 type="button"
-                                title="View side-by-side"
-                                className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                onClick={() => {
-                                  setFrontBackPreview({
-                                    front: docs[`${type.id}_front`] || null,
-                                    back: docs[`${type.id}_back`] || null,
-                                    docName: type.documentName,
-                                  });
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                            )}
-
-                            {/* Expand to edit config if showTypeControls is true */}
-                            {showTypeControls && (
-                              <button
-                                type="button"
-                                title="Edit Document Settings"
-                                className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                onClick={() => onEditType?.(type)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                            )}
-
-                            {/* For single upload and isEditing: Show Upload button if empty, otherwise Replace */}
-                            {!isExpandable && isEditing && (
-                              <label className="cursor-pointer">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-border bg-card text-xs font-bold text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all">
-                                  <UploadCloud className="h-3.5 w-3.5" />
-                                  {singleMeta ? "Replace" : "Upload"}
-                                </span>
-                                <input
-                                  type="file"
-                                  accept={accept}
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) readFile(f, singleKey, type);
-                                    e.target.value = "";
-                                  }}
-                                />
-                              </label>
-                            )}
-
-                            {/* Expand button for frontBack/multiple edit state */}
-                            {isExpandable && isEditing && (
-                              <button
-                                type="button"
-                                onClick={() => toggleRow(type.id)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border bg-card text-xs font-bold text-muted-foreground hover:bg-secondary/55 hover:text-foreground transition-all"
-                              >
-                                {isExpanded ? "Collapse" : "Edit Files"}
-                              </button>
-                            )}
-
-                            {/* Download All if expandable */}
-                            {isExpandable && completeCount > 0 && (
-                              <button
-                                type="button"
-                                title="Download all files"
-                                className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                onClick={() => downloadAll(type)}
-                              >
-                                <Download className="h-4 w-4" />
-                              </button>
-                            )}
-
-                            {/* Delete buttons */}
-                            {!isExpandable && singleMeta && isEditing && (
-                              <button
-                                type="button"
-                                title="Delete file"
-                                className="p-1.5 rounded-lg border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
-                                onClick={() => remove(singleKey)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
-
-                            {isExpandable && completeCount > 0 && isEditing && (
-                              <button
-                                type="button"
-                                title="Delete all files"
-                                className="p-1.5 rounded-lg border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
-                                onClick={() => deleteAll(type)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
-
-                            {showTypeControls && !type.isSystem && (
-                              <button
-                                type="button"
-                                title="Delete Document Type"
-                                className="p-1.5 rounded-lg border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
+                                title="Remove document type"
+                                className="rounded-md border border-border p-1.5 text-destructive hover:bg-destructive/10"
                                 onClick={() => onRemoveType?.(type)}
                               >
-                                <Trash className="h-4 w-4" />
+                                <Trash className="h-3.5 w-3.5" />
                               </button>
-                            )}
+                            ) : null}
                           </div>
-                        </td>
-                      </tr>
+                        ) : null}
+                      </div>
 
-                      {/* Expandable Sub-Rows */}
-                      {isExpandable && isExpanded && (
-                        <tr>
-                          <td colSpan={6} className="bg-secondary/10 px-6 py-4 border-t border-b border-border/40">
-                            <div className="rounded-xl border border-border/80 bg-background overflow-hidden shadow-inner">
-                              <table className="w-full border-collapse text-left text-xs">
-                                <thead>
-                                  <tr className="bg-secondary/20 border-b border-border/70 text-[10px] font-black uppercase tracking-wider text-muted-foreground select-none">
-                                    <th className="px-4 py-2.5 w-1/4">Side / File Slot</th>
-                                    <th className="px-4 py-2.5 w-2/5">File Details</th>
-                                    <th className="px-4 py-2.5">Status</th>
-                                    <th className="px-4 py-2.5 text-right pr-4">Actions</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border/50">
-                                  {typeStorageKeys.map((storageKey) => {
-                                    const side = parseStorageKey(storageKey, type.id);
-                                    const meta = docs[storageKey];
-                                    const pct = progress[storageKey] || 0;
-                                    const sideTitle = sideLabel(side);
+                      <div className="space-y-3">
+                        {typeStorageKeys.map((storageKey) => {
+                          const side = parseStorageKey(storageKey, type.id);
+                          const meta = docs[storageKey];
+                          const pct = progress[storageKey] || 0;
+                          const sideTitle = sideLabel(side);
 
-                                    return (
-                                      <tr key={storageKey} className="hover:bg-secondary/5 transition-colors">
-                                        {/* Slot Name */}
-                                        <td className="px-4 py-3 font-semibold text-foreground">
-                                          {sideTitle || "File Slot"}
-                                        </td>
+                          return (
+                            <div key={storageKey} className="space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                  {sideTitle || "Document File"}
+                                </p>
+                                {meta?.uploadedAt ? (
+                                  <span className="text-[10px] font-medium text-muted-foreground">{formatBytes(meta.sizeBytes)}</span>
+                                ) : null}
+                              </div>
 
-                                        {/* File Details */}
-                                        <td className="px-4 py-3">
-                                          {meta?.fileName ? (
-                                            <div className="flex flex-col min-w-0">
-                                              <span className="font-bold text-foreground truncate max-w-sm font-mono">
-                                                {meta.fileName}
-                                              </span>
-                                              <span className="text-[10px] text-muted-foreground mt-0.5">
-                                                Size: {formatBytes(meta.sizeBytes)}
-                                              </span>
-                                            </div>
-                                          ) : (
-                                            <span className="text-muted-foreground italic font-medium">No file uploaded</span>
-                                          )}
+                              {meta?.fileName ? (
+                                <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-secondary/20 p-2.5">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                                      <FileCheck2 className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="truncate text-xs font-bold text-foreground">{meta.fileName}</p>
+                                      <p className="text-[10px] font-medium text-muted-foreground">Uploaded</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-shrink-0 items-center gap-1">
+                                    <button type="button" title="Preview" className="rounded-md p-1.5 hover:bg-background" onClick={() => previewDocument(meta)}>
+                                      <Eye className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button type="button" title="Download" className="rounded-md p-1.5 hover:bg-background" onClick={() => download(meta)}>
+                                      <Download className="h-3.5 w-3.5" />
+                                    </button>
+                                    {isEditing ? (
+                                      <button type="button" title="Remove" className="rounded-md p-1.5 text-destructive hover:bg-destructive/10" onClick={() => remove(storageKey)}>
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="rounded-xl border border-dashed border-border bg-secondary/10 p-3">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <UploadCloud className="h-4 w-4 opacity-50" />
+                                    <span className="text-xs font-medium italic">No file uploaded</span>
+                                  </div>
+                                </div>
+                              )}
 
-                                          {/* Progress bar */}
-                                          {pct > 0 && pct < 100 && (
-                                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                                              <div
-                                                className="h-full bg-primary transition-all duration-300"
-                                                style={{ width: `${pct}%` }}
-                                              />
-                                            </div>
-                                          )}
-                                        </td>
+                              {pct > 0 && pct < 100 ? (
+                                <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                                  <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                              ) : null}
 
-                                        {/* Status */}
-                                        <td className="px-4 py-3">
-                                          {meta?.fileName ? (
-                                            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                                              Uploaded
-                                            </span>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1 rounded bg-zinc-50 border border-zinc-200 px-2 py-0.5 text-[10px] font-bold text-zinc-500">
-                                              Pending
-                                            </span>
-                                          )}
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="px-4 py-3 text-right pr-4">
-                                          <div className="flex items-center justify-end gap-1.5">
-                                            {meta?.fileName && (
-                                              <>
-                                                <button
-                                                  type="button"
-                                                  title="Preview"
-                                                  className="p-1 rounded border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                                  onClick={() => previewDocument(meta)}
-                                                >
-                                                  <Eye className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  title="Download"
-                                                  className="p-1 rounded border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                                  onClick={() => download(meta)}
-                                                >
-                                                  <Download className="h-3.5 w-3.5" />
-                                                </button>
-                                              </>
-                                            )}
-
-                                            {isEditing && (
-                                              <label className="cursor-pointer">
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border bg-card text-[10px] font-bold text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all">
-                                                  <UploadCloud className="h-3 w-3" />
-                                                  {meta ? "Replace" : "Upload"}
-                                                </span>
-                                                <input
-                                                  type="file"
-                                                  accept={accept}
-                                                  className="hidden"
-                                                  onChange={(e) => {
-                                                    const f = e.target.files?.[0];
-                                                    if (f) readFile(f, storageKey, type);
-                                                    e.target.value = "";
-                                                  }}
-                                                />
-                                              </label>
-                                            )}
-
-                                            {meta && isEditing && (
-                                              <button
-                                                type="button"
-                                                title="Delete file"
-                                                className="p-1 rounded border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
-                                                onClick={() => remove(storageKey)}
-                                              >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                              </button>
-                                            )}
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
+                              {isEditing ? (
+                                <label>
+                                  <span className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-secondary/50">
+                                    <UploadCloud className="h-3.5 w-3.5" />
+                                    {meta ? "Replace File" : sideTitle ? `Upload ${sideTitle}` : "Upload File"}
+                                  </span>
+                                  <input
+                                    type="file"
+                                    accept={accept}
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) readFile(f, storageKey, type);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                </label>
+                              ) : null}
                             </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
+                          );
+                        })}
+                      </div>
+                    </div>
                   );
                 })}
+              </div>
+            </section>
+          );
+        })}
 
-                {filteredDocumentTypes.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-10 text-center text-sm font-semibold text-muted-foreground">
-                      No documents found in this category
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        {groupedDocumentTypes.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-background px-5 py-10 text-center">
+            <p className="text-sm font-bold text-foreground">No documents in this category</p>
+            <p className="mt-1 text-xs text-muted-foreground">Choose another category or add a new document type.</p>
           </div>
-        </div>
+        ) : null}
       </div>
 
-      {/* Single Document Preview Modal */}
       {previewMeta ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 transition-opacity duration-300"
-          onClick={() => setPreviewMeta(null)}
-        >
-          <div
-            className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4" onClick={() => setPreviewMeta(null)}>
+          <div className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">
-                  Document Preview
-                </h3>
-                <p className="mt-0.5 truncate text-xs font-semibold text-muted-foreground">
-                  {previewMeta.fileName}
-                </p>
+                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">Document Preview</h3>
+                <p className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{previewMeta.fileName}</p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
                 <button
                   type="button"
                   title="Download"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary"
                   onClick={() => download(previewMeta)}
                 >
                   <Download className="h-4 w-4" />
@@ -668,7 +461,7 @@ export function EmployeeDocumentsGrid({
                 <button
                   type="button"
                   title="Close"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary"
                   onClick={() => setPreviewMeta(null)}
                 >
                   <X className="h-4 w-4" />
@@ -677,128 +470,16 @@ export function EmployeeDocumentsGrid({
             </div>
             <div className="min-h-0 flex-1 bg-secondary/20 p-4">
               {getPreviewKind(previewMeta.fileName) === "image" ? (
-                <div className="flex h-full items-center justify-center overflow-auto rounded-xl bg-background border border-border/80">
-                  <img
-                    src={previewMeta.dataUrl}
-                    alt={previewMeta.fileName || "Document preview"}
-                    className="max-h-full max-w-full object-contain"
-                  />
+                <div className="flex h-full items-center justify-center overflow-auto rounded-xl bg-background">
+                  <img src={previewMeta.dataUrl} alt={previewMeta.fileName || "Document preview"} className="max-h-full max-w-full object-contain" />
                 </div>
               ) : (
                 <iframe
                   title={previewMeta.fileName || "Document preview"}
                   src={previewMeta.dataUrl}
-                  className="h-full w-full rounded-xl border border-border/80 bg-background"
+                  className="h-full w-full rounded-xl border border-border bg-background"
                 />
               )}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Side-by-Side Front & Back Preview Modal */}
-      {frontBackPreview ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 transition-opacity duration-300"
-          onClick={() => setFrontBackPreview(null)}
-        >
-          <div
-            className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">
-                  Side-by-Side Preview: {frontBackPreview.docName}
-                </h3>
-              </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  title="Close"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setFrontBackPreview(null)}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 bg-secondary/10 p-5 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
-              {/* Front Side */}
-              <div className="flex flex-col h-full min-h-[400px]">
-                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center justify-between">
-                  <span>Front Side</span>
-                  {frontBackPreview.front && (
-                    <button
-                      type="button"
-                      title="Download front side"
-                      onClick={() => frontBackPreview.front && download(frontBackPreview.front)}
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline"
-                    >
-                      <Download className="h-3 w-3" /> Download
-                    </button>
-                  )}
-                </h4>
-                <div className="flex-1 rounded-xl border border-border/80 bg-background overflow-hidden p-2 flex items-center justify-center min-h-[300px]">
-                  {frontBackPreview.front ? (
-                    getPreviewKind(frontBackPreview.front.fileName) === "image" ? (
-                      <img
-                        src={frontBackPreview.front.dataUrl}
-                        alt="Front side preview"
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <iframe
-                        title="Front side preview"
-                        src={frontBackPreview.front.dataUrl}
-                        className="h-full w-full border-0"
-                      />
-                    )
-                  ) : (
-                    <div className="text-center p-6 text-muted-foreground font-semibold italic">
-                      No front side file uploaded
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Back Side */}
-              <div className="flex flex-col h-full min-h-[400px]">
-                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center justify-between">
-                  <span>Back Side</span>
-                  {frontBackPreview.back && (
-                    <button
-                      type="button"
-                      title="Download back side"
-                      onClick={() => frontBackPreview.back && download(frontBackPreview.back)}
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline"
-                    >
-                      <Download className="h-3 w-3" /> Download
-                    </button>
-                  )}
-                </h4>
-                <div className="flex-1 rounded-xl border border-border/80 bg-background overflow-hidden p-2 flex items-center justify-center min-h-[300px]">
-                  {frontBackPreview.back ? (
-                    getPreviewKind(frontBackPreview.back.fileName) === "image" ? (
-                      <img
-                        src={frontBackPreview.back.dataUrl}
-                        alt="Back side preview"
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <iframe
-                        title="Back side preview"
-                        src={frontBackPreview.back.dataUrl}
-                        className="h-full w-full border-0"
-                      />
-                    )
-                  ) : (
-                    <div className="text-center p-6 text-muted-foreground font-semibold italic">
-                      No back side file uploaded
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
         </div>

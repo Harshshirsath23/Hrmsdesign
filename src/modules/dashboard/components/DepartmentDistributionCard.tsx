@@ -11,7 +11,7 @@ const DEPARTMENT_DATA = [
   { name: 'Support', employees: 34 },
 ];
 
-const COLORS = ['#3B5BDB', '#4DABF7', '#12B886', '#F59F00', '#FA5252', '#845EF7'];
+const COLORS = ['#3B5BDB', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#EF4444'];
 
 export function DepartmentDistributionCard() {
   return (

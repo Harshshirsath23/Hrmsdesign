@@ -23,6 +23,10 @@ import { AddEmployeePage } from "./pages/admin/employees/AddEmployeePage";
 import { EmployeeManagementLayout } from "./pages/admin/employees/EmployeeManagementLayout";
 import { EmployeeSetupLayout } from "./pages/admin/employees/EmployeeSetupLayout";
 import { MASTER_CATEGORIES } from "./modules/masters/config";
+// import { MainShell } from "./pages/admin/main/MainShell";
+// import { AnalyticsHubPage } from "./pages/admin/main/AnalyticsHubPage";
+// import { EmployeeDirectoryPage } from "./pages/admin/main/EmployeeDirectoryPage";
+// import { EmployeeDirectoryModulePage } from "./pages/admin/main/EmployeeDirectoryModulePage";
 
 // Superadmin
 import { SuperadminMastersPage } from "./pages/admin/masters/SuperadminMastersPage";
@@ -36,6 +40,7 @@ const IdentityVerificationPage = lazy(() => import("./pages/admin/employees/mana
 const ContractDetailsPage = lazy(() => import("./pages/admin/employees/management/ContractDetailsPage").then(m => ({ default: m.ContractDetailsPage })));
 
 // Setup Pages (Lazy Loaded)
+const LetterTemplatePage = lazy(() => import("./pages/admin/employees/setup/LetterTemplatePage").then(m => ({ default: m.LetterTemplatePage })));
 const PoliciesFormsPage = lazy(() => import("./pages/admin/employees/setup/PoliciesFormsPage").then(m => ({ default: m.PoliciesFormsPage })));
 const EmployeeSegmentPage = lazy(() => import("./pages/admin/employees/setup/EmployeeSegmentPage").then(m => ({ default: m.EmployeeSegmentPage })));
 const EmployeeRolesPage = lazy(() => import("./pages/admin/employees/setup/EmployeeRolesPage").then(m => ({ default: m.EmployeeRolesPage })));
@@ -79,6 +84,7 @@ import { EmployeeLeaveNotificationsPage } from "./pages/employee/leaves/Employee
 import { EmployeePayslipsPage } from "./pages/employee/EmployeePayslipsPage";
 import { EmployeeDocumentsPage } from "./pages/employee/EmployeeDocumentsPage";
 import { EmployeeCanteenPage } from "./pages/employee/EmployeeCanteenPage";
+import { EmployeeProfilePage } from "./pages/employee/EmployeeProfilePage";
 import { ProfileChangeRequestsPage } from "./pages/admin/ProfileChangeRequestsPage";
 
 export const router = createBrowserRouter([
@@ -212,7 +218,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/employee/dashboard" replace /> },
       { path: "dashboard", Component: EmployeeDashboard },
-      { path: "profile", element: <Navigate to="/employee/dashboard" replace /> },
+      { path: "profile", Component: EmployeeProfilePage },
       { path: "attendance", Component: EmployeeAttendancePage },
       {
         path: "leaves",

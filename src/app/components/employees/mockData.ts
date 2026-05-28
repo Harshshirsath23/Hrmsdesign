@@ -3,8 +3,7 @@ export interface EducationEntry {
   specialization: string;
   institutionName: string;
   university: string;
-  fromDate: string;
-  toDate: string;
+  yearOfPassing: string;
   percentageCgpa: string;
   grade: string;
 }
@@ -32,24 +31,7 @@ export interface NomineeEntry {
   dateOfBirth: string;
   contactNumber: string;
   address: string;
-  // legacy total share (kept for backward compatibility)
   sharePercentage: string;
-  // new fields
-  email?: string;
-  nomineeType?: string; // EPF | EPS | Gratuity | Custom
-  // separate share percentages per nominee type (values as strings to match form inputs)
-  shareEPF?: string;
-  shareEPS?: string;
-  shareGratuity?: string;
-  shareCustom?: string;
-  // minor nominee support
-  isMinor?: boolean;
-  guardian?: {
-    name?: string;
-    relationship?: string;
-    contactNumber?: string;
-    address?: string;
-  };
   idProofFileName?: string;
   idProofDataUrl?: string;
 }
@@ -253,13 +235,8 @@ export interface Employee {
   panNumber?: string;
   aadhaarNumber?: string;
   uanNumber?: string;
-  // Simplified statutory coverage flags and numbers
-  isPfCovered?: boolean;
-  isEsiCovered?: boolean;
-  isLwfCovered?: boolean;
   pfNumber: string;
   esiNumber: string;
-  linNumber?: string;
   taxRegime?: string;
 
   // Family
@@ -329,9 +306,6 @@ export interface Employee {
   noticePeriodDays?: string;
   referredBy?: string;
   reportingTo?: string;
-  // Physical attributes
-  height?: string; // e.g. "175 cm"
-  weight?: string; // e.g. "72 kg"
 
   education?: EducationEntry[];
 
@@ -357,11 +331,6 @@ export interface Employee {
     doctorName?: string;
     insuranceProvider?: string;
     insurancePolicyNumber?: string;
-    // New conditional fields
-    hasDisease?: boolean;
-    diseaseDescription?: string;
-    hasSurgery?: boolean;
-    surgeryDescription?: string;
   };
 
   // Background Check
@@ -1278,10 +1247,7 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
           specialization: String(ed.specialization ?? ""),
           institutionName: String(ed.institutionName ?? ""),
           university: String(ed.university ?? ""),
-          fromDate: String(ed.fromDate ?? ed.startDate ?? ""),
-          toDate: String(
-            ed.toDate ?? ed.endDate ?? (ed.yearOfPassing ? `${String(ed.yearOfPassing)}-12-31` : "")
-          ),
+          yearOfPassing: String(ed.yearOfPassing ?? yearFromDate(ed.endDate as string | undefined)),
           percentageCgpa,
           grade,
         };

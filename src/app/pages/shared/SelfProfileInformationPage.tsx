@@ -76,119 +76,16 @@ const statusStyle: Record<string, string> = {
   Inactive: "bg-[#CED4DA] text-[#212529]",
 };
 
-interface FormField {
-  key: string;
-  label: string;
-  type: "text" | "date" | "select";
-  options?: string[];
-}
-
-const sectionFields: Record<string, FormField[]> = {
-  profile: [
-    { key: "firstName", label: "First Name", type: "text" },
-    { key: "middleName", label: "Middle Name", type: "text" },
-    { key: "lastName", label: "Last Name", type: "text" },
-    { key: "fathersName", label: "Father's Name", type: "text" },
-    { key: "spouseName", label: "Spouse's Name", type: "text" },
-    { key: "dateOfBirth", label: "Date of Birth", type: "date" },
-    { key: "actualDob", label: "Actual DOB", type: "date" },
-    { key: "placeOfBirth", label: "Place of Birth", type: "text" },
-    { key: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Other"] },
-    { key: "maritalStatus", label: "Marital Status", type: "select", options: ["Single", "Married", "Divorced", "Widowed"] },
-    { key: "bloodGroup", label: "Blood Group", type: "select", options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
-    { key: "nationality", label: "Nationality", type: "text" },
-    { key: "religion", label: "Religion", type: "text" },
-  ],
-  education: [
-    { key: "education.0.qualification", label: "Qualification", type: "text" },
-    { key: "education.0.specialization", label: "Specialization", type: "text" },
-    { key: "education.0.institutionName", label: "Institution/School Name", type: "text" },
-    { key: "education.0.university", label: "Board/University", type: "text" },
-    { key: "education.0.grade", label: "Grade/Percentage", type: "text" },
-  ],
-  family: [
-    { key: "family.0.name", label: "Family Member Name", type: "text" },
-    { key: "family.0.relationship", label: "Relationship", type: "text" },
-    { key: "family.0.dob", label: "Date of Birth", type: "date" },
-    { key: "family.0.occupation", label: "Occupation", type: "text" },
-  ],
-  nominee: [
-    { key: "nominees.0.nomineeName", label: "Nominee Name", type: "text" },
-    { key: "nominees.0.relationship", label: "Relationship", type: "text" },
-    { key: "nominees.0.dateOfBirth", label: "Date of Birth", type: "date" },
-    { key: "nominees.0.contactNumber", label: "Contact Number", type: "text" },
-    { key: "nominees.0.address", label: "Address", type: "text" },
-  ],
-  insurance: [
-    { key: "insurance.0.insuranceProvider", label: "Insurance Provider", type: "text" },
-    { key: "insurance.0.policyNumber", label: "Policy Number", type: "text" },
-    { key: "insurance.0.coverageType", label: "Coverage Type", type: "text" },
-    { key: "insurance.0.coverageAmount", label: "Coverage Amount", type: "text" },
-  ],
-  work: [
-    { key: "workExperience.0.companyName", label: "Company Name", type: "text" },
-    { key: "workExperience.0.jobTitle", label: "Job Title", type: "text" },
-    { key: "workExperience.0.startDate", label: "Start Date", type: "date" },
-    { key: "workExperience.0.endDate", label: "End Date", type: "date" },
-  ],
-  bank: [
-    { key: "bankName", label: "Bank Name", type: "text" },
-    { key: "accountNumber", label: "Account Number", type: "text" },
-    { key: "ifscCode", label: "IFSC Code", type: "text" },
-    { key: "panNumber", label: "PAN Number", type: "text" },
-    { key: "aadhaarNumber", label: "Aadhaar Number", type: "text" },
-    { key: "uanNumber", label: "UAN Number", type: "text" },
-  ],
-  passport: [
-    { key: "passportNumber", label: "Passport Number", type: "text" },
-    { key: "passportExpiry", label: "Passport Expiry Date", type: "date" },
-    { key: "visaType", label: "Visa Type", type: "text" },
-    { key: "visaNumber", label: "Visa Number", type: "text" },
-    { key: "visaExpiry", label: "Visa Expiry Date", type: "date" },
-    { key: "visaCountry", label: "Visa Country", type: "text" },
-  ],
-};
-
-function getNestedValue(obj: any, path: string): any {
-  const parts = path.split(".");
-  let current = obj;
-  for (const part of parts) {
-    if (current == null) return "";
-    const index = parseInt(part, 10);
-    if (!isNaN(index) && Array.isArray(current)) {
-      current = current[index];
-    } else {
-      current = current[part];
-    }
-  }
-  return current ?? "";
-}
-
-function MyRequestSection({ employee }: { employee: Employee }) {
-  const employeeId = employee.id;
+function MyRequestSection({ employeeId }: { employeeId: string }) {
   const dispatch = useDispatch<AppDispatch>();
   const requests = useSelector((state: RootState) => state.requests.requests);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [section, setSection] = useState<SelfSection | "">("");
-  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     dispatch(fetchRequests(employeeId));
   }, [dispatch, employeeId]);
-
-  // Populate dynamic form values from current employee profile
-  useEffect(() => {
-    if (!section) {
-      setFormValues({});
-      return;
-    }
-    const fields = sectionFields[section] || [];
-    const vals: Record<string, string> = {};
-    fields.forEach((f) => {
-      vals[f.key] = String(getNestedValue(employee, f.key) || "");
-    });
-    setFormValues(vals);
-  }, [section, employee]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return requests;
@@ -205,53 +102,35 @@ function MyRequestSection({ employee }: { employee: Employee }) {
     [requests]
   );
 
-  const fields = section ? sectionFields[section] || [] : [];
-  const hasChanges = useMemo(() => {
-    if (!section) return false;
-    return fields.some((f) => {
-      const oldVal = String(getNestedValue(employee, f.key) || "");
-      const newVal = String(formValues[f.key] || "");
-      return oldVal !== newVal;
-    });
-  }, [section, formValues, fields, employee]);
-
   const submitRequest = async () => {
     const mappedSection = section ? requestSectionMap[section] : undefined;
     const label = menuItems.find((item) => item.id === section)?.label;
-    if (!mappedSection || !label || !hasChanges) return;
-
-    const changes = fields
-      .map((f) => {
-        const oldVal = getNestedValue(employee, f.key);
-        const newVal = formValues[f.key];
-        if (String(oldVal || "") !== String(newVal || "")) {
-          return {
-            fieldName: f.key,
-            fieldLabel: f.label,
-            oldValue: oldVal,
-            newValue: newVal,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
+    if (!mappedSection || !label || !description.trim()) return;
 
     await dispatch(
       createRequest({
         employeeId,
         section: mappedSection,
         sectionLabel: label,
-        changes: changes as any,
+        changes: [
+          {
+            fieldName: "description",
+            fieldLabel: "Description",
+            oldValue: "",
+            newValue: description.trim(),
+          },
+        ],
       })
     );
     setSection("");
+    setDescription("");
   };
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-5 pb-16">
       <div>
         <h2 className="text-xl font-bold text-foreground">My Request</h2>
-        <p className="text-sm text-muted-foreground">Submit and track profile update requests sent to admin.</p>
+        <p className="text-sm text-muted-foreground">Track profile update requests sent to admin.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -268,15 +147,12 @@ function MyRequestSection({ employee }: { employee: Employee }) {
         ))}
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-            Select Section to Edit
-          </label>
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="grid gap-3 lg:grid-cols-[240px_1fr_auto]">
           <select
             value={section}
             onChange={(event) => setSection(event.target.value as SelfSection)}
-            className="w-full md:w-80 h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
           >
             <option value="">Select Section</option>
             {menuItems
@@ -287,71 +163,29 @@ function MyRequestSection({ employee }: { employee: Employee }) {
                 </option>
               ))}
           </select>
+          <input
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Describe what you want admin to update"
+            className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+          />
+          <button
+            onClick={submitRequest}
+            disabled={!section || !description.trim()}
+            className="h-10 rounded-lg bg-foreground px-5 text-xs font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Submit Request
+          </button>
         </div>
-
-        {/* Dynamic Form Render */}
-        {section && fields.length > 0 && (
-          <div className="border-t border-border pt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-            <h3 className="text-sm font-bold text-foreground">
-              Update fields in {menuItems.find((m) => m.id === section)?.label}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {fields.map((field) => {
-                const currentVal = getNestedValue(employee, field.key);
-                return (
-                  <div key={field.key} className="space-y-1.5 p-3 rounded-lg bg-secondary/20 border border-border/40">
-                    <label className="block text-xs font-bold text-foreground">{field.label}</label>
-                    <div className="text-[11px] text-muted-foreground font-medium">
-                      Current: <span className="font-mono bg-card px-1 py-0.5 rounded border border-border">{String(currentVal || "—")}</span>
-                    </div>
-                    {field.type === "select" ? (
-                      <select
-                        value={formValues[field.key] || ""}
-                        onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                        className="w-full h-9 rounded-md border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none"
-                      >
-                        <option value="">Select Option</option>
-                        {field.options?.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={formValues[field.key] || ""}
-                        onChange={(e) => setFormValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                        className="w-full h-9 rounded-md border border-border bg-background px-2.5 text-xs text-foreground focus:outline-none font-medium"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={submitRequest}
-                disabled={!hasChanges}
-                className="h-10 rounded-lg bg-primary text-primary-foreground px-5 text-xs font-bold hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 transition-opacity"
-              >
-                Submit Request
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-2">
+      <div className="flex flex-wrap gap-2">
         {(["all", "pending", "approved", "rejected"] as const).map((item) => (
           <button
             key={item}
             onClick={() => setFilter(item)}
-            className={`rounded-lg border px-4 py-2 text-xs font-bold capitalize cursor-pointer transition-colors ${
-              filter === item
-                ? "border-foreground bg-foreground text-primary-foreground shadow-sm"
-                : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className={`rounded-lg border px-4 py-2 text-xs font-bold capitalize ${
+              filter === item ? "border-foreground bg-foreground text-primary-foreground" : "border-border bg-card text-muted-foreground"
             }`}
           >
             {item}
@@ -359,18 +193,18 @@ function MyRequestSection({ employee }: { employee: Employee }) {
         ))}
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
             No requests found.
           </div>
         ) : (
           filtered.map((request) => (
-            <div key={request.id} className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3">
+            <div key={request.id} className="rounded-xl border border-border bg-card p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-bold text-foreground">{request.sectionLabel}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground">
                     {new Date(request.createdAt).toLocaleString("en-IN", {
                       day: "2-digit",
                       month: "short",
@@ -380,50 +214,13 @@ function MyRequestSection({ employee }: { employee: Employee }) {
                     })}
                   </p>
                 </div>
-                <span
-                  className={[
-                    "rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider",
-                    request.status === "pending"
-                      ? "bg-amber-50 border-amber-200 text-amber-700"
-                      : request.status === "approved"
-                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                        : "bg-rose-50 border-rose-200 text-rose-700",
-                  ].join(" ")}
-                >
+                <span className="rounded-md border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-widest">
                   {request.status}
                 </span>
               </div>
-
-              {/* Changes Timeline */}
-              <div className="space-y-2.5">
-                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Requested Changes</p>
-                <div className="divide-y divide-border/60 border border-border rounded-lg bg-secondary/15 overflow-hidden">
-                  {request.changes.map((change, idx) => (
-                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 text-xs">
-                      <span className="font-bold text-foreground w-1/3 shrink-0">{change.fieldLabel || change.fieldName}</span>
-                      <div className="flex items-center gap-2 flex-1 min-w-0 font-medium">
-                        <span className="text-muted-foreground truncate">{String(change.oldValue || "—")}</span>
-                        <span className="text-muted-foreground shrink-0">→</span>
-                        <span className="text-foreground font-semibold truncate">{String(change.newValue || "—")}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Admin remarks / feedback */}
-              {request.adminRemark && (
-                <div className="rounded-lg bg-secondary/35 border border-border/80 p-3 text-xs">
-                  <p className="font-bold text-foreground">Admin Remark:</p>
-                  <p className="text-muted-foreground mt-1">{request.adminRemark}</p>
-                </div>
-              )}
-              {request.rejectionComment && (
-                <div className="rounded-lg bg-rose-50/50 border border-rose-100 p-3 text-xs">
-                  <p className="font-bold text-rose-700">Rejection Reason:</p>
-                  <p className="text-rose-600 mt-1">{request.rejectionComment}</p>
-                </div>
-              )}
+              {request.changes[0]?.newValue ? (
+                <p className="mt-3 text-sm text-muted-foreground">{String(request.changes[0].newValue)}</p>
+              ) : null}
             </div>
           ))
         )}
@@ -545,7 +342,7 @@ export function SelfProfileInformationPage() {
 
         <main className="flex-1 overflow-y-auto p-6">
           {activeSection === "myRequest" ? (
-            <MyRequestSection employee={employee} />
+            <MyRequestSection employeeId={employee.id} />
           ) : (
             <>
               <ContentSection

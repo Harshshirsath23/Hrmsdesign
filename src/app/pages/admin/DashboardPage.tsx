@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   Users, UserCheck, CalendarOff, ClipboardCheck,
   Cake, CalendarDays, CheckSquare, ChevronRight,
-  UserPlus, ShieldCheck, Hourglass,
+  UserPlus, ShieldCheck, Hourglass, TrendingUp, Bell,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -33,10 +33,10 @@ const notLoggedIn    = todayRecords.filter((r) => r.status === "Absent").length;
 const pendingCount   = leaveRequests.filter((l) => l.status === "Pending").length;
 
 const donutData = [
-  { name: "Present",       value: presentToday, color: P.darkest },
-  { name: "On Leave",      value: onLeaveToday, color: P.mid     },
-  { name: "Not Logged In", value: notLoggedIn,  color: P.lighter },
-  { name: "Half Day",      value: halfDayToday, color: P.muted   },
+  { name: "Present",       value: presentToday, color: "#10B981" },  // success green
+  { name: "On Leave",      value: onLeaveToday, color: "#F59E0B" },  // warning amber
+  { name: "Not Logged In", value: notLoggedIn,  color: "#3B5BDB" },  // brand blue
+  { name: "Half Day",      value: halfDayToday, color: "#3B82F6" },  // info sky blue
 ];
 
 const deptData = Object.entries(
@@ -50,13 +50,13 @@ const deptData = Object.entries(
 }));
 
 const BAR_COLORS = [
-  P.darkest,
-  P.dark,
-  P.mid,
-  P.muted,
-  P.light,
-  P.lighter,
-  "#DEE2E6"
+  "#3B5BDB",  // brand blue
+  "#10B981",  // success green
+  "#F59E0B",  // warning amber
+  "#3B82F6",  // info sky blue
+  "#8B5CF6",  // purple
+  "#EF4444",  // danger red
+  "#DEE2E6"   // gray
 ];
 
 const EVENTS = {
@@ -184,7 +184,30 @@ const LIFECYCLE = [
 ];
 
 type EventTab = "all" | "meetings" | "birthdays" | "holidays";
+type KpiTone = "purple" | "green" | "orange" | "red" | "gray";
 
+const KPI_ICON_TONES: Record<KpiTone, { background: string; boxShadow: string }> = {
+  purple: {
+    background: "linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)",
+    boxShadow: "0 10px 20px rgba(124, 58, 237, 0.28)",
+  },
+  orange: {
+    background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
+    boxShadow: "0 10px 20px rgba(249, 115, 22, 0.28)",
+  },
+  red: {
+    background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+    boxShadow: "0 10px 20px rgba(239, 68, 68, 0.28)",
+  },
+  gray: {
+    background: "linear-gradient(135deg, #6B7280 0%, #4B5563 100%)",
+    boxShadow: "0 10px 20px rgba(75, 85, 99, 0.24)",
+  },
+  green: {
+    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+    boxShadow: "0 10px 20px rgba(16, 185, 129, 0.28)",
+  },
+};
 /* ── Sub-components ────────────────────────────────────────── */
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -199,16 +222,27 @@ function KpiCard({
   label,
   value,
   sub,
+  tone,
 }: {
   icon: React.ElementType;
   label: string;
   value: number | string;
   sub: string;
+  tone: KpiTone;
 }) {
+  const iconTone = KPI_ICON_TONES[tone];
+
   return (
     <div className="flat-card flat-card-hover bg-card p-5 flex items-start gap-4">
-      <div className="w-11 h-11 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-        <Icon className="w-5 h-5 text-foreground" />
+      <div
+        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-white [&_svg]:stroke-white"
+        style={{
+          background: iconTone.background,
+          boxShadow: iconTone.boxShadow,
+          color: "#FFFFFF",
+        }}
+      >
+        <Icon className="w-5 h-5" />
       </div>
 
       <div>
@@ -382,6 +416,7 @@ export function DashboardPage() {
             label="Total Employees"
             value={totalEmployees}
             sub="Across all departments"
+            tone="purple"
           />
 
           <KpiCard
@@ -389,6 +424,7 @@ export function DashboardPage() {
             label="Present Today"
             value={presentToday}
             sub="Checked in today"
+            tone="green"
           />
 
           <KpiCard
@@ -396,6 +432,7 @@ export function DashboardPage() {
             label="On Leave Today"
             value={onLeaveToday}
             sub="Approved absences"
+            tone="orange"
           />
 
           <KpiCard
@@ -403,6 +440,7 @@ export function DashboardPage() {
             label="Pending Approvals"
             value={pendingCount}
             sub="Awaiting your action"
+            tone="red"
           />
         </div>
       </section>
@@ -414,14 +452,26 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Attendance donut */}
-          <div className="flat-card bg-card p-6">
-            <h2 className="text-base font-semibold text-foreground mb-1">
-              Attendance Summary
-            </h2>
-
-            <p className="text-xs text-muted-foreground mb-6">
-              Today's workforce status breakdown
-            </p>
+          <div className="flat-card flat-card-hover bg-card p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white"
+                style={{
+                  background: KPI_ICON_TONES.green.background,
+                  boxShadow: KPI_ICON_TONES.green.boxShadow,
+                }}
+              >
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Attendance Summary
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Today's workforce status breakdown
+                </p>
+              </div>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-6">
 
@@ -457,39 +507,51 @@ export function DashboardPage() {
                 <DonutStat
                   label="Present"
                   value={presentToday}
-                  color={P.darkest}
+                  color="#10B981"
                 />
 
                 <DonutStat
                   label="On Leave"
                   value={onLeaveToday}
-                  color={P.mid}
+                  color="#F59E0B"
                 />
 
                 <DonutStat
                   label="Not Logged In"
                   value={notLoggedIn}
-                  color={P.lighter}
+                  color="#3B5BDB"
                 />
 
                 <DonutStat
                   label="Half Day"
                   value={halfDayToday}
-                  color={P.muted}
+                  color="#3B82F6"
                 />
               </div>
             </div>
           </div>
 
           {/* Dept bar chart */}
-          <div className="flat-card bg-card p-6">
-            <h2 className="text-base font-semibold text-foreground mb-1">
-              Employees by Department
-            </h2>
-
-            <p className="text-xs text-muted-foreground mb-6">
-              Headcount across teams
-            </p>
+          <div className="flat-card flat-card-hover bg-card p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white"
+                style={{
+                  background: KPI_ICON_TONES.purple.background,
+                  boxShadow: KPI_ICON_TONES.purple.boxShadow,
+                }}
+              >
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Employees by Department
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Headcount across teams
+                </p>
+              </div>
+            </div>
 
             <ResponsiveContainer width="100%" height={190}>
               <BarChart
@@ -561,7 +623,7 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Events feed */}
-          <div className="flat-card bg-card p-6 flex flex-col">
+          <div className="flat-card flat-card-hover bg-card p-6 flex flex-col">
             <h2 className="text-base font-semibold text-foreground mb-1">
               Events & Reminders
             </h2>
@@ -593,7 +655,7 @@ export function DashboardPage() {
                 <div
                   key={ev.id}
                   className="flex items-center justify-between p-3 rounded-lg border border-border
-                    hover:bg-secondary transition-colors cursor-pointer group"
+                    hover:bg-secondary hover:border-foreground/20 hover:shadow-md transition-all duration-200 cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-md bg-secondary border border-border flex items-center justify-center flex-shrink-0">
@@ -624,7 +686,7 @@ export function DashboardPage() {
           </div>
 
           {/* Lifecycle alerts */}
-          <div className="flat-card bg-card p-6 flex flex-col">
+          <div className="flat-card flat-card-hover bg-card p-6 flex flex-col">
             <h2 className="text-base font-semibold text-foreground mb-1">
               Lifecycle Alerts
             </h2>
@@ -634,18 +696,27 @@ export function DashboardPage() {
             </p>
 
             <div className="space-y-4">
-              {LIFECYCLE.map((alert) => {
+              {LIFECYCLE.map((alert, idx) => {
                 const Icon = alert.icon;
+                const tones: KpiTone[] = ["purple", "green", "orange"];
+                const tone = tones[idx % tones.length];
+                const iconTone = KPI_ICON_TONES[tone];
 
                 return (
                   <div
                     key={alert.id}
-                    className="p-4 rounded-lg border border-border bg-background hover:bg-secondary transition-colors"
+                    className="p-4 rounded-lg border border-border bg-background hover:bg-secondary hover:border-foreground/20 hover:shadow-md transition-all duration-200 cursor-pointer"
                   >
                     <div className="flex items-start gap-4">
 
-                      <div className="w-10 h-10 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-5 h-5 text-foreground" />
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white [&_svg]:stroke-white"
+                        style={{
+                          background: iconTone.background,
+                          boxShadow: iconTone.boxShadow,
+                        }}
+                      >
+                        <Icon className="w-5 h-5" />
                       </div>
 
                       <div className="flex-1 min-w-0">

@@ -4,22 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../ui/avatar";
 import { cn } from "../../ui/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { ShiftDefinition, RosterRecord } from "../../../modules/attendance/types";
-
-function employeeDisplayName(record: RosterRecord): string {
-  const name = record.employeeName?.trim();
-  if (name) return name;
-  if (record.employeeCode?.trim()) return record.employeeCode;
-  return "Employee";
-}
-
-function employeeInitials(record: RosterRecord): string {
-  const name = employeeDisplayName(record);
-  const parts = name.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-  }
-  return (name.slice(0, 2) || "??").toUpperCase();
-}
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Lock, Edit2, Check, Globe } from "lucide-react";
 import { Button } from "../../ui/button";
@@ -34,14 +18,6 @@ interface RosterGridProps {
 
 export function RosterGrid({ roster, days, shiftDefinitions, isPublished, onUpdateShift }: RosterGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  if (!roster?.length) {
-    return (
-      <div className="flex items-center justify-center min-h-[240px] text-sm text-slate-500 dark:text-slate-400">
-        No roster data for this period. Adjust filters or generate a roster.
-      </div>
-    );
-  }
 
   return (
     <div className="relative flex flex-col h-full overflow-hidden">
@@ -103,12 +79,12 @@ export function RosterGrid({ roster, days, shiftDefinitions, isPublished, onUpda
                     <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shadow-sm">
                       <AvatarImage src={record.avatar} />
                       <AvatarFallback className="bg-emerald-500/10 text-emerald-600 text-xs font-bold">
-                        {employeeInitials(record)}
+                        {record.employeeName.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col min-w-0">
                       <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-2">
-                        {employeeDisplayName(record)}
+                        {record.employeeName}
                         {isPublished && <Globe className="w-3 h-3 text-emerald-500" />}
                       </span>
                       <div className="flex items-center gap-1.5">
