@@ -638,12 +638,7 @@ html {
     transform: scale(.98);
   }
 
-  @media (pointer: fine) {
-    body,
-    body * {
-      cursor: none !important;
-    }
-  }
+
 
   :where(input, textarea, select) {
     border-radius: 14px !important;
