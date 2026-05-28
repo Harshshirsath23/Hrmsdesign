@@ -1,16 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@api/client';
-
+ 
 const LEAVE_BAL_KEY = 'hrms-demo-leave-balances';
 const LEAVE_APP_KEY = 'hrms-demo-leave-applications';
-
+ 
 const DEMO_LEAVE_TYPES: LeaveTypeRef[] = [
   { id: 'lt-1', name: 'Privilege Leave', code: 'PL', color_code: '#0EA5E9', is_paid: true },
   { id: 'lt-2', name: 'Sick Leave', code: 'SL', color_code: '#F59E0B', is_paid: true },
   { id: 'lt-3', name: 'Casual Leave', code: 'CL', color_code: '#10B981', is_paid: true },
   { id: 'lt-4', name: 'Loss of Pay', code: 'LOP', color_code: '#EF4444', is_paid: false },
 ];
-
+ 
 const DEMO_BALANCES: LeaveBalanceAPI[] = [
   {
     id: 'lb-1', employee_code: 'EMP-0001', leave_type: 'lt-1', leave_type_detail: DEMO_LEAVE_TYPES[0],
@@ -28,7 +28,7 @@ const DEMO_BALANCES: LeaveBalanceAPI[] = [
     pending_approval: 0, carry_forwarded: 0, encashed: 0, available: 5, total_allocated: 6,
   },
 ];
-
+ 
 const DEMO_APPLICATIONS: LeaveApplicationAPI[] = [
   {
     id: 'la-1', employee_code: 'EMP-0002', employee_name: 'Rohan Kulkarni', leave_type: 'lt-2',
@@ -41,7 +41,7 @@ const DEMO_APPLICATIONS: LeaveApplicationAPI[] = [
     total_days: 3, reason: 'Family function out of station', status: 'SUBMITTED', applied_on: '2026-04-29', approved_at: null,
   },
 ];
-
+ 
 function readStore<T>(key: string, seed: T[]): T[] {
   const raw = localStorage.getItem(key);
   if (raw) {
@@ -54,15 +54,15 @@ function readStore<T>(key: string, seed: T[]): T[] {
   localStorage.setItem(key, JSON.stringify(seed));
   return seed;
 }
-
+ 
 function writeStore<T>(key: string, data: T[]) {
   localStorage.setItem(key, JSON.stringify(data));
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
-
+ 
 export interface LeaveTypeRef {
   id: string;
   name: string;
@@ -70,7 +70,7 @@ export interface LeaveTypeRef {
   color_code: string;
   is_paid: boolean;
 }
-
+ 
 export interface LeaveBalanceAPI {
   id: string;
   employee_code: string;
@@ -87,7 +87,7 @@ export interface LeaveBalanceAPI {
   available: number;
   total_allocated: number;
 }
-
+ 
 export interface LeaveApplicationAPI {
   id: string;
   employee_code: string;
@@ -104,7 +104,7 @@ export interface LeaveApplicationAPI {
   applied_on: string;
   approved_at: string | null;
 }
-
+ 
 export interface HolidayAPI {
   id: string;
   name: string;
@@ -112,28 +112,83 @@ export interface HolidayAPI {
   holiday_type: string;
   is_optional: boolean;
 }
-
+ 
+export interface LeaveBalanceSummaryAPI {
+  employee_id: string;
+  total_allocated: number;
+  total_accrued: number;
+  total_available: number;
+  total_used: number;
+  total_pending: number;
+  balances: Array<{
+    leave_type_id: string;
+    leave_type_name: string;
+    allocated: number;
+    accrued: number;
+    available: number;
+    used: number;
+    pending: number;
+    carried_forward: number;
+  }>;
+}
+ 
 /* ------------------------------------------------------------------ */
 /*  Hooks                                                              */
 /* ------------------------------------------------------------------ */
-
+ 
+async function fetchLeaveBalanceSummary(): Promise<LeaveBalanceSummaryAPI> {
+  try {
+    console.log('Fetching leave balance summary...');
+    const res = await api.get('/leave/ess/balance/summary/');
+    console.log('Leave balance summary response:', res.data);
+    const data = res.data?.data ?? res.data ?? {};
+    if (data?.total_allocated !== undefined) {
+      return data as LeaveBalanceSummaryAPI;
+    }
+  } catch (error) {
+    console.error('Error fetching leave balance summary:', error);
+  }
+  // Fallback: sum from demo balances
+  const sum = DEMO_BALANCES.reduce(
+    (acc, b) => ({
+      total_allocated: acc.total_allocated + b.total_allocated,
+      total_available: acc.total_available + b.available,
+      total_used: acc.total_used + b.used,
+    }),
+    { total_allocated: 0, total_available: 0, total_used: 0 }
+  );
+  return {
+    employee_id: '',
+    total_allocated: sum.total_allocated,
+    total_accrued: 0,
+    total_available: sum.total_available,
+    total_used: sum.total_used,
+    total_pending: 0,
+    balances: DEMO_BALANCES as any,
+  };
+}
+ 
 async function fetchMyBalances(): Promise<LeaveBalanceAPI[]> {
   try {
+    console.log('Fetching leave balances...');
     const res = await api.get('/me/leave-balances/');
+    console.log('Leave balances response:', res.data);
     const rows = res.data?.results ?? res.data?.data ?? res.data ?? [];
     if (Array.isArray(rows) && rows.length) {
       writeStore(LEAVE_BAL_KEY, rows as LeaveBalanceAPI[]);
       return rows as LeaveBalanceAPI[];
     }
-  } catch {
-    // fallback
+  } catch (error) {
+    console.error('Error fetching leave balances:', error);
   }
   return readStore(LEAVE_BAL_KEY, DEMO_BALANCES);
 }
-
+ 
 async function fetchMyApplications(): Promise<LeaveApplicationAPI[]> {
   try {
+    console.log('Fetching leave applications...');
     const res = await api.get('/me/leave-applications/');
+    console.log('Leave applications response:', res.data);
     const rows = res.data?.results ?? res.data?.data?.results ?? res.data?.data ?? res.data ?? [];
     if (Array.isArray(rows) && rows.length) {
       writeStore(LEAVE_APP_KEY, rows as LeaveApplicationAPI[]);
@@ -144,7 +199,7 @@ async function fetchMyApplications(): Promise<LeaveApplicationAPI[]> {
   }
   return readStore(LEAVE_APP_KEY, DEMO_APPLICATIONS);
 }
-
+ 
 async function fetchUpcomingHolidays(): Promise<HolidayAPI[]> {
   try {
     const res = await api.get('/me/holidays/');
@@ -158,7 +213,7 @@ async function fetchUpcomingHolidays(): Promise<HolidayAPI[]> {
     { id: 'hol-2', name: 'Bakrid', date: '2026-06-08', holiday_type: 'Festival', is_optional: true },
   ];
 }
-
+ 
 async function fetchLeaveTypes(): Promise<LeaveTypeRef[]> {
   try {
     const res = await api.get('/me/leave-types/');
@@ -169,7 +224,7 @@ async function fetchLeaveTypes(): Promise<LeaveTypeRef[]> {
   }
   return DEMO_LEAVE_TYPES;
 }
-
+ 
 export function useMyLeaveBalances() {
   return useQuery({
     queryKey: ['leave-balances-my'],
@@ -177,7 +232,15 @@ export function useMyLeaveBalances() {
     staleTime: 2 * 60_000,
   });
 }
-
+ 
+export function useLeaveBalanceSummary() {
+  return useQuery({
+    queryKey: ['leave-balance-summary'],
+    queryFn: fetchLeaveBalanceSummary,
+    staleTime: 3 * 60_000,
+  });
+}
+ 
 export function useMyLeaveApplications() {
   return useQuery({
     queryKey: ['leave-applications-my'],
@@ -185,7 +248,7 @@ export function useMyLeaveApplications() {
     staleTime: 2 * 60_000,
   });
 }
-
+ 
 export function useUpcomingHolidays() {
   return useQuery({
     queryKey: ['holidays-upcoming'],
@@ -193,7 +256,7 @@ export function useUpcomingHolidays() {
     staleTime: 10 * 60_000,
   });
 }
-
+ 
 export function useLeaveTypes() {
   return useQuery({
     queryKey: ['leave-types'],
@@ -201,7 +264,7 @@ export function useLeaveTypes() {
     staleTime: 10 * 60_000,
   });
 }
-
+ 
 export interface ApplyLeavePayload {
   leave_type: string;
   from_date: string;
@@ -213,7 +276,7 @@ export interface ApplyLeavePayload {
   contact_during_leave?: string;
   document_url?: string;
 }
-
+ 
 export function useApplyLeave() {
   const qc = useQueryClient();
   return useMutation({
@@ -242,7 +305,7 @@ export function useApplyLeave() {
           approved_at: null,
         };
         writeStore(LEAVE_APP_KEY, [newApp, ...apps]);
-
+ 
         const balances = readStore(LEAVE_BAL_KEY, DEMO_BALANCES);
         const updated = balances.map((bal) => {
           if (bal.leave_type !== payload.leave_type) return bal;
@@ -250,7 +313,7 @@ export function useApplyLeave() {
           return { ...bal, pending_approval: pendingApproval, available: Number(bal.available) - payload.total_days };
         });
         writeStore(LEAVE_BAL_KEY, updated);
-
+ 
         return newApp;
       }
     },
@@ -260,11 +323,11 @@ export function useApplyLeave() {
     },
   });
 }
-
+ 
 /* ------------------------------------------------------------------ */
 /*  Admin hooks (HRMS portal)                                          */
 /* ------------------------------------------------------------------ */
-
+ 
 async function fetchAllApplications(): Promise<LeaveApplicationAPI[]> {
   try {
     const res = await api.get('/leave/applications/');
@@ -278,7 +341,7 @@ async function fetchAllApplications(): Promise<LeaveApplicationAPI[]> {
   }
   return readStore(LEAVE_APP_KEY, DEMO_APPLICATIONS);
 }
-
+ 
 export function useAllLeaveApplications() {
   return useQuery({
     queryKey: ['leave-applications-all'],
@@ -286,7 +349,7 @@ export function useAllLeaveApplications() {
     staleTime: 60_000,
   });
 }
-
+ 
 export function useApproveLeave() {
   const qc = useQueryClient();
   return useMutation({
@@ -308,7 +371,7 @@ export function useApproveLeave() {
     },
   });
 }
-
+ 
 export function useRejectLeave() {
   const qc = useQueryClient();
   return useMutation({
@@ -330,3 +393,5 @@ export function useRejectLeave() {
     },
   });
 }
+ 
+ 

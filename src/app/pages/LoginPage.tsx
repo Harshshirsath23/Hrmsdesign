@@ -114,8 +114,8 @@ const DEMO: Record<
     password: "Manager@123",
   },
   employee: {
-    email: "emp001@company.com",
-    password: "Emp@123",
+    email: "amit.patel@acme.com",
+    password: "Password@123",
   },
 };
 
