@@ -33,7 +33,8 @@ export interface EducationDetail {
   specialization: string;
   institutionName: string;
   university: string;
-  yearOfPassing: string;
+  fromDate: string;
+  toDate: string;
   percentageCgpa: string;
   grade: string;
 }
@@ -117,6 +118,8 @@ export interface EmployeeProfile {
     religion: string;
     residentialStatus: string;
     identificationMark: string;
+    height?: string;
+    weight?: string;
     panNumber: string;
     aadhaarNumber: string;
     passportNumber: string;
@@ -166,6 +169,11 @@ export interface EmployeeProfile {
     doctorName: string;
     insuranceProvider: string;
     insurancePolicyNumber: string;
+    // Conditional disease / surgery fields
+    hasDisease?: boolean;
+    diseaseDescription?: string;
+    hasSurgery?: boolean;
+    surgeryDescription?: string;
   };
 }
 

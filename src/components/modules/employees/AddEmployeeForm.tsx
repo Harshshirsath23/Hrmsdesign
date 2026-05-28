@@ -48,6 +48,10 @@ type AddEmployeeFormState = {
   alternate_mobile: string;
   emergency_contact_name: string;
   emergency_contact_number: string;
+  has_disease?: boolean;
+  disease_description?: string;
+  has_surgery?: boolean;
+  surgery_description?: string;
   father_name: string;
   spouse_name: string;
   marital_status: string;
@@ -100,6 +104,10 @@ const initialFormState: AddEmployeeFormState = {
   alternate_mobile: '',
   emergency_contact_name: '',
   emergency_contact_number: '',
+  has_disease: false,
+  disease_description: '',
+  has_surgery: false,
+  surgery_description: '',
   father_name: '',
   spouse_name: '',
   marital_status: '',
@@ -372,6 +380,12 @@ export function AddEmployeeForm({ onClose, onSuccess }: AddEmployeeFormProps) {
     card_number: form.card_number || undefined,
     access_valid_from: form.access_valid_from || undefined,
     access_valid_to: form.access_valid_to || undefined,
+    medicalInfo: {
+      conditions: form.disease_description || undefined,
+      hasDisease: form.has_disease || undefined,
+      surgeryDescription: form.surgery_description || undefined,
+      hasSurgery: form.has_surgery || undefined,
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -605,6 +619,40 @@ export function AddEmployeeForm({ onClose, onSuccess }: AddEmployeeFormProps) {
             {renderField('Emergency Contact Number', (
               <input type="tel" value={form.emergency_contact_number} onChange={(e) => update('emergency_contact_number', e.target.value)} className={inputClass} placeholder="Contact number" />
             ), 'emergency_contact_number')}
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Disease?</span>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={Boolean(form.has_disease)} onChange={(e) => setForm((p) => ({ ...p, has_disease: e.target.checked, disease_description: e.target.checked ? p.disease_description : '' }))} />
+                <span className="text-sm text-surface-700">Yes</span>
+              </label>
+            </div>
+            <div>
+              {form.has_disease ? (
+                <textarea value={form.disease_description} onChange={(e) => update('disease_description', e.target.value)} rows={3} className={inputClass} placeholder="Describe disease/condition" />
+              ) : (
+                <div className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm font-semibold text-surface-600">{"No"}</div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Surgery/Operation Done?</span>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={Boolean(form.has_surgery)} onChange={(e) => setForm((p) => ({ ...p, has_surgery: e.target.checked, surgery_description: e.target.checked ? p.surgery_description : '' }))} />
+                <span className="text-sm text-surface-700">Yes</span>
+              </label>
+            </div>
+            <div>
+              {form.has_surgery ? (
+                <textarea value={form.surgery_description} onChange={(e) => update('surgery_description', e.target.value)} rows={3} className={inputClass} placeholder="Describe surgery/operation" />
+              ) : (
+                <div className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm font-semibold text-surface-600">{"No"}</div>
+              )}
+            </div>
           </div>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

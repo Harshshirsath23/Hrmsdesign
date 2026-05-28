@@ -25,7 +25,9 @@ interface DirectoryFilters {
   department: string;
   team: string;
   designation: string;
-  joiningDate: string;
+  joiningFrom: string;
+  joiningTo: string;
+  status: string; // 'active' | 'inactive'
 }
 
 function StatusBadge({ status }: { status: Employee["status"] }) {
@@ -104,7 +106,9 @@ export function EmployeeDirectory() {
     department:  searchParams.get("department")  || "",
     team:        searchParams.get("team")        || "",
     designation: searchParams.get("designation") || "",
-    joiningDate: searchParams.get("joiningDate") || "",
+    joiningFrom: searchParams.get("joiningFrom") || "",
+    joiningTo:   searchParams.get("joiningTo")   || "",
+    status:      searchParams.get("status") || "active",
   });
   const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "card");
 
@@ -114,7 +118,9 @@ export function EmployeeDirectory() {
     if (filters.department)  params.department  = filters.department;
     if (filters.team)        params.team        = filters.team;
     if (filters.designation) params.designation = filters.designation;
-    if (filters.joiningDate) params.joiningDate = filters.joiningDate;
+    if (filters.joiningFrom) params.joiningFrom = filters.joiningFrom;
+    if (filters.joiningTo)   params.joiningTo = filters.joiningTo;
+    if (filters.status && filters.status !== 'active') params.status = filters.status;
     if (viewMode !== "card") params.view        = viewMode;
     setSearchParams(params, { replace: true });
   }, [filters, viewMode]);
@@ -129,14 +135,31 @@ export function EmployeeDirectory() {
       (!filters.department  || emp.department  === filters.department)  &&
       (!filters.team        || emp.team        === filters.team)        &&
       (!filters.designation || emp.designation === filters.designation) &&
-      (!filters.joiningDate || emp.joiningDate.startsWith(filters.joiningDate))
+      // Joining date range filter
+      (!filters.joiningFrom || !filters.joiningTo || (() => {
+        try {
+          const jd = new Date(emp.joiningDate);
+          const from = new Date(filters.joiningFrom);
+          const to = new Date(filters.joiningTo);
+          // normalize time
+          from.setHours(0,0,0,0);
+          to.setHours(23,59,59,999);
+          return jd >= from && jd <= to;
+        } catch {
+          return true;
+        }
+      })()) &&
+      // Status filter: default shows only active employees
+      (filters.status === 'active' ? emp.status === 'Active' : (emp.status === 'Inactive' || emp.status === 'Resigned'))
     );
   });
 
   const clearFilters = () =>
-    setFilters({ search: "", department: "", team: "", designation: "", joiningDate: "" });
+    setFilters({ search: "", department: "", team: "", designation: "", joiningFrom: "", joiningTo: "", status: 'active' });
 
-  const hasActiveFilters = Object.values(filters).some(Boolean);
+  const hasActiveFilters = (
+    filters.search || filters.department || filters.team || filters.designation || filters.joiningFrom || filters.joiningTo || filters.status !== 'active'
+  );
 
   const openInformation = (emp: Employee) => {
     selectEmployee(emp.id);
@@ -179,29 +202,68 @@ export function EmployeeDirectory() {
         </div>
 
         {/* Filters row */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Filter className="w-3.5 h-3.5" /> Filters:
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mt-1">
+              <Filter className="w-3.5 h-3.5" /> Filters:
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold text-muted-foreground">Department</span>
+              <SelectFilter value={filters.department} onChange={(v) => updateFilter("department", v)} options={departments} placeholder="All Departments" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold text-muted-foreground">Team</span>
+              <SelectFilter value={filters.team} onChange={(v) => updateFilter("team", v)} options={teams} placeholder="All Teams" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold text-muted-foreground">Designation</span>
+              <SelectFilter value={filters.designation} onChange={(v) => updateFilter("designation", v)} options={designations} placeholder="All Designations" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold text-muted-foreground">From Date</span>
+                <input
+                  type="date"
+                  value={filters.joiningFrom}
+                  onChange={(e) => updateFilter("joiningFrom", e.target.value)}
+                  className="flat-input appearance-none px-3 py-2 text-sm cursor-pointer font-medium w-40"
+                  title="From Date"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold text-muted-foreground">To Date</span>
+                <input
+                  type="date"
+                  value={filters.joiningTo}
+                  onChange={(e) => updateFilter("joiningTo", e.target.value)}
+                  className="flat-input appearance-none px-3 py-2 text-sm cursor-pointer font-medium w-40"
+                  title="To Date"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-semibold text-muted-foreground">Status</span>
+                <div className="w-44">
+                  <SelectFilter
+                    value={filters.status === 'active' ? 'Active Employees' : 'Inactive/Resigned Employees'}
+                    onChange={(v) => updateFilter('status', v === 'Active Employees' ? 'active' : 'inactive')}
+                    options={[ 'Active Employees', 'Inactive/Resigned Employees' ]}
+                    placeholder="Status"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-          <SelectFilter value={filters.department}  onChange={(v) => updateFilter("department", v)}  options={departments}  placeholder="All Departments" />
-          <SelectFilter value={filters.team}        onChange={(v) => updateFilter("team", v)}        options={teams}        placeholder="All Teams"        />
-          <SelectFilter value={filters.designation} onChange={(v) => updateFilter("designation", v)} options={designations} placeholder="All Designations" />
-          <input
-            type="month"
-            value={filters.joiningDate}
-            onChange={(e) => updateFilter("joiningDate", e.target.value)}
-            className="flat-input appearance-none px-3 py-2 text-sm cursor-pointer font-medium"
-            title="Filter by joining date"
-          />
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground
-                px-3 py-2 rounded-lg bg-secondary border border-border transition-all"
-            >
-              <X className="w-3.5 h-3.5" /> Clear all
-            </button>
-          )}
+          <div className="flex-shrink-0">
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground
+                  px-3 py-2 rounded-lg bg-secondary border border-border transition-all"
+              >
+                <X className="w-3.5 h-3.5" /> Clear all
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

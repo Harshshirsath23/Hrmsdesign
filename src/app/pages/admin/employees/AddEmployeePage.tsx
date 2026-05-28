@@ -72,6 +72,8 @@ interface FormState {
   reportingManager: string;
   status: string;
   joiningDate: string;
+  height: string;
+  weight: string;
   referredBy: string;
   allowSelfFill: boolean;
   probationPeriod: string;
@@ -239,6 +241,8 @@ const INIT: FormState = {
   reportingManager: "",
   status: "active",
   joiningDate: "",
+  height: "",
+  weight: "",
   referredBy: "",
   allowSelfFill: false,
   probationPeriod: "90",
@@ -1666,6 +1670,14 @@ export function AddEmployeePage() {
                     success={ok("joiningDate")}
                     className="cursor-pointer"
                   />
+                </FF>
+
+                <FF label="Height">
+                  <Inp value={form.height} onChange={(e) => set("height", e.target.value)} placeholder="e.g. 175 cm" />
+                </FF>
+
+                <FF label="Weight">
+                  <Inp value={form.weight} onChange={(e) => set("weight", e.target.value)} placeholder="e.g. 72 kg" />
                 </FF>
 
                 <FF label="Referred By">
