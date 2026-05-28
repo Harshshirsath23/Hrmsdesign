@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   MapPin,
   Mail,
@@ -51,6 +51,32 @@ function formatDate(dateStr?: string) {
 
 export function EmployeeProfile({ employee }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleEditPhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert("Image must be 3 MB or smaller.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      const nextEmployee = {
+        ...employee,
+        avatar: dataUrl,
+      };
+      await handleAdminSave("Profile Photo", employee, nextEmployee);
+    };
+    reader.readAsDataURL(file);
+  };
   const genderOptions = useMasterOptions("Gender");
   const maritalStatusOptions = useMasterOptions("MaritalStatus");
   const bloodGroupOptions = useMasterOptions("BloodGroup");
@@ -139,9 +165,21 @@ export function EmployeeProfile({ employee }: Props) {
                 {employee.initials}
               </div>
             )}
-            <span className="absolute -bottom-2 -right-2 p-2 bg-primary text-white rounded-lg shadow-lg">
+            <button
+              type="button"
+              onClick={handleEditPhotoClick}
+              className="absolute -bottom-2 -right-2 p-2 bg-primary text-white rounded-lg shadow-lg hover:bg-primary/95 transition-colors cursor-pointer"
+              title="Upload or change photo"
+            >
               <Edit2 size={14} />
-            </span>
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+            />
           </div>
           <div className="flex-1 text-center md:text-left space-y-4">
             <div>

@@ -350,7 +350,7 @@ export default function AddEmployeeBasicForm() {
     try {
       console.log('Form Submitted:', data);
       toast.success('Employee registration initiated successfully!');
-      setTimeout(() => navigate('/admin/employees/management/generate-letter'), 2000);
+      setTimeout(() => navigate('/admin/letters-policies/generate-letter'), 2000);
     } catch (error) {
       toast.error('Failed to submit form. Please check all fields.');
     } finally {
@@ -366,7 +366,7 @@ export default function AddEmployeeBasicForm() {
     }, 1000);
   };
 
-  const handleCancel = () => navigate('/admin/employees/management/generate-letter');
+  const handleCancel = () => navigate('/admin/letters-policies/generate-letter');
 
   const [activeSection, setActiveSection] = useState('basic-info');
 

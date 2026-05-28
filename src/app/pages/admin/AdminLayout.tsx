@@ -17,6 +17,8 @@ import {
   ClipboardCheck,
   Settings2,
   Search,
+  Mail,
+  Megaphone,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -28,6 +30,8 @@ const NAV_ITEMS = [
   { icon: Clock, label: "Attendance", path: "/admin/attendance" },
   { icon: CalendarDays, label: "Leave", path: "/admin/leave" },
   { icon: Wallet, label: "Payroll", path: "/admin/payroll" },
+  { icon: Mail, label: "Letters & Policies", path: "/admin/letters-policies" },
+  { icon: Megaphone, label: "Communication Center", path: "/admin/communication-center" },
   { icon: FileText, label: "Documents", path: "/admin/documents" },
   { icon: Settings2, label: "Settings", path: "/admin/settings" },
   { icon: ClipboardCheck, label: "Profile Requests", path: "/admin/profile-requests" },
