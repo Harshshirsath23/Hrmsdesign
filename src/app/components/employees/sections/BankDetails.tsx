@@ -418,7 +418,6 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
           <BankInfoRow label="PAN Number" value={statutoryData.panNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, panNumber: v }))} />
           <BankInfoRow label="Aadhaar Number" value={statutoryData.aadhaarNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, aadhaarNumber: v }))} />
-          <BankInfoRow label="UAN Number" value={statutoryData.uanNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, uanNumber: v }))} />
           <BankInfoRow label="Tax Regime" value={statutoryData.taxRegime || ""} isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, taxRegime: v }))} options={taxRegimeOptions} />
         </div>
 
@@ -438,14 +437,30 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               </div>
             </div>
             {statutoryData.isPfCovered ? (
-              <input
-                type="text"
-                value={statutoryData.pfNumber || ''}
-                disabled={!statutoryEditing}
-                onChange={(e) => setStatutoryData((p) => ({ ...p, pfNumber: e.target.value }))}
-                placeholder="PF Number"
-                className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2 py-1 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">PF Number</span>
+                  <input
+                    type="text"
+                    value={statutoryData.pfNumber || ''}
+                    disabled={!statutoryEditing}
+                    onChange={(e) => setStatutoryData((p) => ({ ...p, pfNumber: e.target.value }))}
+                    placeholder="PF Number"
+                    className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">UAN Number</span>
+                  <input
+                    type="text"
+                    value={statutoryData.uanNumber || ''}
+                    disabled={!statutoryEditing}
+                    onChange={(e) => setStatutoryData((p) => ({ ...p, uanNumber: e.target.value }))}
+                    placeholder="UAN Number"
+                    className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                  />
+                </div>
+              </div>
             ) : null}
           </div>
 
@@ -464,18 +479,21 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               </div>
             </div>
             {statutoryData.isEsiCovered ? (
-              <input
-                type="text"
-                value={statutoryData.esiNumber || ''}
-                disabled={!statutoryEditing}
-                onChange={(e) => setStatutoryData((p) => ({ ...p, esiNumber: e.target.value }))}
-                placeholder="ESI Number"
-                className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2 py-1 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ESI Number</span>
+                <input
+                  type="text"
+                  value={statutoryData.esiNumber || ''}
+                  disabled={!statutoryEditing}
+                  onChange={(e) => setStatutoryData((p) => ({ ...p, esiNumber: e.target.value }))}
+                  placeholder="ESI Number"
+                  className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                />
+              </div>
             ) : null}
           </div>
 
-          <div className="flex items-center gap-4 py-2 last:border-0">
+          <div className="flex items-center gap-4 py-2 border-b border-border">
             <div className="flex items-center gap-3 w-96 shrink-0">
               <input
                 type="checkbox"
@@ -490,15 +508,34 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               </div>
             </div>
             {statutoryData.isLwfCovered ? (
-              <input
-                type="text"
-                value={statutoryData.linNumber || ''}
-                disabled={!statutoryEditing}
-                onChange={(e) => setStatutoryData((p) => ({ ...p, linNumber: e.target.value }))}
-                placeholder="LIN Number"
-                className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2 py-1 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">LIN Number</span>
+                <input
+                  type="text"
+                  value={statutoryData.linNumber || ''}
+                  disabled={!statutoryEditing}
+                  onChange={(e) => setStatutoryData((p) => ({ ...p, linNumber: e.target.value }))}
+                  placeholder="LIN Number"
+                  className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                />
+              </div>
             ) : null}
+          </div>
+
+          <div className="flex items-center gap-4 py-2 last:border-0">
+            <div className="flex items-center gap-3 w-96 shrink-0">
+              <input
+                type="checkbox"
+                checked={Boolean(statutoryData.isEarlierMemberOfPensionOnHigherWages)}
+                disabled={!statutoryEditing}
+                onChange={(e) => setStatutoryData((p) => ({ ...p, isEarlierMemberOfPensionOnHigherWages: e.target.checked }))}
+                className="h-4 w-4 rounded border-border text-primary-600"
+              />
+              <div>
+                <div className="text-sm font-medium">Earlier Member of Pension on Higher Wages?</div>
+                <div className="text-xs text-muted-foreground">Check if applicable for this employee</div>
+              </div>
+            </div>
           </div>
         </div>
       </EditableSectionCard>

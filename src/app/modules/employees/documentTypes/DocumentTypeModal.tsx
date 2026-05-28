@@ -28,7 +28,7 @@ interface Props {
   onSave: (config: DocumentTypeConfig) => void;
 }
 
-const emptyForm = (): Omit<DocumentTypeConfig, "id"> & { id: string } => ({
+const emptyForm = (): Omit<DocumentTypeConfig, "id"> & { id: string, needsVerification?: boolean } => ({
   id: "",
   documentName: "",
   documentSection: "Personal",
@@ -39,6 +39,7 @@ const emptyForm = (): Omit<DocumentTypeConfig, "id"> & { id: string } => ({
   allowEmployeeEdit: true,
   displayOrder: 100,
   status: "Active",
+  needsVerification: false,
 });
 
 export function DocumentTypeModal({ open, onOpenChange, initial, existingIds, onSave }: Props) {
@@ -101,6 +102,7 @@ export function DocumentTypeModal({ open, onOpenChange, initial, existingIds, on
       displayOrder: Number(form.displayOrder) || 100,
       status: form.status,
       isSystem: initial?.isSystem,
+      needsVerification: form.needsVerification,
     });
     onOpenChange(false);
   };
@@ -226,7 +228,17 @@ export function DocumentTypeModal({ open, onOpenChange, initial, existingIds, on
             </div>
           </div>
 
-         
+          <div className="space-y-2 py-1">
+            <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer text-foreground select-none">
+              <input
+                type="checkbox"
+                checked={Boolean(form.needsVerification)}
+                onChange={(e) => setForm((f) => ({ ...f, needsVerification: e.target.checked }))}
+                className="h-4 w-4 rounded border-input text-primary focus:ring-primary accent-primary"
+              />
+              Needs Verification (e.g. name as per Aadhaar/PAN Card)
+            </label>
+          </div>
 
           <div className="space-y-1.5">
             <Label>Display Order / Sequence</Label>

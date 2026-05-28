@@ -261,6 +261,8 @@ export interface Employee {
   esiNumber: string;
   linNumber?: string;
   taxRegime?: string;
+  /** Earlier member of pension on higher wages */
+  isEarlierMemberOfPensionOnHigherWages?: boolean;
 
   // Family
   family: {
@@ -302,6 +304,8 @@ export interface Employee {
   esiDetails?: EsiDetails;
   accessCards?: AccessCardEntry[];
   employeeDocuments?: Partial<Record<string, EmployeeDocumentMeta>>;
+  /** Salary slips keyed by "YYYY-MM" (e.g. "2024-03") */
+  salarySlipsByMonth?: Partial<Record<string, EmployeeDocumentMeta>>;
 
   workExperience: WorkExperienceEntry[];
 
