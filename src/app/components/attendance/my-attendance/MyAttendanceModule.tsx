@@ -114,13 +114,29 @@ export function MyAttendanceModule({
               transition={{ duration: 0.3 }}
             >
               {view === "calendar" ? (
-                <CalendarView
-                  records={employeeRecords}
-                  currentDate={currentDate}
-                  searchTerm={searchTerm}
-                  onRegularize={handleRegularize}
-                  onSwipeDetails={handleSwipeDetails}
-                />
+                <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-6 items-start">
+                  <div className="w-full">
+                    <CalendarView
+                      records={employeeRecords}
+                      currentDate={currentDate}
+                      searchTerm={searchTerm}
+                      onRegularize={handleRegularize}
+                      onSwipeDetails={handleSwipeDetails}
+                    />
+                  </div>
+                  <div className="w-full lg:sticky lg:top-[90px] space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="attendance-section-icon p-2 bg-[#6366F1]/10 rounded-2xl shadow-sm">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 3v18h18" />
+                          <path d="m19 9-5 5-4-4-3 3" />
+                        </svg>
+                      </div>
+                      <h2 className="text-lg font-semibold text-foreground tracking-tight">Performance Analytics</h2>
+                    </div>
+                    <AttendanceCharts records={employeeRecords} />
+                  </div>
+                </div>
               ) : view === "list" ? (
                 <ListView
                   records={employeeRecords}
@@ -162,7 +178,7 @@ export function MyAttendanceModule({
       {view !== "regularization" && <Legend />}
 
       {/* Analytics & Trends Section */}
-      {view !== "regularization" && (
+      {view !== "regularization" && view !== "calendar" && (
         <div className="attendance-analytics pt-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="attendance-section-icon p-2.5 rounded-2xl shadow-sm">
