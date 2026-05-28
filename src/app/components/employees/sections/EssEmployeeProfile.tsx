@@ -96,6 +96,8 @@ export function EssEmployeeProfile({ employee }: Props) {
           <ProfileInfoField label="Caste Category" value={personal.casteCategory || ""} editing={personalEdit} onChange={(v) => setPersonal((p) => ({ ...p, casteCategory: v }))} />
           <ProfileInfoField label="Identification Mark" value={personal.identificationMark || ""} editing={personalEdit} onChange={(v) => setPersonal((p) => ({ ...p, identificationMark: v }))} />
           <ProfileInfoField label="Physically Challenged" value={personal.isPhysicallyChallenged ? "Yes" : "No"} editing={personalEdit} onChange={(v) => setPersonal((p) => ({ ...p, isPhysicallyChallenged: /^y/i.test(v.trim()) }))} />
+          <ProfileInfoField label="Height" value={personal.height || ""} editing={personalEdit} onChange={(v) => setPersonal((p) => ({ ...p, height: v }))} placeholder="e.g. 175 cm" />
+          <ProfileInfoField label="Weight" value={personal.weight || ""} editing={personalEdit} onChange={(v) => setPersonal((p) => ({ ...p, weight: v }))} placeholder="e.g. 72 kg" />
           <ProfileInfoField label="International Employee" value={personal.isInternationalEmployee ? "Yes" : "No"} editing={personalEdit} onChange={(v) => setPersonal((p) => ({ ...p, isInternationalEmployee: /^y/i.test(v.trim()) }))} />
           <ProfileInfoField label="Joining Date" value={personal.joiningDate} editing={personalEdit} onChange={(v) => setPersonal((p) => ({ ...p, joiningDate: v }))} type="date" />
         </div>
@@ -254,7 +256,43 @@ export function EssEmployeeProfile({ employee }: Props) {
           <ProfileInfoField label="Emergency Contact #" value={emergency.ec?.phone || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, ec: { name: e.ec?.name || "", relationship: e.ec?.relationship || "", phone: v, alternatePhone: e.ec?.alternatePhone } }))} />
           <ProfileInfoField label="Relationship" value={emergency.ec?.relationship || emergency.med?.relationship || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, ec: { name: e.ec?.name || "", phone: e.ec?.phone || "", relationship: v } }))} />
           <ProfileInfoField label="Medical Conditions" value={emergency.med?.conditions || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, conditions: v } }))} type="textarea" />
+          <div className="space-y-1.5">
+            <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Disease?</span>
+            {emEdit ? (
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(emergency.med?.hasDisease)}
+                  onChange={(e) => setEmergency((p) => ({ ...p, med: { ...p.med, hasDisease: e.target.checked, diseaseDescription: e.target.checked ? p.med?.diseaseDescription || "" : "" } }))}
+                />
+                <span className="text-sm text-foreground">Yes</span>
+              </label>
+            ) : (
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-[2.5rem] flex items-center">{emergency.med?.hasDisease ? "Yes" : "No"}</div>
+            )}
+          </div>
+          {emEdit && emergency.med?.hasDisease ? (
+            <ProfileInfoField label="Disease Description" value={emergency.med?.diseaseDescription || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, diseaseDescription: v } }))} type="textarea" />
+          ) : null}
           <ProfileInfoField label="Allergies" value={emergency.med?.allergies || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, allergies: v } }))} />
+          <div className="space-y-1.5">
+            <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Surgery/Operation Done?</span>
+            {emEdit ? (
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(emergency.med?.hasSurgery)}
+                  onChange={(e) => setEmergency((p) => ({ ...p, med: { ...p.med, hasSurgery: e.target.checked, surgeryDescription: e.target.checked ? p.med?.surgeryDescription || "" : "" } }))}
+                />
+                <span className="text-sm text-foreground">Yes</span>
+              </label>
+            ) : (
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-[2.5rem] flex items-center">{emergency.med?.hasSurgery ? "Yes" : "No"}</div>
+            )}
+          </div>
+          {emEdit && emergency.med?.hasSurgery ? (
+            <ProfileInfoField label="Surgery/Operation Description" value={emergency.med?.surgeryDescription || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, surgeryDescription: v } }))} type="textarea" />
+          ) : null}
           <ProfileInfoField label="Doctor Name" value={emergency.med?.doctorName || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, doctorName: v } }))} />
         </div>
       </EditableSectionCard>

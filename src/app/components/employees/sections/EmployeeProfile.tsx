@@ -314,6 +314,20 @@ export function EmployeeProfile({ employee }: Props) {
             onChange={(v) => setPersonal((p) => ({ ...p, identificationMark: v }))}
           />
           <ProfileInfoField
+            label="Height"
+            value={personal.height || ""}
+            editing={personalEdit}
+            onChange={(v) => setPersonal((p) => ({ ...p, height: v }))}
+            placeholder="e.g. 175 cm"
+          />
+          <ProfileInfoField
+            label="Weight"
+            value={personal.weight || ""}
+            editing={personalEdit}
+            onChange={(v) => setPersonal((p) => ({ ...p, weight: v }))}
+            placeholder="e.g. 72 kg"
+          />
+          <ProfileInfoField
             label="Physically Challenged"
             value={personal.isPhysicallyChallenged ? "Yes" : "No"}
             editing={personalEdit}
@@ -779,6 +793,76 @@ export function EmployeeProfile({ employee }: Props) {
             onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, conditions: v } }))}
             type="textarea"
           />
+          <div className="space-y-1.5">
+            <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Disease?</span>
+            {emEdit ? (
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(emergency.med?.hasDisease)}
+                  onChange={(e) =>
+                    setEmergency((p) => ({
+                      ...p,
+                      med: {
+                        ...p.med,
+                        hasDisease: e.target.checked,
+                        diseaseDescription: e.target.checked ? p.med?.diseaseDescription || "" : "",
+                      },
+                    }))
+                  }
+                />
+                <span className="text-sm text-foreground">Yes</span>
+              </label>
+            ) : (
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-[2.5rem] flex items-center">
+                {emergency.med?.hasDisease ? "Yes" : "No"}
+              </div>
+            )}
+          </div>
+          {emEdit && emergency.med?.hasDisease ? (
+            <ProfileInfoField
+              label="Disease Description"
+              value={emergency.med?.diseaseDescription || ""}
+              editing={emEdit}
+              onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, diseaseDescription: v } }))}
+              type="textarea"
+            />
+          ) : null}
+          <div className="space-y-1.5">
+            <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Surgery/Operation Done?</span>
+            {emEdit ? (
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(emergency.med?.hasSurgery)}
+                  onChange={(e) =>
+                    setEmergency((p) => ({
+                      ...p,
+                      med: {
+                        ...p.med,
+                        hasSurgery: e.target.checked,
+                        surgeryDescription: e.target.checked ? p.med?.surgeryDescription || "" : "",
+                      },
+                    }))
+                  }
+                />
+                <span className="text-sm text-foreground">Yes</span>
+              </label>
+            ) : (
+              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-[2.5rem] flex items-center">
+                {emergency.med?.hasSurgery ? "Yes" : "No"}
+              </div>
+            )}
+          </div>
+          {emEdit && emergency.med?.hasSurgery ? (
+            <ProfileInfoField
+              label="Surgery/Operation Description"
+              value={emergency.med?.surgeryDescription || ""}
+              editing={emEdit}
+              onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, surgeryDescription: v } }))}
+              type="textarea"
+            />
+          ) : null}
           <ProfileInfoField
             label="Allergies"
             value={emergency.med?.allergies || ""}

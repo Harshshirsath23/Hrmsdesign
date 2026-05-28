@@ -33,23 +33,8 @@ export function PendingRequestsPanel({ employeeId }: { employeeId: string }) {
     setModalType(type);
     setModalOpen(true);
   };
-
   const handleConfirm = (rejectionReason?: string, adminRemark?: string) => {
     if (!selectedRequest || !modalType) return;
-
-    const finalDataObj = selectedRequest.changes.reduce((acc, curr) => {
-      const keys = curr.fieldName.split(".");
-      let currentLevel = acc as Record<string, unknown>;
-      keys.forEach((k, idx) => {
-        if (idx === keys.length - 1) {
-          currentLevel[k] = curr.newValue;
-        } else {
-          currentLevel[k] = (currentLevel[k] as Record<string, unknown>) || {};
-          currentLevel = currentLevel[k] as Record<string, unknown>;
-        }
-      });
-      return acc;
-    }, {} as Record<string, unknown>);
 
     dispatch(
       reviewRequest({
@@ -60,7 +45,6 @@ export function PendingRequestsPanel({ employeeId }: { employeeId: string }) {
         adminRemark,
         employeeId: selectedRequest.employeeId,
         section: selectedRequest.section,
-        finalData: modalType === "approve" ? finalDataObj : undefined,
       })
     );
   };
