@@ -27,14 +27,9 @@ import {
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { KebabMenu } from "../../../components/ui/KebabMenu";
-import { 
-  MOCK_SWIPE_LOGS, 
-  MOCK_DEPARTMENTS, 
-  MOCK_DESIGNATIONS, 
-  MOCK_TEAMS, 
-  MOCK_DEVICES,
-  MOCK_EMPLOYEES
-} from "../../../modules/attendance/mockData";
+import { MOCK_DEVICES, MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
+import { useSwipeLogs, useSwipeLogsLive, useSwipeLogMutations } from "../../../modules/attendance/hooks";
+import { subDays } from "date-fns";
 import { cn } from "../../../components/ui/utils";
 import { SwipeLogsFilterBar } from "../../../components/attendance/swipe/SwipeLogsFilterBar";
 import { SwipeLogsAnalytics } from "../../../components/attendance/swipe/SwipeLogsAnalytics";
@@ -52,8 +47,7 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 
 export function SwipeLogsPage() {
-  const [logs, setLogs] = useState<SwipeLog[]>(MOCK_SWIPE_LOGS);
-  const [devices, setDevices] = useState<DeviceHealth[]>(MOCK_DEVICES);
+  const [devices] = useState<DeviceHealth[]>(MOCK_DEVICES);
   const [filters, setFilters] = useState({
     search: "",
     department: "all",
@@ -63,20 +57,33 @@ export function SwipeLogsPage() {
     device: "all",
     type: "all",
     date: new Date(),
+    fromDate: subDays(new Date(), 7),
+    toDate: new Date(),
   });
 
-  // Sorting & Pagination States
   const [sortField, setSortField] = useState<string>("swipeTime");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
-
-  // UI & Modal States
   const [selectedSwipe, setSelectedSwipe] = useState<SwipeLog | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isLiveEnabled, setIsLiveEnabled] = useState(true);
+
+  const listParams = useMemo(() => ({
+    from_date: format(filters.fromDate ?? filters.date, "yyyy-MM-dd"),
+    to_date: format(filters.toDate ?? filters.date, "yyyy-MM-dd"),
+    punch_type: filters.type !== "all" ? filters.type : undefined,
+    page: currentPage,
+    limit: pageSize,
+  }), [filters, currentPage, pageSize]);
+
+  const logsQuery = useSwipeLogs(listParams);
+  useSwipeLogsLive(isLiveEnabled);
+  const { create: createSwipe } = useSwipeLogMutations();
+
+  const logs = logsQuery.data?.results ?? [];
+  const isLoading = logsQuery.isLoading;
   
   const [showManualEntryModal, setShowManualEntryModal] = useState(false);
   const [showManageDevicesModal, setShowManageDevicesModal] = useState(false);
@@ -92,28 +99,16 @@ export function SwipeLogsPage() {
     reason: ""
   });
 
-  // Loaders simulation
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [filters.date, filters.department, filters.device, filters.type]);
-
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setIsLoading(true);
-    setTimeout(() => {
+    logsQuery.refetch().finally(() => {
       setIsRefreshing(false);
-      setIsLoading(false);
-      toast.success("Swipe logs synced with biometric servers");
-    }, 1000);
+      toast.success("Swipe logs refreshed");
+    });
   };
 
   // EXPORT FUNCTIONALITY (CSV)
@@ -253,119 +248,47 @@ export function SwipeLogsPage() {
     }
   };
 
-  // Real-Time auto sync hook
-  useEffect(() => {
-    if (!isLiveEnabled) return;
-    
-    const interval = setInterval(() => {
-      const deviceTypes = ["Biometric Device", "Mobile App", "Web Login", "QR Attendance", "RFID Card"];
-      const verificationMethods = ["Face", "Fingerprint", "Mobile GPS", "QR Scan", "Card Tap"];
-      const statuses = ["Approved", "Pending", "Rejected", "Missing Punch", "Duplicate Swipe", "Late Entry", "Early Exit"];
-      const branches = ["Mumbai HQ", "Pune Office", "Bangalore Tech Park", "Delhi Regional"];
-      const doors = ["Main Entrance", "Server Room", "Cafeteria", "South Wing Exit"];
-      
-      const emp = MOCK_EMPLOYEES[Math.floor(Math.random() * MOCK_EMPLOYEES.length)];
-      const today = new Date();
-      const dateStr = format(today, "yyyy-MM-dd");
-      const timeStr = format(today, "HH:mm:ss");
-      
-      const deviceType = deviceTypes[Math.floor(Math.random() * deviceTypes.length)];
-      const workMode = deviceType === "Mobile App" ? "WFH" : (deviceType === "Web Login" ? (Math.random() > 0.5 ? "WFH" : "WFO") : "WFO");
-
-      const newLog: SwipeLog = {
-        id: `SWIPE-LIVE-${Date.now()}`,
-        employeeId: emp.id,
-        employeeName: emp.name,
-        employeeCode: emp.id,
-        department: emp.dept,
-        designation: emp.desig,
-        avatar: `${emp.id}`,
-        swipeDate: dateStr,
-        swipeTime: timeStr,
-        type: Math.random() > 0.5 ? "IN" : "OUT",
-        shiftName: "General Shift",
-        shiftTiming: "09:00 - 18:00",
-        deviceName: "BioMax-X990",
-        deviceId: `DEV-${Math.floor(Math.random() * 1000)}`,
-        deviceType: deviceType as any,
-        accessCardId: `CRD-${Math.floor(Math.random() * 10000)}`,
-        branch: branches[Math.floor(Math.random() * branches.length)],
-        doorName: doors[Math.floor(Math.random() * doors.length)],
-        ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
-        gpsCoordinates: "19.0760° N, 72.8777° E",
-        receivedOn: `${dateStr} ${timeStr}`,
-        syncTime: `${dateStr} ${timeStr}`,
-        status: statuses[Math.floor(Math.random() * statuses.length)] as any,
-        verificationMethod: verificationMethods[Math.floor(Math.random() * verificationMethods.length)] as any,
-        spoofDetection: Math.random() > 0.9 ? "Suspicious" : "Safe",
-        faceMatchScore: Math.random() > 0.8 ? 98.5 : undefined,
-        workMode: workMode as any,
-      };
-
-      setLogs((prev) => [newLog, ...prev]);
-      toast.info(`New swipe log synced for ${emp.name}`, { duration: 2000 });
-    }, 7000);
-
-    return () => clearInterval(interval);
-  }, [isLiveEnabled]);
-
-  // MANUAL ENTRY FUNCTIONALITY
   const handleAddManualEntry = () => {
-    const employee = MOCK_EMPLOYEES.find(e => e.id === manualEntry.employeeId);
+    const employee = MOCK_EMPLOYEES.find((e) => e.id === manualEntry.employeeId);
     if (!employee) {
       toast.error("Please select a valid employee");
       return;
     }
 
-    const newLog: SwipeLog = {
-      id: `MANUAL-${Date.now()}`,
-      employeeId: employee.id,
-      employeeName: employee.name,
-      employeeCode: employee.id,
-      department: employee.dept,
-      designation: employee.desig,
-      avatar: `${employee.id}`,
-      swipeDate: manualEntry.date,
-      swipeTime: manualEntry.time,
-      type: manualEntry.type as "IN" | "OUT",
-      shiftName: "General Shift",
-      shiftTiming: "09:00 - 18:00",
-      deviceName: "Admin Portal",
-      deviceId: "WEB-ADMIN",
-      deviceType: "Web Login",
-      accessCardId: "N/A",
-      branch: "Mumbai HQ",
-      doorName: "Manual Override",
-      ipAddress: "127.0.0.1",
-      gpsCoordinates: "Manual Entry",
-      receivedOn: new Date().toISOString(),
-      syncTime: new Date().toISOString(),
-      status: "Approved",
-      verificationMethod: "QR Scan",
-      spoofDetection: "Safe",
-      workMode: "WFO",
-    };
-
-    setLogs([newLog, ...logs]);
-    setShowManualEntryModal(false);
-    toast.success(`Manual ${manualEntry.type} log added for ${employee.name}`);
+    const punchTime = `${manualEntry.date}T${manualEntry.time}`;
+    createSwipe.mutate(
+      {
+        employee_id: employee.id,
+        punch_type: manualEntry.type,
+        punch_source: "MANUAL",
+        punch_time: punchTime,
+        reason: manualEntry.reason,
+      },
+      {
+        onSuccess: () => {
+          setShowManualEntryModal(false);
+          toast.success(`Manual ${manualEntry.type} log added for ${employee.name}`);
+          logsQuery.refetch();
+        },
+        onError: (err) => toast.error((err as Error).message),
+      },
+    );
   };
 
   const filteredLogs = useMemo(() => {
-    const filterDateStr = format(filters.date, "yyyy-MM-dd");
-    return logs.filter(log => {
-      const matchesSearch = !filters.search || 
+    return logs.filter((log) => {
+      const matchesSearch =
+        !filters.search ||
         log.employeeName.toLowerCase().includes(filters.search.toLowerCase()) ||
         log.employeeCode.toLowerCase().includes(filters.search.toLowerCase()) ||
         log.deviceId.toLowerCase().includes(filters.search.toLowerCase()) ||
         log.deviceName.toLowerCase().includes(filters.search.toLowerCase());
-      
+
       const matchesDept = filters.department === "all" || log.department === filters.department;
       const matchesType = filters.type === "all" || log.type === filters.type;
       const matchesDevice = filters.device === "all" || log.deviceType === filters.device;
-      const matchesDate = log.swipeDate === filterDateStr;
 
-      return matchesSearch && matchesDept && matchesType && matchesDevice && matchesDate;
+      return matchesSearch && matchesDept && matchesType && matchesDevice;
     });
   }, [filters, logs]);
 

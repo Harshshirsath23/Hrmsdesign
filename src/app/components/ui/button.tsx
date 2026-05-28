@@ -37,15 +37,16 @@ const buttonVariants = cva(
 const Button = React.forwardRef<React.ElementRef<typeof Slot>, React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
+    iconOnly?: boolean;
   }>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, iconOnly, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
 
     return (
       <Comp
         ref={ref}
         data-slot="button"
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size, className }), iconOnly && "aspect-square px-0")}
         {...props}
       />
     );

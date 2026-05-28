@@ -1,4 +1,18 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import {
+  getAccessToken,
+  setAccessToken,
+  setCompanyId,
+  syncCompanyIdFromToken,
+  parseAccessTokenClaims,
+} from "../../api/attendanceClient";
+import {
+  clearAuthStorage,
+  getTenantSchema,
+  loginWithBackend,
+  refreshAccessToken,
+  setTenantSchema,
+} from "../../api/authClient";
 
 export type UserRole = "admin" | "manager" | "employee";
 
@@ -8,6 +22,7 @@ export interface AuthUser {
   name: string;
   initials: string;
   employeeId?: string;
+  companyId?: string;
 }
 
 interface AuthContextType {
@@ -17,28 +32,20 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-const DUMMY_CREDENTIALS: Record<UserRole, { email: string; password: string; name: string; initials: string; employeeId?: string }> = {
-  admin: {
-    email: "admin@hrms.com",
-    password: "Admin@123",
-    name: "Admin User",
-    initials: "AD",
-  },
-  manager: {
-    email: "manager@hrms.com",
-    password: "Manager@123",
-    name: "Priya Patel",
-    initials: "PP",
-    employeeId: "MGR001",
-  },
-  employee: {
-    email: "emp001@company.com",
-    password: "Emp@123",
-    name: "Arjun Sharma",
-    initials: "AS",
-    employeeId: "1",
-  },
-};
+function roleFromEmail(email: string, selectedRole: UserRole): UserRole {
+  const e = email.toLowerCase();
+  if (e === "admin@hrms.com") return "admin";
+  if (e === "manager@hrms.com") return "manager";
+  if (e === "emp001@company.com") return "employee";
+  return selectedRole;
+}
+
+function displayName(email: string, tokenData: Record<string, unknown> | null): string {
+  if (tokenData?.employee_code) {
+    return String(tokenData.employee_code);
+  }
+  return email.split("@")[0].replace(/[._]/g, " ");
+}
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -46,36 +53,123 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     try {
       const stored = localStorage.getItem("hrms_user");
-      return stored ? JSON.parse(stored) : null;
+      const token = localStorage.getItem("hrms_access_token");
+      if (!stored || !token) return null;
+      return JSON.parse(stored);
     } catch {
       return null;
     }
   });
 
+  useEffect(() => {
+    const schema = getTenantSchema();
+    setTenantSchema(schema);
+
+    const bootstrap = async () => {
+      try {
+        let token = getAccessToken();
+        if (!token) return;
+
+        let claims = parseAccessTokenClaims();
+        const exp = typeof claims?.exp === "number" ? claims.exp : null;
+        const isExpired = exp !== null && exp * 1000 < Date.now() + 60_000;
+
+        if (isExpired) {
+          const refresh = localStorage.getItem("hrms_refresh_token");
+          if (refresh) {
+            const next = await refreshAccessToken(refresh);
+            if (!next) {
+              clearAuthStorage();
+              setUser(null);
+              return;
+            }
+            token = next;
+            claims = parseAccessTokenClaims();
+          } else {
+            clearAuthStorage();
+            setUser(null);
+            return;
+          }
+        }
+
+        if (!claims) {
+          clearAuthStorage();
+          setUser(null);
+          return;
+        }
+
+        setAccessToken(token);
+        syncCompanyIdFromToken();
+      } catch {
+        clearAuthStorage();
+        setUser(null);
+      }
+    };
+
+    void bootstrap();
+  }, []);
+
   const login = async (email: string, password: string, role: UserRole) => {
-    const cred = DUMMY_CREDENTIALS[role];
-    if (email.trim().toLowerCase() === cred.email && password === cred.password) {
-      const userData: AuthUser = {
-        email: cred.email,
-        role,
-        name: cred.name,
-        initials: cred.initials,
-        employeeId: cred.employeeId,
+    const result = await loginWithBackend(email, password);
+
+    if (!result.success || !result.data?.access) {
+      return {
+        success: false,
+        message:
+          result.message ||
+          "Login failed. Ensure the backend is running and demo users are seeded (python manage.py seed_demo_users --schema acme).",
       };
-      setUser(userData);
-      localStorage.setItem("hrms_user", JSON.stringify(userData));
-      return { success: true };
     }
-    return { success: false, message: "Invalid email or password for the selected role." };
+
+    const { access, refresh } = result.data;
+    setAccessToken(access);
+    localStorage.setItem("hrms_access_token", access);
+    localStorage.setItem("hrms_refresh_token", refresh);
+
+    const tokenData = parseAccessTokenClaims();
+    const companyId = tokenData?.company_id ? String(tokenData.company_id) : undefined;
+    const employeeId = tokenData?.employee_id ? String(tokenData.employee_id) : undefined;
+
+    if (!companyId || !employeeId) {
+      localStorage.removeItem("hrms_access_token");
+      localStorage.removeItem("hrms_refresh_token");
+      return {
+        success: false,
+        message:
+          "Login succeeded but your account has no employee profile. Run: python manage.py seed_demo_users --schema acme",
+      };
+    }
+
+    if (companyId) {
+      setCompanyId(companyId);
+      localStorage.setItem("hrms_company_id", companyId);
+    }
+
+    const resolvedRole = roleFromEmail(email, role);
+    const userData: AuthUser = {
+      email,
+      role: resolvedRole,
+      name: displayName(email, tokenData),
+      initials: email.charAt(0).toUpperCase(),
+      employeeId,
+      companyId,
+    };
+
+    setUser(userData);
+    localStorage.setItem("hrms_user", JSON.stringify(userData));
+
+    return { success: true };
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("hrms_user");
+    clearAuthStorage();
   };
 
+  const isAuthenticated = Boolean(user && getAccessToken());
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

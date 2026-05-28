@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, CheckCircle, XCircle, Clock, Eye, AlertCircle, Calendar } from 'lucide-react';
+import { Search, Filter, Download, CheckCircle, XCircle, Clock, Eye, AlertCircle, Calendar, Loader2 } from 'lucide-react';
+import {
+  useAttendanceRequests,
+  useAttendanceRequestStats,
+  useRequestApprovalMutations,
+} from '../../../modules/attendance/hooks';
+import { mapAttendanceRequestApi } from '../../../modules/attendance/mappers';
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
@@ -157,9 +163,18 @@ export function AttendanceRequestsPage() {
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<AttendanceRequest | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  const requestsQuery = useAttendanceRequests(search || undefined);
+  const statsQuery = useAttendanceRequestStats();
+  const { approve, reject } = useRequestApprovalMutations();
+
+  const allRequests = useMemo(
+    () => (requestsQuery.data ?? []).map((r) => mapAttendanceRequestApi(r)),
+    [requestsQuery.data],
+  );
+
   // Filter Data
   const filteredRequests = useMemo(() => {
-    return MOCK_REQUESTS.filter(req => {
+    return allRequests.filter(req => {
       const matchSearch = req.employeeName.toLowerCase().includes(search.toLowerCase()) || req.id.toLowerCase().includes(search.toLowerCase());
       const matchType = filterType === 'All' || req.requestType === filterType;
       const matchDept = filterDept === 'All' || req.department === filterDept;
@@ -168,13 +183,21 @@ export function AttendanceRequestsPage() {
       
       return matchSearch && matchType && matchDept && matchStatus;
     });
-  }, [search, filterType, filterDept, filterStatus]);
+  }, [search, filterType, filterDept, filterStatus, allRequests]);
 
-  // Summary Stats
   const stats = useMemo(() => {
+    const apiStats = statsQuery.data;
+    if (apiStats) {
+      return {
+        pending: apiStats.pending ?? 0,
+        managerApproved: apiStats.manager_approved ?? apiStats.managerApproved ?? 0,
+        pendingAdmin: apiStats.pending_admin ?? apiStats.pendingAdmin ?? 0,
+        approved: apiStats.approved ?? 0,
+        rejected: apiStats.rejected ?? 0,
+      };
+    }
     let pending = 0, managerApproved = 0, pendingAdmin = 0, approved = 0, rejected = 0;
-    
-    MOCK_REQUESTS.forEach(req => {
+    allRequests.forEach((req) => {
       const final = getFinalStatus(req.managerStatus, req.adminStatus);
       if (req.managerStatus === 'Pending' && req.adminStatus === 'Pending') pending++;
       if (req.managerStatus === 'Approved') managerApproved++;
@@ -182,9 +205,8 @@ export function AttendanceRequestsPage() {
       if (final === 'Fully Approved') approved++;
       if (final === 'Rejected') rejected++;
     });
-
     return { pending, managerApproved, pendingAdmin, approved, rejected };
-  }, []);
+  }, [statsQuery.data, allRequests]);
 
   // Handlers
   const toggleSelection = (id: string) => {
@@ -209,8 +231,18 @@ export function AttendanceRequestsPage() {
   };
 
   const handleAction = (id: string, action: 'Approve' | 'Reject') => {
-    console.log(`${action} request ${id}`);
-    setIsDrawerOpen(false);
+    const numericId = id.replace(/^REQ-0*/, '');
+    const mutation = action === 'Approve' ? approve : reject;
+    mutation.mutate(
+      { id: numericId },
+      {
+        onSuccess: () => {
+          setIsDrawerOpen(false);
+          requestsQuery.refetch();
+          statsQuery.refetch();
+        },
+      },
+    );
   };
 
   return (
@@ -223,6 +255,16 @@ export function AttendanceRequestsPage() {
           <p className="text-muted-foreground mt-1 text-sm">Manage and approve employee attendance corrections.</p>
         </div>
       </div>
+
+      {requestsQuery.isLoading && (
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading requests…
+        </div>
+      )}
+      {requestsQuery.error && (
+        <p className="text-sm text-destructive">{(requestsQuery.error as Error).message}</p>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard title="Pending Requests" value={stats.pending} icon={Clock} color="text-orange-500" bg="bg-orange-500/10" />

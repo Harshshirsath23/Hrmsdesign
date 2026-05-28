@@ -14,7 +14,11 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import { MOCK_ROSTER, SHIFT_DEFINITIONS, MOCK_DEPARTMENTS, MOCK_DESIGNATIONS, MOCK_TEAMS, MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
+import { SHIFT_DEFINITIONS, MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
+import { useRosterCalendar, useShiftMasters } from "../../../modules/attendance/hooks";
+import { mapRosterCalendarToUi } from "../../../modules/attendance/mappers";
+import { formatAttendanceError } from "../../../modules/attendance/errors";
+import type { RosterRecord } from "../../../modules/attendance/types";
 import { cn } from "../../../components/ui/utils";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, addMonths, subMonths, isWithinInterval, parseISO } from "date-fns";
 import { RosterFilterBar } from "../../../components/attendance/roster/RosterFilterBar";
@@ -27,12 +31,11 @@ import { Input } from "../../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { Checkbox } from "../../../components/ui/checkbox";
 import { toast } from "sonner";
-import { RosterRecord, ShiftDefinition } from "../../../modules/attendance/types";
+import type { ShiftDefinition } from "../../../modules/attendance/types";
 
 export function ShiftRosterPage() {
-  // State for Roster Data
-  const [rosterData, setRosterData] = useState<RosterRecord[]>(MOCK_ROSTER);
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 4, 1)); // May 2026
+  const [rosterData, setRosterData] = useState<RosterRecord[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [filters, setFilters] = useState({
     search: "",
     department: "all",
@@ -75,12 +78,25 @@ export function ShiftRosterPage() {
   const monthEnd = endOfMonth(selectedDate);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  const rosterMonth = selectedDate.getMonth() + 1;
+  const rosterYear = selectedDate.getFullYear();
+  const departmentId = filters.department !== "all" ? filters.department : undefined;
+
+  const calendarQuery = useRosterCalendar(rosterMonth, rosterYear, departmentId);
+  useShiftMasters();
+
+  useEffect(() => {
+    const cal = calendarQuery.data;
+    if (!cal?.employees) return;
+    setRosterData(mapRosterCalendarToUi(cal));
+  }, [calendarQuery.data]);
+
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    calendarQuery.refetch().finally(() => {
       setIsRefreshing(false);
       toast.success("Roster data refreshed");
-    }, 800);
+    });
   };
 
   // EXPORT EXCEL FUNCTIONALITY
@@ -383,6 +399,13 @@ export function ShiftRosterPage() {
                 <p className="text-[11px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Draft Mode</p>
                 <p className="text-[11px] text-amber-700 dark:text-amber-500 font-medium">Changes are saved as draft. Click Publish to make them visible to employees.</p>
               </div>
+            </div>
+          )}
+
+          {calendarQuery.error && (
+            <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-sm flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {formatAttendanceError(calendarQuery.error)}
             </div>
           )}
 

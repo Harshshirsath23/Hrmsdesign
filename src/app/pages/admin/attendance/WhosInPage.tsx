@@ -1,17 +1,28 @@
-import { useState, useMemo, useEffect } from "react";
-import { ChevronRight, Home, RefreshCw, Download, Calendar as CalendarIcon, MapPin, Users, CheckCircle, Info } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { ChevronRight, Home, RefreshCw, Download, Calendar as CalendarIcon, Users, CheckCircle, Info, AlertCircle, Loader2, Map } from "lucide-react";
 import { AttendanceFilterPanel } from "../../../components/attendance/whos-in/AttendanceFilterPanel";
 import { AttendanceAnalyticsHeader } from "../../../components/attendance/whos-in/AttendanceAnalyticsHeader";
 import { EmployeeAttendanceCard } from "../../../components/attendance/whos-in/EmployeeAttendanceCard";
 import { Button } from "../../../components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { Calendar } from "../../../components/ui/calendar";
-import { MOCK_ATTENDANCE } from "../../../modules/attendance/mockData";
-import { isSameDay, isBefore, isAfter, startOfDay, format, parseISO } from "date-fns";
+import { isSameDay, isBefore, isAfter, startOfDay, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { cn } from "../../../components/ui/utils";
+import {
+  useWhoIsInEmployees,
+  useWhoIsInLive,
+  useWhoIsInSummary,
+} from "../../../modules/attendance/hooks";
+import { mapWhoIsInCardToDailyAttendance } from "../../../modules/attendance/mappers";
+import type { DailyAttendance } from "../../../modules/attendance/types";
+import type { WhoIsInStatus } from "../../../modules/attendance/apiTypes";
+import { formatAttendanceError } from "../../../modules/attendance/errors";
+import { AttendanceApiError } from "../../../../api/attendanceClient";
+import { useAuth } from "../../../context/AuthContext";
 
 export function WhosInPage() {
+  const { logout } = useAuth();
   const [filters, setFilters] = useState({
     date: new Date(),
     shift: "all",
@@ -22,113 +33,111 @@ export function WhosInPage() {
     search: "",
   });
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [oooTab, setOooTab] = useState("all");
 
   const isTodayValue = useMemo(() => isSameDay(filters.date, new Date()), [filters.date]);
   const isPast = useMemo(() => isBefore(startOfDay(filters.date), startOfDay(new Date())), [filters.date]);
   const isFuture = useMemo(() => isAfter(startOfDay(filters.date), startOfDay(new Date())), [filters.date]);
 
-  // Simulation of real-time refresh
+  const apiFilters = useMemo(() => ({
+    date: filters.date,
+    department_id: filters.department !== "all" ? filters.department : undefined,
+    designation_id: filters.designation !== "all" ? filters.designation : undefined,
+    team_id: filters.team !== "all" ? filters.team : undefined,
+    search: filters.search || undefined,
+  }), [filters]);
+
+  const summaryQuery = useWhoIsInSummary(apiFilters);
+  useWhoIsInLive(apiFilters, isTodayValue);
+
+  const notInQuery = useWhoIsInEmployees("NOT_IN" as WhoIsInStatus, apiFilters, !isFuture);
+  const lateQuery = useWhoIsInEmployees("LATE" as WhoIsInStatus, apiFilters, !isFuture);
+  const onTimeQuery = useWhoIsInEmployees("ON_TIME" as WhoIsInStatus, apiFilters, !isFuture);
+  const oooQuery = useWhoIsInEmployees("OUT_OF_OFFICE" as WhoIsInStatus, apiFilters, true);
+
+  const dateStr = format(filters.date, "yyyy-MM-dd");
+
+  const mapEmployees = useCallback(
+    (status: WhoIsInStatus) => {
+      const query =
+        status === "NOT_IN" ? notInQuery :
+        status === "LATE" ? lateQuery :
+        status === "ON_TIME" ? onTimeQuery : oooQuery;
+      return (query.data?.employees ?? []).map((e) =>
+        mapWhoIsInCardToDailyAttendance(e, dateStr) as DailyAttendance,
+      );
+    },
+    [notInQuery.data, lateQuery.data, onTimeQuery.data, oooQuery.data, dateStr],
+  );
+
+  const sections = useMemo(() => ({
+    primarySection: mapEmployees("NOT_IN"),
+    late: mapEmployees("LATE"),
+    onTime: mapEmployees("ON_TIME"),
+    ooo: mapEmployees("OUT_OF_OFFICE"),
+  }), [mapEmployees]);
+
+  const isRefreshing =
+    summaryQuery.isFetching ||
+    notInQuery.isFetching ||
+    lateQuery.isFetching ||
+    onTimeQuery.isFetching;
+
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 800);
+    summaryQuery.refetch();
+    notInQuery.refetch();
+    lateQuery.refetch();
+    onTimeQuery.refetch();
+    oooQuery.refetch();
   };
 
-  useEffect(() => {
-    if (isTodayValue) {
-      const interval = setInterval(handleRefresh, 45000);
-      return () => clearInterval(interval);
-    }
-  }, [isTodayValue]);
+  const totalEmployees = summaryQuery.data?.summary.total_employees ?? 1;
+  const summary = summaryQuery.data?.summary;
 
-  // Comprehensive Filter Logic
-  const filteredData = useMemo(() => {
-    const selectedDateStr = format(filters.date, "yyyy-MM-dd");
-    
-    return MOCK_ATTENDANCE.filter(record => {
-      const isDay = record.date === selectedDateStr;
-      
-      const matchesShift = filters.shift === "all" || record.shiftName === filters.shift;
-      const matchesDept = filters.department === "all" || record.department === filters.department;
-      const matchesDesig = filters.designation === "all" || record.designation === filters.designation;
-      const matchesTeam = filters.team === "all" || record.team === filters.team;
-      const matchesWorkMode = filters.workMode === "all" || record.workMode === filters.workMode;
-      const matchesSearch = !filters.search || 
-        record.employeeName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        record.employeeId.toLowerCase().includes(filters.search.toLowerCase()) ||
-        record.email?.toLowerCase().includes(filters.search.toLowerCase());
-
-      return isDay && matchesShift && matchesDept && matchesDesig && matchesTeam && matchesWorkMode && matchesSearch;
-    });
-  }, [filters]);
-
-  // Section Data Calculation
-  const sections = useMemo(() => {
-    if (isFuture) {
-      return { 
-        primarySection: filteredData, 
-        late: [], 
-        onTime: [], 
-        ooo: filteredData.filter(r => r.status === "Week Off" || r.status === "Holiday") 
-      };
-    }
-
-    if (isPast) {
-      // Past categories: Present, Late, Absent, OOO
-      const present = filteredData.filter(r => r.status === "Present" && !r.isLate);
-      const late = filteredData.filter(r => r.isLate);
-      const absent = filteredData.filter(r => r.status === "Absent" && !r.leaveType);
-      const ooo = filteredData.filter(r => r.status === "Leave" || r.status === "Holiday" || r.status === "Week Off");
-      
-      return { primarySection: absent, late, onTime: present, ooo };
-    }
-
-    // Today categories
-    const notYetIn = filteredData.filter(r => r.status === "Absent" && !r.leaveType);
-    const late = filteredData.filter(r => r.isLate);
-    const onTime = filteredData.filter(r => r.status === "Present" && !r.isLate);
-    const ooo = filteredData.filter(r => r.status === "Leave" || r.status === "Holiday" || r.status === "Week Off");
-
-    return { primarySection: notYetIn, late, onTime, ooo };
-  }, [filteredData, isFuture, isPast]);
-
-  // Stats for Header
   const stats = useMemo(() => {
-    const total = filteredData.length || 1;
-    
     if (isFuture) {
       return {
-        notYetIn: { count: filteredData.length, percentage: 100, label: "Scheduled Employees" },
+        notYetIn: { count: sections.primarySection.length, percentage: 100, label: "Scheduled Employees" },
         lateArrivals: { count: 0, percentage: 0, label: "No Punches Yet" },
         onTime: { count: 0, percentage: 0, label: "No Punches Yet" },
-        outOfOffice: { count: sections.ooo.length, percentage: Math.round((sections.ooo.length / total) * 100), label: "Scheduled Off" },
+        outOfOffice: {
+          count: summary?.out_of_office ?? sections.ooo.length,
+          percentage: Math.round(((summary?.out_of_office ?? 0) / totalEmployees) * 100),
+          label: "Scheduled Off",
+        },
       };
     }
 
     return {
-      notYetIn: { 
-        count: sections.primarySection.length, 
-        percentage: Math.round((sections.primarySection.length / total) * 100),
-        label: isTodayValue ? "Employees Are Not Yet In" : "Employees Are Absent"
+      notYetIn: {
+        count: summary?.not_yet_in ?? sections.primarySection.length,
+        percentage: Math.round(((summary?.not_yet_in ?? 0) / totalEmployees) * 100),
+        label: isTodayValue ? "Employees Are Not Yet In" : "Employees Are Absent",
       },
-      lateArrivals: { 
-        count: sections.late.length, 
-        percentage: Math.round((sections.late.length / total) * 100),
-        label: isPast ? "Late Arrivals" : "Late Arrivals Today"
+      lateArrivals: {
+        count: summary?.late_arrivals ?? sections.late.length,
+        percentage: Math.round(((summary?.late_arrivals ?? 0) / totalEmployees) * 100),
+        label: isPast ? "Late Arrivals" : "Late Arrivals Today",
       },
-      onTime: { 
-        count: sections.onTime.length, 
-        percentage: Math.round((sections.onTime.length / total) * 100),
-        label: isPast ? "Present (On Time)" : "On Time Today"
+      onTime: {
+        count: summary?.on_time ?? sections.onTime.length,
+        percentage: Math.round(((summary?.on_time ?? 0) / totalEmployees) * 100),
+        label: isPast ? "Present (On Time)" : "On Time Today",
       },
-      outOfOffice: { 
-        count: sections.ooo.length, 
-        percentage: Math.round((sections.ooo.length / total) * 100),
-        label: "Out Of Office"
+      outOfOffice: {
+        count: summary?.out_of_office ?? sections.ooo.length,
+        percentage: Math.round(((summary?.out_of_office ?? 0) / totalEmployees) * 100),
+        label: "Out Of Office",
       },
     };
-  }, [sections, filteredData, isTodayValue, isFuture, isPast]);
+  }, [sections, summary, totalEmployees, isTodayValue, isFuture, isPast]);
+
+  const loadError =
+    summaryQuery.error ?? notInQuery.error ?? lateQuery.error ?? onTimeQuery.error;
+  const loadErrorMessage = loadError ? formatAttendanceError(loadError) : null;
+  const sessionExpired =
+    loadError instanceof AttendanceApiError && loadError.status === 401;
+  const isLoading = summaryQuery.isLoading && notInQuery.isLoading;
 
   return (
     <div className="flex flex-col h-full bg-background/50 overflow-hidden">
@@ -237,6 +246,31 @@ export function WhosInPage() {
 
         {/* Main Content Area */}
         <div className="flex-1 p-6 space-y-8 overflow-y-auto no-scrollbar pb-24 bg-black/[0.01] dark:bg-white/[0.01]">
+          {loadErrorMessage && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-sm">
+              <div className="flex items-center gap-2 flex-1">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{loadErrorMessage}</span>
+              </div>
+              {sessionExpired && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-destructive/40"
+                  onClick={() => logout()}
+                >
+                  Sign in again
+                </Button>
+              )}
+            </div>
+          )}
+          {isLoading && (
+            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Loading who&apos;s in data…</span>
+            </div>
+          )}
           <AttendanceAnalyticsHeader stats={stats} />
 
           {/* 2x2 Grid of Status Sections */}
@@ -309,7 +343,7 @@ export function WhosInPage() {
                 <div className="p-5 border-b border-black/[0.05] dark:border-white/5 bg-white/80 dark:bg-black/40 flex items-center justify-between sticky top-0 z-10">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20 shadow-inner">
-                      <MapPin className="w-5 h-5 text-green-500" />
+                      <Map className="w-5 h-5 text-green-500" />
                     </div>
                     <div className="flex flex-col">
                       <h3 className="text-base font-bold text-foreground">
