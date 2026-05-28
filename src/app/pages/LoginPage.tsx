@@ -1,9 +1,21 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import {
-  Building2, Eye, EyeOff, Lock, Mail,
-  ShieldCheck, User, Users, ArrowRight,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  User,
+  Users,
+  Clock,
+  FileText,
+  Building2,
+  Lock,
+  Mail,
+  Moon,
+  Sun,
 } from "lucide-react";
+
 import { useAuth, UserRole } from "../context/AuthContext";
 
 /* =========================
@@ -102,8 +114,8 @@ const DEMO: Record<
     password: "Manager@123",
   },
   employee: {
-    email: "amit.patel@acme.com",
-    password: "Password@123",
+    email: "emp001@company.com",
+    password: "Emp@123",
   },
 };
 
@@ -111,230 +123,1193 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [role, setRole] = useState<UserRole>("admin");
+  const [theme, setTheme] = useState<"light" | "dark">(
+    "light"
+  );
+
+  const c = COLORS[theme];
+
+  const [role, setRole] =
+    useState<UserRole>("admin");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const handleShapeMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+
+      e.currentTarget.style.setProperty(
+        "--mouse-x",
+        `${e.clientX - rect.left}px`
+      );
+      e.currentTarget.style.setProperty(
+        "--mouse-y",
+        `${e.clientY - rect.top}px`
+      );
+      e.currentTarget.style.setProperty(
+        "--glow-opacity",
+        "1"
+      );
+    },
+    []
+  );
+
+  const handleShapeMouseLeave = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.currentTarget.style.setProperty(
+        "--glow-opacity",
+        "0"
+      );
+    },
+    []
+  );
+
+  const handleRootMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 24;
+      const y = (e.clientY / window.innerHeight - 0.5) * 24;
+
+      e.currentTarget.style.setProperty(
+        "--parallax-x",
+        `${x}px`
+      );
+      e.currentTarget.style.setProperty(
+        "--parallax-y",
+        `${y}px`
+      );
+    },
+    []
+  );
+
+  const switchRole = (r: UserRole) => {
+    setRole(r);
+    setError("");
+    setEmail("");
+    setPassword("");
+  };
+
   const fillDemo = () => {
-    if (role === "admin") {
-      setEmail("admin@hrms.com");
-      setPassword("Admin@123");
-    } else if (role === "manager") {
-      setEmail("manager@hrms.com");
-      setPassword("Manager@123");
-    } else {
-      setEmail("emp001@company.com");
-      setPassword("Emp@123");
-    }
+    setEmail(DEMO[role].email);
+    setPassword(DEMO[role].password);
     setError("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
-    if (!email || !password) { setError("Please enter email and password."); return; }
+
+    if (!email || !password) {
+      setError("Please enter email and password.");
+      return;
+    }
+
     setLoading(true);
     setError("");
-    const result = await login(email, password, role);
+
+    const result = await login(
+      email,
+      password,
+      role
+    );
+
     setLoading(false);
+
     if (result.success) {
-      if (role === "admin") {
-        navigate("/admin/dashboard", { replace: true });
-      } else if (role === "manager") {
-        navigate("/manager/dashboard", { replace: true });
-      } else {
-        navigate("/employee/dashboard", { replace: true });
-      }
+      navigate(
+        role === "admin"
+          ? "/admin/dashboard"
+          : role === "manager"
+          ? "/manager/dashboard"
+          : "/employee/dashboard",
+        { replace: true }
+      );
     } else {
-      setError(result.message || "Invalid credentials.");
+      setError(
+        result.message || "Invalid credentials."
+      );
     }
   };
 
   return (
-    <div className="min-h-screen flex items-stretch bg-[#F8F9FA]">
-      {/* ── Left Panel ─────────────────────────────────── */}
-      <div className="hidden lg:flex flex-col justify-between w-[420px] flex-shrink-0 bg-[#212529] text-[#F8F9FA] p-12">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#F8F9FA] rounded-lg flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-5 h-5 text-[#212529]" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">
-            HR<span className="text-[#ADB5BD]">MS</span>
-          </span>
-        </div>
+    <>
+      <style>{`
 
-        {/* Middle copy */}
-        <div>
-          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-[#F8F9FA] mb-6">
-            Human Resource<br />Management<br />System
-          </h1>
-          <p className="text-[#ADB5BD] text-sm leading-relaxed font-medium max-w-[320px]">
-            Streamline HR operations — from onboarding to payroll,
-            attendance to performance analytics. Everything unified.
-          </p>
+      *{
+        box-sizing:border-box;
+      }
 
-          <div className="mt-10 space-y-3">
-            {[
-              { label: "Employee Management" },
-              { label: "Attendance & Leave Tracking" },
-              { label: "Payroll Processing" },
-              { label: "Document Management" },
-            ].map((f) => (
-              <div key={f.label} className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#6C757D] flex-shrink-0" />
-                <span className="text-sm font-medium text-[#CED4DA]">{f.label}</span>
+      body{
+        margin:0;
+        font-family:Inter,sans-serif;
+      }
+
+      .login-root{
+        min-height:100vh;
+        background:${c.bg};
+        background-image:
+          radial-gradient(circle at calc(14% + var(--parallax-x, 0px)) calc(-4% + var(--parallax-y, 0px)), rgba(6,182,212,.44), transparent 34%),
+          radial-gradient(circle at calc(86% - var(--parallax-x, 0px)) calc(8% - var(--parallax-y, 0px)), rgba(2,132,199,.22), transparent 32%),
+          radial-gradient(circle at 52% 104%, rgba(6,182,212,.42), transparent 40%);
+        position:relative;
+        overflow:hidden;
+        --parallax-x:0px;
+        --parallax-y:0px;
+      }
+
+      .login-root::before{
+        content:"";
+        position:absolute;
+        inset:0;
+        background:
+          linear-gradient(115deg, rgba(255,255,255,.42), transparent 36%),
+          radial-gradient(circle at 50% 0%, rgba(255,255,255,.5), transparent 42%);
+        pointer-events:none;
+        animation:login-aurora 16s ease-in-out infinite alternate;
+      }
+
+      .login-root::after{
+        content:"";
+        position:absolute;
+        inset:0;
+        background-image:
+          radial-gradient(circle, rgba(255,255,255,.58) 0 1px, transparent 1.5px),
+          radial-gradient(circle, rgba(2,132,199,.22) 0 1px, transparent 1.5px);
+        background-size:90px 90px, 140px 140px;
+        background-position:12px 18px, 42px 54px;
+        opacity:.42;
+        pointer-events:none;
+        animation:particles-drift 18s linear infinite;
+      }
+
+      /* ZOOM OUT EFFECT */
+      .zoom-wrapper{
+        transform:scale(.8);
+        transform-origin:center;
+        width:125%;
+        margin-left:-12.5%;
+      }
+
+      /* BACKGROUND BLOCKS */
+
+      .shape{
+        position:absolute;
+        border-radius:40px;
+        --mouse-x:50%;
+        --mouse-y:50%;
+        --glow-opacity:0;
+        overflow:visible;
+        pointer-events:auto;
+        box-shadow:
+          inset 0 0 0 1px rgba(255,255,255,0);
+        transition:
+          transform .35s ease,
+          box-shadow .35s ease;
+      }
+
+      .shape::before{
+        content:"";
+        position:absolute;
+        inset:0;
+        border-radius:inherit;
+        padding:2px;
+        background:
+          radial-gradient(
+            160px circle at var(--mouse-x) var(--mouse-y),
+            rgba(255,255,255,.95),
+            rgba(6,182,212,.88) 24%,
+            rgba(2,132,199,.74) 42%,
+            transparent 66%
+          ),
+          linear-gradient(
+            135deg,
+            rgba(255,255,255,.16),
+            rgba(2,132,199,.22) 34%,
+            rgba(2,132,199,.2) 68%,
+            rgba(255,255,255,.14)
+          );
+        opacity:var(--glow-opacity);
+        pointer-events:none;
+        -webkit-mask:
+          linear-gradient(#000 0 0) content-box,
+          linear-gradient(#000 0 0);
+        -webkit-mask-composite:xor;
+        mask-composite:exclude;
+        transition:opacity .18s ease;
+      }
+
+      .shape::after{
+        content:"";
+        position:absolute;
+        inset:-14px;
+        border-radius:inherit;
+        padding:16px;
+        background:
+          radial-gradient(
+            190px circle at calc(var(--mouse-x) + 14px) calc(var(--mouse-y) + 14px),
+            rgba(6,182,212,.88),
+            rgba(2,132,199,.5) 36%,
+            transparent 68%
+          );
+        opacity:var(--glow-opacity);
+        filter:blur(10px);
+        pointer-events:none;
+        -webkit-mask:
+          linear-gradient(#000 0 0) content-box,
+          linear-gradient(#000 0 0);
+        -webkit-mask-composite:xor;
+        mask-composite:exclude;
+        transition:opacity .18s ease;
+      }
+
+      .shape:hover{
+        box-shadow:
+          0 0 34px rgba(2,132,199,.22),
+          inset 0 0 0 1px rgba(255,255,255,.18);
+      }
+
+      .shape-1{
+        width:400px;
+        height:400px;
+        background:color-mix(in srgb, ${c.secondary} 26%, transparent);
+        backdrop-filter:blur(14px);
+        border:1px solid rgba(255,255,255,.32);
+        top:-120px;
+        left:-120px;
+        transform:translate3d(calc(var(--parallax-x) * .35), calc(var(--parallax-y) * .35), 0);
+      }
+
+      .shape-2{
+        width:320px;
+        height:320px;
+        background:color-mix(in srgb, ${c.primary} 22%, transparent);
+        backdrop-filter:blur(14px);
+        border:1px solid rgba(255,255,255,.28);
+        right:0;
+        bottom:0;
+        border-radius:40px 0 0 0;
+        transform:translate3d(calc(var(--parallax-x) * -.22), calc(var(--parallax-y) * -.22), 0);
+      }
+
+      .shape-3{
+        width:220px;
+        height:220px;
+        background:color-mix(in srgb, ${c.dark} 12%, transparent);
+        backdrop-filter:blur(12px);
+        border:1px solid rgba(255,255,255,.24);
+        left:45%;
+        top:8%;
+        transform:translate3d(calc(var(--parallax-x) * .18), calc(var(--parallax-y) * -.18), 0);
+      }
+
+      .login-container{
+        position:relative;
+        z-index:2;
+
+        min-height:100vh;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+
+        padding:40px;
+      }
+
+      .login-grid{
+        width:100%;
+        max-width:1240px;
+
+        display:grid;
+        grid-template-columns:1.1fr .9fr;
+
+        background:${c.panel};
+
+        border-radius:38px;
+
+        overflow:hidden;
+
+        border:1px solid ${c.border};
+        backdrop-filter:blur(28px) saturate(145%);
+        -webkit-backdrop-filter:blur(28px) saturate(145%);
+
+        box-shadow:
+          0 30px 80px rgba(3,105,161,.13),
+          inset 0 1px 0 rgba(255,255,255,.75);
+
+        animation:login-card-in .7s cubic-bezier(.2,.8,.2,1) both;
+      }
+
+      /* LEFT SIDE */
+
+      .left-panel{
+        background:${c.soft};
+        padding:70px;
+        position:relative;
+        backdrop-filter:blur(22px);
+        -webkit-backdrop-filter:blur(22px);
+        border-right:1px solid rgba(255,255,255,.5);
+        overflow:hidden;
+      }
+
+      .left-panel::before{
+        content:"";
+        position:absolute;
+        right:-110px;
+        bottom:-130px;
+        width:360px;
+        height:360px;
+        border-radius:42% 58% 50% 50%;
+        background:
+          radial-gradient(circle at 34% 28%, rgba(255,255,255,.82), transparent 18%),
+          linear-gradient(135deg, rgba(2,132,199,.72), rgba(2,132,199,.5), rgba(6,182,212,.62));
+        filter:blur(.2px);
+        opacity:.7;
+        animation:liquid-blob 9s ease-in-out infinite;
+      }
+
+      .left-panel::after{
+        content:"";
+        position:absolute;
+        right:84px;
+        bottom:96px;
+        width:118px;
+        height:118px;
+        border-radius:34px;
+        background:rgba(255,255,255,.22);
+        border:1px solid rgba(255,255,255,.42);
+        backdrop-filter:blur(18px);
+        -webkit-backdrop-filter:blur(18px);
+        box-shadow:0 24px 56px rgba(3,105,161,.16);
+        transform:rotate(12deg);
+        animation:float-card 6s ease-in-out infinite;
+      }
+
+      .brand{
+        display:flex;
+        align-items:center;
+        gap:14px;
+        margin-bottom:50px;
+      }
+
+      .brand-icon{
+        width:58px;
+        height:58px;
+        border-radius:18px;
+        background:linear-gradient(135deg, ${c.primary}, ${c.secondary});
+        color:white;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+
+        font-size:20px;
+        font-weight:800;
+      }
+
+      .brand-title{
+        margin:0;
+        font-size:18px;
+        font-weight:800;
+        color:${c.text};
+      }
+
+      .brand-sub{
+        margin-top:3px;
+        color:${c.muted};
+        font-size:13px;
+      }
+
+      .headline{
+        font-size:64px;
+        line-height:1;
+        font-weight:900;
+        color:${c.text};
+        margin:0;
+      }
+
+      .headline span{
+        color:${c.primary};
+      }
+
+      .subtext{
+        margin-top:22px;
+        font-size:16px;
+        line-height:1.8;
+        color:${c.muted};
+        max-width:520px;
+      }
+
+      .features{
+        margin-top:50px;
+
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:18px;
+      }
+
+      .feature-card{
+        background:rgba(255,255,255,.42);
+
+        border:1px solid ${c.border};
+
+        border-radius:26px;
+
+        padding:22px;
+
+        backdrop-filter:blur(18px);
+        -webkit-backdrop-filter:blur(18px);
+        box-shadow:
+          0 18px 40px rgba(3,105,161,.08),
+          inset 0 1px 0 rgba(255,255,255,.65);
+
+        transition:.3s ease;
+      }
+
+      .feature-card:hover{
+        transform:translateY(-6px);
+        background:rgba(255,255,255,.55);
+        box-shadow:
+          0 22px 48px rgba(3,105,161,.13),
+          inset 0 1px 0 rgba(255,255,255,.82);
+      }
+
+      .feature-icon{
+        width:48px;
+        height:48px;
+
+        border-radius:16px;
+
+        background:linear-gradient(135deg, ${c.primary}, ${c.secondary});
+        color:white;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+
+        margin-bottom:16px;
+      }
+
+      .feature-title{
+        margin:0;
+        color:${c.text};
+        font-weight:700;
+      }
+
+      .feature-desc{
+        margin-top:6px;
+        font-size:13px;
+        color:${c.muted};
+        line-height:1.6;
+      }
+
+      /* RIGHT PANEL */
+
+      .right-panel{
+        background:${c.panel};
+        padding:60px;
+        position:relative;
+        backdrop-filter:blur(24px);
+        -webkit-backdrop-filter:blur(24px);
+      }
+
+      .right-panel::before{
+        content:"";
+        position:absolute;
+        inset:24px;
+        border-radius:28px;
+        border:1px solid rgba(255,255,255,.34);
+        pointer-events:none;
+        opacity:.5;
+      }
+
+      .theme-toggle{
+        position:absolute;
+        top:28px;
+        right:28px;
+
+        width:52px;
+        height:52px;
+
+        border:1px solid ${c.border};
+        border-radius:16px;
+
+        background:rgba(255,255,255,.38);
+
+        color:${c.text};
+
+        cursor:pointer;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+
+        transition:.25s ease;
+      }
+
+      .theme-toggle:hover{
+        transform:scale(1.05);
+        background:rgba(255,255,255,.56);
+      }
+
+      .signin-label{
+        font-size:12px;
+        letter-spacing:2px;
+        text-transform:uppercase;
+        color:${c.primary};
+        font-weight:700;
+      }
+
+      .signin-title{
+        margin-top:14px;
+        font-size:40px;
+        font-weight:900;
+        color:${c.text};
+      }
+
+      .signin-sub{
+        margin-top:10px;
+        color:${c.muted};
+        font-size:15px;
+      }
+
+      /* ROLE TABS */
+
+      .role-switch{
+        margin-top:32px;
+
+        display:flex;
+        gap:10px;
+      }
+
+      .role-btn{
+        flex:1;
+
+        height:52px;
+
+        border:none;
+        border-radius:18px;
+
+        background:rgba(255,255,255,.38);
+
+        color:${c.muted};
+
+        cursor:pointer;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+
+        font-weight:700;
+
+        transition:.25s ease;
+      }
+
+      .role-btn.active{
+        background:linear-gradient(135deg, ${c.primary}, ${c.secondary});
+        color:white;
+        box-shadow:0 12px 26px rgba(2,132,199,.22);
+      }
+
+      /* FORM */
+
+      .form-group{
+        margin-top:20px;
+      }
+
+      .label{
+        display:block;
+        margin-bottom:10px;
+
+        font-size:13px;
+        font-weight:600;
+
+        color:${c.text};
+      }
+
+      .input-wrap{
+        position:relative;
+      }
+
+      .input-icon{
+        position:absolute;
+        left:16px;
+        top:50%;
+        transform:translateY(-50%);
+        color:${c.muted};
+      }
+
+      .input{
+        width:100%;
+        height:58px;
+
+        border-radius:18px;
+
+        border:1px solid ${c.border};
+
+        background:rgba(255,255,255,.4);
+
+        color:${c.text};
+
+        padding-left:48px;
+        padding-right:16px;
+
+        outline:none;
+
+        font-size:14px;
+
+        transition:.25s ease;
+      }
+
+      .input:focus{
+        border-color:${c.primary};
+        background:rgba(255,255,255,.58);
+        box-shadow:0 0 0 4px rgba(2,132,199,.12);
+      }
+
+      .input::placeholder{
+        color:${c.muted};
+      }
+
+      .password-input{
+        padding-right:50px;
+      }
+
+      .pw-toggle{
+        position:absolute;
+        right:16px;
+        top:50%;
+        transform:translateY(-50%);
+
+        border:none;
+        background:none;
+
+        cursor:pointer;
+
+        color:${c.muted};
+      }
+
+      .extra{
+        margin-top:18px;
+
+        display:flex;
+        justify-content:space-between;
+
+        font-size:13px;
+      }
+
+      .remember{
+        color:${c.muted};
+      }
+
+      .forgot{
+        color:${c.primary};
+        text-decoration:none;
+        font-weight:600;
+      }
+
+      .error{
+        margin-top:18px;
+
+        background:#ffe7e7;
+
+        color:#c53030;
+
+        padding:14px;
+
+        border-radius:14px;
+
+        font-size:13px;
+      }
+
+      .submit-btn{
+        width:100%;
+        height:60px;
+
+        margin-top:24px;
+
+        border:none;
+        border-radius:20px;
+
+        background:linear-gradient(135deg, ${c.primary}, ${c.secondary});
+
+        color:white;
+
+        font-size:15px;
+        font-weight:800;
+
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+
+        cursor:pointer;
+
+        transition:.25s ease;
+      }
+
+      .submit-btn:hover{
+        transform:translateY(-2px);
+        box-shadow:0 18px 38px rgba(2,132,199,.28);
+      }
+
+      .demo-box{
+        margin-top:28px;
+
+        background:rgba(255,255,255,.38);
+
+        border:1px solid ${c.border};
+
+        border-radius:24px;
+
+        padding:22px;
+        backdrop-filter:blur(18px);
+        -webkit-backdrop-filter:blur(18px);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.65),
+          0 16px 38px rgba(3,105,161,.08);
+      }
+
+      .demo-title{
+        margin:0 0 16px;
+        color:${c.text};
+        font-size:14px;
+        font-weight:800;
+      }
+
+      .demo-row{
+        display:flex;
+        justify-content:space-between;
+
+        margin-bottom:10px;
+
+        font-size:13px;
+      }
+
+      .demo-key{
+        color:${c.muted};
+      }
+
+      .demo-value{
+        color:${c.primary};
+        font-weight:700;
+      }
+
+      .demo-btn{
+        width:100%;
+        height:48px;
+
+        margin-top:14px;
+
+        border:none;
+        border-radius:16px;
+
+        background:linear-gradient(135deg, ${c.primary}, ${c.secondary});
+
+        color:white;
+
+        cursor:pointer;
+
+        font-weight:700;
+      }
+
+      .spinner{
+        width:18px;
+        height:18px;
+
+        border-radius:50%;
+
+        border:2px solid rgba(255,255,255,.4);
+        border-top-color:white;
+
+        animation:spin .7s linear infinite;
+      }
+
+      @keyframes spin{
+        to{
+          transform:rotate(360deg);
+        }
+      }
+
+      @keyframes login-card-in{
+        from{
+          opacity:0;
+          transform:translateY(18px) scale(.98);
+        }
+        to{
+          opacity:1;
+          transform:translateY(0) scale(1);
+        }
+      }
+
+      @keyframes login-aurora{
+        from{
+          transform:translate3d(-18px,-10px,0) scale(1);
+        }
+        to{
+          transform:translate3d(18px,14px,0) scale(1.04);
+        }
+      }
+
+      @keyframes particles-drift{
+        to{
+          background-position:102px 118px, -98px 174px;
+        }
+      }
+
+      @keyframes liquid-blob{
+        0%,100%{
+          border-radius:42% 58% 50% 50%;
+          transform:translateY(0) rotate(0deg);
+        }
+        50%{
+          border-radius:58% 42% 46% 54%;
+          transform:translateY(-16px) rotate(8deg);
+        }
+      }
+
+      @keyframes float-card{
+        0%,100%{
+          transform:translateY(0) rotate(12deg);
+        }
+        50%{
+          transform:translateY(-18px) rotate(6deg);
+        }
+      }
+
+      @media(max-width:980px){
+
+        .zoom-wrapper{
+          transform:scale(1);
+          width:100%;
+          margin-left:0;
+        }
+
+        .login-grid{
+          grid-template-columns:1fr;
+        }
+
+        .left-panel{
+          display:none;
+        }
+
+        .right-panel{
+          padding:40px 24px;
+        }
+      }
+
+      `}</style>
+
+      <div
+        className="login-root"
+        onMouseMove={handleRootMouseMove}
+      >
+
+        <div
+          className="shape shape-1"
+          onMouseMove={handleShapeMouseMove}
+          onMouseLeave={handleShapeMouseLeave}
+        />
+        <div
+          className="shape shape-2"
+          onMouseMove={handleShapeMouseMove}
+          onMouseLeave={handleShapeMouseLeave}
+        />
+        <div
+          className="shape shape-3"
+          onMouseMove={handleShapeMouseMove}
+          onMouseLeave={handleShapeMouseLeave}
+        />
+
+        <div className="zoom-wrapper">
+
+          <div className="login-container">
+
+            <div className="login-grid">
+
+              {/* LEFT */}
+
+              <div className="left-panel">
+
+                <div className="brand">
+
+                  <div className="brand-icon">
+                    HR
+                  </div>
+
+                  <div>
+                    <p className="brand-title">
+                      HRMS Portal
+                    </p>
+
+                    <p className="brand-sub">
+                      Workforce Management Platform
+                    </p>
+                  </div>
+
+                </div>
+
+                <h1 className="headline">
+                  Smart HR,
+                  <br />
+                  <span>simplified.</span>
+                </h1>
+
+                <p className="subtext">
+                  Manage attendance, payroll,
+                  onboarding and employee workflows
+                  from one modern platform.
+                </p>
+
+                <div className="features">
+
+                  {features.map(
+                    ({ icon: Icon, label, desc }) => (
+                      <div
+                        className="feature-card"
+                        key={label}
+                      >
+                        <div className="feature-icon">
+                          <Icon size={20} />
+                        </div>
+
+                        <p className="feature-title">
+                          {label}
+                        </p>
+
+                        <p className="feature-desc">
+                          {desc}
+                        </p>
+                      </div>
+                    )
+                  )}
+
+                </div>
+
               </div>
-            ))}
-          </div>
-        </div>
 
-        <p className="text-[#495057] text-xs font-medium tracking-widest uppercase">
-          © 2026 HRMS. All rights reserved.
-        </p>
-      </div>
+              {/* RIGHT */}
 
-      {/* ── Right Panel ────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-[400px]">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-10 lg:hidden">
-            <div className="w-9 h-9 bg-[#212529] rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-[#212529]">HRMS</span>
-          </div>
+              <div className="right-panel">
 
-          <h2 className="text-2xl font-bold text-[#212529] tracking-tight mb-1">
-            Welcome back
-          </h2>
-          <p className="text-sm text-[#6C757D] font-medium mb-8">
-            Sign in to your workspace to continue
-          </p>
-
-          {/* Role toggle */}
-          <div className="flex gap-2 p-1 bg-[#E9ECEF] rounded-lg mb-8">
-            {(["admin", "manager", "employee"] as UserRole[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => { setRole(r); setError(""); setEmail(""); setPassword(""); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-semibold transition-all duration-150 ${role === r
-                  ? "bg-white text-[#212529] shadow-sm border border-[#DEE2E6]"
-                  : "text-[#6C757D] hover:text-[#212529]"
-                  }`}
-              >
-                {r === "admin"
-                  ? <ShieldCheck className="w-4 h-4" />
-                  : r === "manager"
-                    ? <Users className="w-4 h-4" />
-                    : <User className="w-4 h-4" />}
-                {r === "admin" ? "Admin" : r === "manager" ? "Manager" : "Employee"}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div>
-              <label className="block text-xs font-semibold text-[#495057] uppercase tracking-wider mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#ADB5BD]" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={role === "admin" ? "admin@hrms.com" : "emp001@company.com"}
-                  className="flat-input w-full pl-10 pr-4 py-3 text-sm"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-xs font-semibold text-[#495057] uppercase tracking-wider mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#ADB5BD]" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="flat-input w-full pl-10 pr-12 py-3 text-sm"
-                  autoComplete="current-password"
-                />
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#ADB5BD] hover:text-[#495057] transition-colors"
+                  className="theme-toggle"
+                  onClick={() =>
+                    setTheme(
+                      theme === "light"
+                        ? "dark"
+                        : "light"
+                    )
+                  }
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {theme === "light" ? (
+                    <Moon size={18} />
+                  ) : (
+                    <Sun size={18} />
+                  )}
                 </button>
+
+                <div className="signin-label">
+                  SECURE LOGIN
+                </div>
+
+                <div className="signin-title">
+                  Welcome back
+                </div>
+
+                <div className="signin-sub">
+                  Login to continue to your dashboard.
+                </div>
+
+                <div className="role-switch">
+
+                  {ROLES.map(
+                    ({ value, label, icon }) => (
+                      <button
+                        key={value}
+                        onClick={() =>
+                          switchRole(value)
+                        }
+                        className={`role-btn ${
+                          role === value
+                            ? "active"
+                            : ""
+                        }`}
+                      >
+                        {icon}
+                        {label}
+                      </button>
+                    )
+                  )}
+
+                </div>
+
+                <form onSubmit={handleSubmit}>
+
+                  <div className="form-group">
+
+                    <label className="label">
+                      Email Address
+                    </label>
+
+                    <div className="input-wrap">
+
+                      <div className="input-icon">
+                        <Mail size={16} />
+                      </div>
+
+                      <input
+                        type="email"
+                        className="input"
+                        placeholder="Enter email"
+                        value={email}
+                        onChange={(e) =>
+                          setEmail(e.target.value)
+                        }
+                      />
+
+                    </div>
+
+                  </div>
+
+                  <div className="form-group">
+
+                    <label className="label">
+                      Password
+                    </label>
+
+                    <div className="input-wrap">
+
+                      <div className="input-icon">
+                        <Lock size={16} />
+                      </div>
+
+                      <input
+                        type={
+                          showPassword
+                            ? "text"
+                            : "password"
+                        }
+                        className="input password-input"
+                        placeholder="Enter password"
+                        value={password}
+                        onChange={(e) =>
+                          setPassword(e.target.value)
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        className="pw-toggle"
+                        onClick={() =>
+                          setShowPassword(
+                            !showPassword
+                          )
+                        }
+                      >
+                        {showPassword ? (
+                          <Eye size={16} />
+                        ) : (
+                          <EyeOff size={16} />
+                        )}
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                  <div className="extra">
+
+                    <label className="remember">
+                      <input type="checkbox" /> Remember me
+                    </label>
+
+                    <a
+                      href="#"
+                      className="forgot"
+                    >
+                      Forgot password?
+                    </a>
+
+                  </div>
+
+                  {error && (
+                    <div className="error">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="submit-btn"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <div className="spinner" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        Sign In
+                        <ArrowRight size={18} />
+                      </>
+                    )}
+                  </button>
+
+                </form>
+
+                <div className="demo-box">
+
+                  <p className="demo-title">
+                    Demo Credentials
+                  </p>
+
+                  <div className="demo-row">
+                    <span className="demo-key">
+                      Email
+                    </span>
+
+                    <span className="demo-value">
+                      {DEMO[role].email}
+                    </span>
+                  </div>
+
+                  <div className="demo-row">
+                    <span className="demo-key">
+                      Password
+                    </span>
+
+                    <span className="demo-value">
+                      {DEMO[role].password}
+                    </span>
+                  </div>
+
+                  <button
+                    className="demo-btn"
+                    onClick={fillDemo}
+                  >
+                    Auto Fill Credentials
+                  </button>
+
+                </div>
+
               </div>
+
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-[#F8F9FA] border border-[#DEE2E6] rounded-lg text-sm text-[#495057]">
-                <div className="w-2 h-2 rounded-full bg-[#6C757D] flex-shrink-0" />
-                {error}
-              </div>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[#212529] text-[#F8F9FA] rounded-lg text-sm font-semibold
-                hover:bg-[#343A40] disabled:bg-[#ADB5BD] disabled:cursor-not-allowed
-                transition-colors duration-150"
-            >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-[#F8F9FA]/30 border-t-[#F8F9FA] rounded-full animate-spin" />
-              )}
-              {loading ? "Signing in…" : (
-                <>Sign In <ArrowRight className="w-4 h-4" /></>
-              )}
-            </button>
-          </form>
-
-          {/* Demo credentials */}
-          <div className="mt-8 p-4 border border-[#DEE2E6] rounded-lg bg-white">
-            <p className="text-xs font-semibold text-[#6C757D] uppercase tracking-wider mb-3">
-              Demo Credentials — {role === "admin" ? "Admin" : role === "manager" ? "Manager" : "Employee"}
-            </p>
-            <div className="space-y-1.5 mb-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#6C757D]">Email</span>
-                <span className="font-mono text-xs font-semibold text-[#212529] bg-[#F8F9FA] px-2 py-0.5 rounded border border-[#DEE2E6]">
-                  {role === "admin" ? "admin@hrms.com" : role === "manager" ? "manager@hrms.com" : "emp001@company.com"}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#6C757D]">Password</span>
-                <span className="font-mono text-xs font-semibold text-[#212529] bg-[#F8F9FA] px-2 py-0.5 rounded border border-[#DEE2E6]">
-                  {role === "admin" ? "Admin@123" : role === "manager" ? "Manager@123" : "Emp@123"}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="w-full py-2 text-xs font-semibold text-[#495057] bg-[#F8F9FA] hover:bg-[#E9ECEF]
-                border border-[#DEE2E6] rounded-md transition-colors duration-150"
-            >
-              Auto-fill credentials
-            </button>
           </div>
+
         </div>
+
       </div>
-    </div>
+    </>
   );
 }
