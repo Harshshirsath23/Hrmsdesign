@@ -1,17 +1,18 @@
 import { useMemo, useState } from "react";
-import { Download, Eye, FileDown, FileSpreadsheet, List, Search, User, Users } from "lucide-react";
-import { useNavigate } from "react-router";
+import { Download, Eye, FileDown, FileSpreadsheet, List, RefreshCw, Search, Users } from "lucide-react";
 import { MyAttendanceModule } from "../../components/attendance/my-attendance/MyAttendanceModule";
-import { attendanceDataset } from "../../modules/attendance/store";
 import { DailyAttendance } from "../../modules/attendance/types";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { cn } from "../../components/ui/utils";
 import { Modal } from "../../../components/ui/Modal";
+import {
+  useManagerTeamAttendance,
+  useTeamMemberAttendanceHistory,
+} from "../../hooks/useManagerTeamAttendance";
+import { teamStatusLabel } from "../../modules/manager-attendance/mappers";
 
 type TeamView = "card" | "list";
-
-const TODAY = "2026-05-14";
 
 function formatHours(hours?: number) {
   return typeof hours === "number" && hours > 0 ? `${hours.toFixed(1)}h` : "-";
@@ -48,32 +49,43 @@ function statusClass(status?: string) {
 }
 
 export function ManagerTeamAttendancePage() {
-  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [view, setView] = useState<TeamView>("card");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [modalPeriodDate, setModalPeriodDate] = useState(() => new Date());
 
-  const teamMembers = useMemo(() => {
-    return attendanceDataset.employees.map((employee) => {
-      const today = attendanceDataset.records.find((record) => record.employeeId === employee.id && record.date === TODAY);
-      const latest = today ?? attendanceDataset.records.find((record) => record.employeeId === employee.id);
+  const { members: teamMembers, loading: teamLoading, error: teamError, reload } = useManagerTeamAttendance();
 
-      return {
-        id: employee.id,
-        name: employee.name,
-        department: employee.dept,
-        designation: latest?.designation ?? employee.desig,
-        avatar: `${employee.id}`,
-        today,
-      };
-    });
-  }, []);
+  const selectedEmployee = teamMembers.find((employee) => employee.id === selectedEmployeeId) ?? null;
 
-  const departments = useMemo(() => ["ALL", ...Array.from(new Set(teamMembers.map((employee) => employee.department))).sort()], [teamMembers]);
-  const statuses = useMemo(() => ["ALL", ...Array.from(new Set(teamMembers.map((employee) => employee.today?.status ?? "No Record"))).sort()], [teamMembers]);
+  const { records: selectedRecords, loading: historyLoading, error: historyError } =
+    useTeamMemberAttendanceHistory(
+      selectedEmployeeId,
+      modalPeriodDate,
+      {
+        name: selectedEmployee?.name ?? "",
+        department: selectedEmployee?.department ?? "",
+        designation: selectedEmployee?.designation ?? "",
+      },
+    );
+
+  const departments = useMemo(
+    () => ["ALL", ...Array.from(new Set(teamMembers.map((employee) => employee.department))).sort()],
+    [teamMembers],
+  );
+
+  const statuses = useMemo(
+    () => [
+      "ALL",
+      ...Array.from(
+        new Set(teamMembers.map((employee) => teamStatusLabel(employee.raw.status))),
+      ).sort(),
+    ],
+    [teamMembers],
+  );
 
   const filteredEmployees = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -82,20 +94,15 @@ export function ManagerTeamAttendancePage() {
       const matchesQuery =
         !normalizedQuery ||
         employee.name.toLowerCase().includes(normalizedQuery) ||
+        employee.displayId.toLowerCase().includes(normalizedQuery) ||
         employee.id.toLowerCase().includes(normalizedQuery);
       const matchesDepartment = department === "ALL" || employee.department === department;
-      const employeeStatus = employee.today?.status ?? "No Record";
+      const employeeStatus = teamStatusLabel(employee.raw.status);
       const matchesStatus = status === "ALL" || employeeStatus === status;
 
       return matchesQuery && matchesDepartment && matchesStatus;
     });
   }, [teamMembers, query, department, status]);
-
-  const selectedEmployee = teamMembers.find((employee) => employee.id === selectedEmployeeId) ?? null;
-  const selectedRecords = useMemo(
-    () => attendanceDataset.records.filter((record) => record.employeeId === selectedEmployeeId),
-    [selectedEmployeeId],
-  );
 
   const exportRows = selectedRecords.map((record: DailyAttendance) => ({
     Date: record.date,
@@ -118,7 +125,7 @@ export function ManagerTeamAttendancePage() {
       headers.join(","),
       ...exportRows.map((row) => headers.map((header) => JSON.stringify(row[header as keyof typeof row] ?? "")).join(",")),
     ].join("\n");
-    downloadBlob(csv, `${selectedEmployee.id}-attendance.csv`, "text/csv;charset=utf-8");
+    downloadBlob(csv, `${selectedEmployee.displayId}-attendance.csv`, "text/csv;charset=utf-8");
   };
 
   const exportExcel = () => {
@@ -126,7 +133,7 @@ export function ManagerTeamAttendancePage() {
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
-    XLSX.writeFile(workbook, `${selectedEmployee.id}-attendance.xlsx`);
+    XLSX.writeFile(workbook, `${selectedEmployee.displayId}-attendance.xlsx`);
   };
 
   const exportPdf = () => {
@@ -135,7 +142,7 @@ export function ManagerTeamAttendancePage() {
     doc.setFontSize(16);
     doc.text(`${selectedEmployee.name} Attendance Report`, 14, 18);
     doc.setFontSize(10);
-    doc.text(`${selectedEmployee.id} | ${selectedEmployee.department} | ${selectedEmployee.designation}`, 14, 26);
+    doc.text(`${selectedEmployee.displayId} | ${selectedEmployee.department} | ${selectedEmployee.designation}`, 14, 26);
 
     selectedRecords.slice(0, 28).forEach((record, index) => {
       const y = 38 + index * 8;
@@ -146,13 +153,16 @@ export function ManagerTeamAttendancePage() {
       );
     });
 
-    doc.save(`${selectedEmployee.id}-attendance.pdf`);
+    doc.save(`${selectedEmployee.displayId}-attendance.pdf`);
   };
 
   const openAttendanceModal = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
+    setModalPeriodDate(new Date());
     setIsAttendanceModalOpen(true);
   };
+
+  const todayRecord = selectedEmployee?.today;
 
   return (
     <div className="attendance-liquid team-attendance-page space-y-7 p-4 md:p-6">
@@ -165,20 +175,35 @@ export function ManagerTeamAttendancePage() {
               Search team members, review daily attendance, and open the full attendance history.
             </p>
           </div>
-          {selectedEmployee ? (
-            <div className="flex flex-wrap gap-2">
-              <button onClick={exportExcel} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
-                <FileSpreadsheet className="h-4 w-4" /> Excel
-              </button>
-              <button onClick={exportPdf} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
-                <FileDown className="h-4 w-4" /> PDF
-              </button>
-              <button onClick={exportCsv} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
-                <Download className="h-4 w-4" /> CSV
-              </button>
-            </div>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void reload()}
+              className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white"
+            >
+              <RefreshCw className={cn("h-4 w-4", teamLoading && "animate-spin")} /> Refresh
+            </button>
+            {selectedEmployee ? (
+              <>
+                <button onClick={exportExcel} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
+                  <FileSpreadsheet className="h-4 w-4" /> Excel
+                </button>
+                <button onClick={exportPdf} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
+                  <FileDown className="h-4 w-4" /> PDF
+                </button>
+                <button onClick={exportCsv} className="attendance-export-button inline-flex h-9 items-center gap-2 px-3 text-sm font-semibold text-white">
+                  <Download className="h-4 w-4" /> CSV
+                </button>
+              </>
+            ) : null}
+          </div>
         </div>
+
+        {teamError ? (
+          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+            {teamError}
+          </div>
+        ) : null}
 
         <div className="attendance-team-toolbar mt-5 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_160px_auto]">
           <div className="relative">
@@ -232,10 +257,17 @@ export function ManagerTeamAttendancePage() {
         </div>
       </div>
 
-      {view === "card" ? (
+      {teamLoading ? (
+        <div className="attendance-empty flex min-h-[260px] items-center justify-center p-8 text-center text-muted-foreground">
+          Loading team attendance…
+        </div>
+      ) : null}
+
+      {!teamLoading && view === "card" ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredEmployees.map((employee) => {
             const selected = employee.id === selectedEmployeeId;
+            const statusLabel = teamStatusLabel(employee.raw.status);
             return (
               <div
                 key={employee.id}
@@ -256,10 +288,10 @@ export function ManagerTeamAttendancePage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h2 className="truncate text-sm font-bold text-foreground">{employee.name}</h2>
-                        <p className="text-xs text-muted-foreground">{employee.id}</p>
+                        <p className="text-xs text-muted-foreground">{employee.displayId}</p>
                       </div>
-                      <span className={cn("rounded-md px-2 py-1 text-[10px] font-bold uppercase", statusClass(employee.today?.status))}>
-                        {employee.today?.status ?? "No Record"}
+                      <span className={cn("rounded-md px-2 py-1 text-[10px] font-bold uppercase", statusClass(statusLabel))}>
+                        {statusLabel}
                       </span>
                     </div>
                     <p className="mt-3 text-xs font-medium text-foreground">{employee.designation}</p>
@@ -277,13 +309,14 @@ export function ManagerTeamAttendancePage() {
                   <button type="button" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }} className="attendance-submit-button inline-flex h-8 flex-1 items-center justify-center gap-2 text-sm font-semibold text-primary-foreground">
                     <Eye className="h-4 w-4" /> View Attendance
                   </button>
-
                 </div>
               </div>
             );
           })}
         </div>
-      ) : (
+      ) : null}
+
+      {!teamLoading && view === "list" ? (
         <div className="attendance-list-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -300,7 +333,9 @@ export function ManagerTeamAttendancePage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee) => (
+                {filteredEmployees.map((employee) => {
+                  const statusLabel = teamStatusLabel(employee.raw.status);
+                  return (
                   <tr
                     key={employee.id}
                     onClick={() => openAttendanceModal(employee.id)}
@@ -311,15 +346,15 @@ export function ManagerTeamAttendancePage() {
                         <img src={employee.avatar} alt={employee.name} className="h-9 w-9 rounded-full border border-border bg-secondary object-cover" />
                         <div>
                           <p className="text-sm font-semibold text-foreground">{employee.name}</p>
-                          <p className="text-xs text-muted-foreground">{employee.id}</p>
+                          <p className="text-xs text-muted-foreground">{employee.displayId}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm">{employee.department}</td>
                     <td className="px-4 py-3 text-sm">{employee.designation}</td>
                     <td className="px-4 py-3">
-                      <span className={cn("rounded-md px-2 py-1 text-[10px] font-bold uppercase", statusClass(employee.today?.status))}>
-                        {employee.today?.status ?? "No Record"}
+                      <span className={cn("rounded-md px-2 py-1 text-[10px] font-bold uppercase", statusClass(statusLabel))}>
+                        {statusLabel}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">{employee.today?.firstIn || "No Punch In"}</td>
@@ -328,16 +363,21 @@ export function ManagerTeamAttendancePage() {
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <button className="attendance-submit-button px-3 py-1.5 text-xs font-semibold text-primary-foreground" onClick={(event) => { event.stopPropagation(); openAttendanceModal(employee.id); }}>View Attendance</button>
-
                       </div>
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+      ) : null}
+
+      {!teamLoading && filteredEmployees.length === 0 ? (
+        <div className="attendance-empty flex min-h-[200px] items-center justify-center text-muted-foreground">
+          No team members match your filters.
+        </div>
+      ) : null}
 
       {!selectedEmployee ? (
         <div className="attendance-empty flex min-h-[260px] items-center justify-center p-8 text-center">
@@ -359,49 +399,47 @@ export function ManagerTeamAttendancePage() {
           className="max-w-[100vw] w-full md:max-w-[90vw] xl:max-w-[85vw]"
         >
           <div className="attendance-modal-profile flex flex-col xl:flex-row gap-6 mb-8 p-6">
-            {/* Profile Info */}
             <div className="flex items-center gap-5 xl:w-1/3">
               <img src={selectedEmployee.avatar} alt={selectedEmployee.name} className="h-20 w-20 rounded-full border-4 border-card shadow-sm object-cover" />
               <div>
                 <h2 className="text-xl font-bold text-foreground">{selectedEmployee.name}</h2>
-                <p className="text-sm font-medium text-muted-foreground mb-1">{selectedEmployee.id}</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">{selectedEmployee.displayId}</p>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm text-foreground">{selectedEmployee.designation}</span>
                   <span className="text-xs text-muted-foreground">{selectedEmployee.department}</span>
                 </div>
                 <div className="mt-2">
-                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-sm", statusClass(selectedEmployee.today?.status))}>
-                    {selectedEmployee.today?.status ?? "No Record"}
+                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-sm", statusClass(teamStatusLabel(selectedEmployee.raw.status)))}>
+                    {teamStatusLabel(selectedEmployee.raw.status)}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 flex-1">
-                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
+              <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Punch In</p>
-                <p className="text-sm font-semibold text-foreground">{selectedEmployee.today?.firstIn || "--:--"}</p>
+                <p className="text-sm font-semibold text-foreground">{todayRecord?.firstIn || "--:--"}</p>
               </div>
-                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
+              <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Punch Out</p>
-                <p className="text-sm font-semibold text-foreground">{selectedEmployee.today?.lastOut || "--:--"}</p>
+                <p className="text-sm font-semibold text-foreground">{todayRecord?.lastOut || "--:--"}</p>
               </div>
-                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
+              <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Working Hours</p>
-                <p className="text-sm font-semibold text-foreground">{formatHours(selectedEmployee.today?.workHours)}</p>
+                <p className="text-sm font-semibold text-foreground">{formatHours(todayRecord?.workHours)}</p>
               </div>
-                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
+              <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Late By</p>
-                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">{selectedEmployee.today?.lateMins ? `${selectedEmployee.today.lateMins}m` : "-"}</p>
+                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">{todayRecord?.lateMins ? `${todayRecord.lateMins}m` : "-"}</p>
               </div>
-                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
+              <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Early Out</p>
-                <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">{selectedEmployee.today?.earlyExitMins ? `${selectedEmployee.today.earlyExitMins}m` : "-"}</p>
+                <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">{todayRecord?.earlyExitMins ? `${todayRecord.earlyExitMins}m` : "-"}</p>
               </div>
-                <div className="attendance-mini-panel p-4 flex flex-col justify-center">
+              <div className="attendance-mini-panel p-4 flex flex-col justify-center">
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Overtime</p>
-                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{selectedEmployee.today?.otMins ? `${selectedEmployee.today.otMins}m` : "-"}</p>
+                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{todayRecord?.otMins ? `${todayRecord.otMins}m` : "-"}</p>
               </div>
             </div>
           </div>
@@ -411,6 +449,10 @@ export function ManagerTeamAttendancePage() {
               employeeId={selectedEmployee.id}
               readOnly
               showTitle={false}
+              externalRecords={selectedRecords}
+              externalLoading={historyLoading}
+              externalError={historyError}
+              onPeriodChange={setModalPeriodDate}
             />
           </div>
         </Modal>

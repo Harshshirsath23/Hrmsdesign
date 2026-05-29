@@ -35,6 +35,22 @@ import { cn } from "../../../components/ui/utils";
 import { useManagerLeaveData } from "../leaves/ManagerLeaveDataContext";
 import type { LeaveApplicationAPI } from "../../../modules/leaves/types";
 import { useApproveLeave, useRejectLeave } from "../../../modules/leaves/useLeaves";
+import { useManagerApprovals } from "../../../hooks/useManagerApprovals";
+import {
+  mergeOvertimeDetail,
+  mergeRegularizationDetail,
+  type ApprovalRowSource,
+  type UnifiedApprovalRow,
+} from "../../../modules/manager-attendance/approvalsMappers";
+import {
+  approveManagerOvertime,
+  approveManagerRegularization,
+  fetchManagerOvertimeDetail,
+  fetchManagerRegularizationDetail,
+  ManagerAttendanceApiError,
+  rejectManagerOvertime,
+  rejectManagerRegularization,
+} from "../../../../api/managerAttendanceClient";
 import { EmployeeLeaveStatusBadge } from "../../../components/leaves/employee/EmployeeLeaveStatusBadge";
 import { LeaveTypePill } from "../../../components/leaves/employee/LeaveTypePill";
 import { formatLeaveDate, formatLeaveShortDate } from "../../../components/leaves/employee/leaveDateUtils";
@@ -46,45 +62,12 @@ type RequestCategory = "Attendance" | "Leave" | "Other";
 type RequestStatus = "Pending" | "Approved" | "Rejected" | "Sent Back" | "Escalated";
 type Priority = "Low" | "Medium" | "High";
 
-/** Source tag so we know which rows are legacy attendance/other vs API leave rows */
-type RowSource = "local" | "api";
-
-interface RequestRow {
-  id: string;
-  source: RowSource;
-  /** For API leave rows we keep the original object so we can call approve/reject hooks */
+/** Unified row for inbox (leave + attendance APIs + optional local demo rows) */
+type RequestRow = UnifiedApprovalRow & {
   _apiLeave?: LeaveApplicationAPI;
+};
 
-  requestId: string;
-  employeeName: string;
-  employeeId: string;
-  photoUrl: string;
-  department: string;
-  team: string;
-  requestType: string;
-  category: RequestCategory;
-  requestDate: string;
-  effectiveDate: string;
-  submittedOn: string;
-  status: RequestStatus;
-  priority: Priority;
-  waitingDays: number;
-  daysAffected: number;
-  currentApprover: string;
-  designation: string;
-  reportingTo: string;
-  reason: string;
-  attachments: string[];
-  commentsCount: number;
-  existingData: string;
-  leaveBalance: string;
-  previousRequests: string;
-  leaveTypeCode?: string;
-  leaveTypeName?: string;
-  fromDate?: string;
-  toDate?: string;
-  timeline: Array<{ step: string; date: string; actor: string; status: string; remarks?: string }>;
-}
+type RowSource = ApprovalRowSource;
 
 // --- Constants ---
 const STATUS_STYLES: Record<RequestStatus, string> = {
@@ -107,39 +90,8 @@ const TYPE_COLORS: Record<string, string> = {
   default: "bg-[#4B5563] text-white border border-[#4B5563]",
 };
 
-// --- Mock Data (local attendance/other requests) ---
+// --- Mock Data (non-API "Other" category demo only) ---
 const MOCK_REQUESTS: Omit<RequestRow, "source">[] = [
-  {
-    id: "r1",
-    requestId: "REQ-1024",
-    employeeName: "Anaya Kapoor",
-    employeeId: "EMP-1802",
-    photoUrl: "https://api.dicebear.com/9.x/notionists/svg?seed=Anaya",
-    department: "Finance",
-    team: "Accounts Payable",
-    requestType: "Regularization",
-    category: "Attendance",
-    requestDate: "2026-05-10",
-    effectiveDate: "2026-05-10",
-    submittedOn: "2026-05-11",
-    status: "Pending",
-    priority: "High",
-    waitingDays: 3,
-    daysAffected: 1,
-    currentApprover: "Riya Menon",
-    designation: "Accounts Executive",
-    reportingTo: "Rohit Sharma",
-    reason: "Missed punch due to network issue at office gate. Attended morning sync.",
-    attachments: ["gate-pass.jpg"],
-    commentsCount: 2,
-    existingData: "Marked absent on 10 May, no punch logs available.",
-    leaveBalance: "N/A",
-    previousRequests: "One regularization approved in Apr 2026.",
-    timeline: [
-      { step: "Submitted", date: "2026-05-11", actor: "Anaya Kapoor", status: "Pending" },
-      { step: "Pending with Manager", date: "2026-05-11", actor: "Rohit Sharma", status: "In Review" },
-    ],
-  },
   {
     id: "r2",
     requestId: "REQ-1031",
@@ -200,37 +152,6 @@ const MOCK_REQUESTS: Omit<RequestRow, "source">[] = [
     ],
   },
   {
-    id: "r4",
-    requestId: "REQ-1042",
-    employeeName: "Varun Iyer",
-    employeeId: "EMP-1418",
-    photoUrl: "https://api.dicebear.com/9.x/notionists/svg?seed=Varun",
-    department: "Sales",
-    team: "Channel Partners",
-    requestType: "Late Login",
-    category: "Attendance",
-    requestDate: "2026-05-13",
-    effectiveDate: "2026-05-13",
-    submittedOn: "2026-05-14",
-    status: "Rejected",
-    priority: "Medium",
-    waitingDays: 1,
-    daysAffected: 0,
-    currentApprover: "Completed",
-    designation: "Sales Executive",
-    reportingTo: "Rohit Sharma",
-    reason: "Reached office late due to severe traffic delay on the highway.",
-    attachments: ["travel-slip.jpg"],
-    commentsCount: 3,
-    existingData: "Login at 09:38, regular shift start 09:00.",
-    leaveBalance: "N/A",
-    previousRequests: "No previous late login requests this month.",
-    timeline: [
-      { step: "Submitted", date: "2026-05-14", actor: "Varun Iyer", status: "Rejected" },
-      { step: "Rejected", date: "2026-05-15", actor: "Riya Menon", status: "Rejected", remarks: "Please apply for half-day leave as per policy." },
-    ],
-  },
-  {
     id: "r5",
     requestId: "REQ-1045",
     employeeName: "Sanya Mehta",
@@ -259,37 +180,6 @@ const MOCK_REQUESTS: Omit<RequestRow, "source">[] = [
     timeline: [
       { step: "Submitted", date: "2026-05-12", actor: "Sanya Mehta", status: "Pending" },
       { step: "Pending with Manager", date: "2026-05-12", actor: "Rohit Sharma", status: "In Review" },
-    ],
-  },
-  {
-    id: "r6",
-    requestId: "REQ-1048",
-    employeeName: "Rahul Dev",
-    employeeId: "EMP-1132",
-    photoUrl: "https://api.dicebear.com/9.x/notionists/svg?seed=Rahul",
-    department: "Operations",
-    team: "Logistics",
-    requestType: "Work From Home",
-    category: "Attendance",
-    requestDate: "2026-05-19",
-    effectiveDate: "2026-05-19",
-    submittedOn: "2026-05-18",
-    status: "Pending",
-    priority: "Low",
-    waitingDays: 0,
-    daysAffected: 1,
-    currentApprover: "Radha Singh",
-    designation: "Logistics Coordinator",
-    reportingTo: "Rohit Sharma",
-    reason: "Working from home for client call and paper work. Available on teams.",
-    attachments: [],
-    commentsCount: 0,
-    existingData: "WFH not taken in last 30 days.",
-    leaveBalance: "N/A",
-    previousRequests: "Two approved WFH requests in Apr 2026.",
-    timeline: [
-      { step: "Submitted", date: "2026-05-18", actor: "Rahul Dev", status: "Pending" },
-      { step: "Pending with Manager", date: "2026-05-18", actor: "Radha Singh", status: "In Review" },
     ],
   },
   {
@@ -357,7 +247,7 @@ function leaveApiToRow(app: LeaveApplicationAPI): RequestRow {
 
   return {
     id: `api-${app.id}`,
-    source: "api",
+    source: "api-leave",
     _apiLeave: app,
     requestId: `LVE-${app.id.slice(0, 6).toUpperCase()}`,
     employeeName: app.employee_name ?? "—",
@@ -396,6 +286,67 @@ function leaveApiToRow(app: LeaveApplicationAPI): RequestRow {
       },
     ],
   };
+}
+
+// --- Reject dialog for attendance API rows ---
+function ApiAttendanceRejectDialog({
+  row,
+  onClose,
+  onDone,
+}: {
+  row: RequestRow;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [remarks, setRemarks] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const handleReject = async () => {
+    setBusy(true);
+    try {
+      if (row.source === "api-reg" && row.attendanceRegId) {
+        await rejectManagerRegularization(row.attendanceRegId, { remarks });
+      } else if (row.source === "api-ot" && row.attendanceOtId) {
+        await rejectManagerOvertime(row.attendanceOtId, { remarks });
+      }
+      onDone();
+    } catch (err) {
+      const message =
+        err instanceof ManagerAttendanceApiError ? err.message : "Failed to reject request.";
+      alert(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md rounded-xl border-border">
+        <DialogHeader>
+          <DialogTitle className="text-base">Reject attendance request</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Rejecting {row.requestType} for {row.employeeName}.
+          </p>
+          <Textarea
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            placeholder="Reason for rejection (optional)"
+            className="min-h-[100px]"
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={handleReject}>
+              Reject
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // --- Reject dialog for API leave rows ---
@@ -458,22 +409,13 @@ export default function ManagerApprovalsRequestsPage() {
   const { teamPendingApplications, refreshTeam } = useManagerLeaveData();
   const approveLeave = useApproveLeave();
 
-  // Local rows (attendance / other mock data)
   const [localRows, setLocalRows] = useState<RequestRow[]>(
     MOCK_REQUESTS.map((r) => ({ ...r, source: "local" as RowSource }))
   );
 
-  // API leave rows derived from context — merged into unified list
-  const apiRows = useMemo<RequestRow[]>(
-    () => teamPendingApplications.map(leaveApiToRow),
-    [teamPendingApplications]
-  );
-
-  // Combined list — API rows first (they need action), then local
-  const allRows = useMemo<RequestRow[]>(() => [...apiRows, ...localRows], [apiRows, localRows]);
-
-  // Reject dialog state for API rows (needs async hook)
   const [apiRejectTarget, setApiRejectTarget] = useState<RequestRow | null>(null);
+  const [attendanceRejectTarget, setAttendanceRejectTarget] = useState<RequestRow | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   // Filters
   const [query, setQuery] = useState("");
@@ -484,6 +426,33 @@ export default function ManagerApprovalsRequestsPage() {
   const [showOnlyPending, setShowOnlyPending] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  const attendanceFilters = useMemo(
+    () => ({
+      status: showOnlyPending ? "PENDING" : status !== "ALL" ? status.toUpperCase() : undefined,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+      search: query.trim() || undefined,
+    }),
+    [showOnlyPending, status, dateFrom, dateTo, query],
+  );
+
+  const {
+    rows: attendanceApiRows,
+    loading: attendanceLoading,
+    error: attendanceError,
+    reload: reloadAttendance,
+  } = useManagerApprovals(attendanceFilters);
+
+  const apiLeaveRows = useMemo<RequestRow[]>(
+    () => teamPendingApplications.map(leaveApiToRow),
+    [teamPendingApplications],
+  );
+
+  const allRows = useMemo<RequestRow[]>(
+    () => [...apiLeaveRows, ...attendanceApiRows, ...localRows],
+    [apiLeaveRows, attendanceApiRows, localRows],
+  );
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
@@ -586,7 +555,7 @@ export default function ManagerApprovalsRequestsPage() {
       return;
     }
 
-    if (row.source === "api" && row._apiLeave) {
+    if (row.source === "api-leave" && row._apiLeave) {
       if (action === "Approved") {
         try {
           await approveLeave.mutate(row._apiLeave.id);
@@ -596,13 +565,52 @@ export default function ManagerApprovalsRequestsPage() {
           showToast("Failed to approve.", "error");
         }
       } else if (action === "Rejected") {
-        // Open the dedicated dialog for remarks
         setApiRejectTarget(row);
         setDrawerRow(null);
         return;
       } else {
-        // Sent Back — treat as local state change for API rows (UI only)
         showToast(`${row.requestId} sent back.`, "info");
+      }
+    } else if (row.source === "api-reg" && row.attendanceRegId) {
+      try {
+        if (action === "Approved") {
+          await approveManagerRegularization(row.attendanceRegId, { remarks: finalRemarks });
+          showToast(`${row.requestId} approved.`);
+        } else if (action === "Rejected") {
+          setAttendanceRejectTarget(row);
+          setDrawerRow(null);
+          return;
+        } else {
+          showToast("Send back is not supported for attendance workflow.", "info");
+        }
+        reloadAttendance();
+      } catch (err) {
+        showToast(
+          err instanceof ManagerAttendanceApiError ? err.message : "Action failed.",
+          "error",
+        );
+      }
+    } else if (row.source === "api-ot" && row.attendanceOtId) {
+      try {
+        if (action === "Approved") {
+          await approveManagerOvertime(row.attendanceOtId, {
+            remarks: finalRemarks,
+            approved_ot_mins: row.claimedOtMins,
+          });
+          showToast(`${row.requestId} approved.`);
+        } else if (action === "Rejected") {
+          setAttendanceRejectTarget(row);
+          setDrawerRow(null);
+          return;
+        } else {
+          showToast("Send back is not supported for attendance workflow.", "info");
+        }
+        reloadAttendance();
+      } catch (err) {
+        showToast(
+          err instanceof ManagerAttendanceApiError ? err.message : "Action failed.",
+          "error",
+        );
       }
     } else {
       applyLocalAction(row.id, action as RequestStatus, finalRemarks);
@@ -621,29 +629,59 @@ export default function ManagerApprovalsRequestsPage() {
     const actionLabel = action === "Approved" ? "approved" : action === "Rejected" ? "rejected" : "sent back";
 
     for (const row of selected) {
-      if (row.source === "api" && row._apiLeave) {
+      if (row.source === "api-leave" && row._apiLeave) {
         if (action === "Approved") {
           try { await approveLeave.mutate(row._apiLeave.id); } catch { /* continue */ }
         }
-        // Reject/SendBack for API rows via bulk only marks locally since we can't collect per-row remarks
-      } else {
+      } else if (row.source === "api-reg" && row.attendanceRegId && action === "Approved") {
+        try {
+          await approveManagerRegularization(row.attendanceRegId, { remarks: "Bulk approve" });
+        } catch { /* continue */ }
+      } else if (row.source === "api-ot" && row.attendanceOtId && action === "Approved") {
+        try {
+          await approveManagerOvertime(row.attendanceOtId, {
+            remarks: "Bulk approve",
+            approved_ot_mins: row.claimedOtMins,
+          });
+        } catch { /* continue */ }
+      } else if (row.source === "local") {
         applyLocalAction(row.id, action as RequestStatus, "Bulk action");
       }
     }
     refreshTeam();
+    reloadAttendance();
     setSelectedIds({});
     showToast(`${selected.length} requests ${actionLabel} successfully.`);
   };
 
   const handleQuickApprove = async (row: RequestRow, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (row.source === "api" && row._apiLeave) {
+    if (row.source === "api-leave" && row._apiLeave) {
       try {
         await approveLeave.mutate(row._apiLeave.id);
         refreshTeam();
         showToast(`${row.requestId} approved.`);
       } catch {
         showToast("Failed to approve.", "error");
+      }
+    } else if (row.source === "api-reg" && row.attendanceRegId) {
+      try {
+        await approveManagerRegularization(row.attendanceRegId, { remarks: "Quick approve" });
+        reloadAttendance();
+        showToast(`${row.requestId} approved.`);
+      } catch (err) {
+        showToast(err instanceof ManagerAttendanceApiError ? err.message : "Failed to approve.", "error");
+      }
+    } else if (row.source === "api-ot" && row.attendanceOtId) {
+      try {
+        await approveManagerOvertime(row.attendanceOtId, {
+          remarks: "Quick approve",
+          approved_ot_mins: row.claimedOtMins,
+        });
+        reloadAttendance();
+        showToast(`${row.requestId} approved.`);
+      } catch (err) {
+        showToast(err instanceof ManagerAttendanceApiError ? err.message : "Failed to approve.", "error");
       }
     } else {
       applyLocalAction(row.id, "Approved", "Approved from quick actions");
@@ -653,11 +691,38 @@ export default function ManagerApprovalsRequestsPage() {
 
   const handleQuickReject = (row: RequestRow, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (row.source === "api") {
+    if (row.source === "api-leave") {
       setApiRejectTarget(row);
+    } else if (row.source === "api-reg" || row.source === "api-ot") {
+      setAttendanceRejectTarget(row);
     } else {
       applyLocalAction(row.id, "Rejected", "Rejected from quick actions");
       showToast(`${row.requestId} rejected.`);
+    }
+  };
+
+  const openDrawer = async (row: RequestRow) => {
+    setDrawerRow(row);
+    if (row.source !== "api-reg" && row.source !== "api-ot") return;
+
+    setDetailLoading(true);
+    try {
+      if (row.source === "api-reg" && row.attendanceRegId) {
+        const detail = await fetchManagerRegularizationDetail(row.attendanceRegId);
+        setDrawerRow((current) =>
+          current?.id === row.id ? mergeRegularizationDetail(row, detail) : current,
+        );
+      } else if (row.source === "api-ot" && row.attendanceOtId) {
+        const detail = await fetchManagerOvertimeDetail(row.attendanceOtId);
+        setDrawerRow((current) => (current?.id === row.id ? mergeOvertimeDetail(row, detail) : current));
+      }
+    } catch (err) {
+      showToast(
+        err instanceof ManagerAttendanceApiError ? err.message : "Could not load request details.",
+        "error",
+      );
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -729,8 +794,8 @@ export default function ManagerApprovalsRequestsPage() {
             <option value="Delegate Approval Authority">Delegate Approval Authority</option>
             <option value="Approval Workflow Configuration">Approval Workflow Configuration</option>
           </select> */}
-          <Button variant="outline" size="sm" onClick={() => { setLocalRows(MOCK_REQUESTS.map((r) => ({ ...r, source: "local" as RowSource }))); refreshTeam(); }}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={() => { setLocalRows(MOCK_REQUESTS.map((r) => ({ ...r, source: "local" as RowSource }))); refreshTeam(); reloadAttendance(); }}>
+            <RefreshCw className={cn("mr-2 h-4 w-4", attendanceLoading && "animate-spin")} />
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
@@ -739,6 +804,12 @@ export default function ManagerApprovalsRequestsPage() {
           </Button>
         </div>
       </div>
+
+      {attendanceError ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+          {attendanceError}
+        </div>
+      ) : null}
 
       {/* Filter bar */}
       <div className="rounded-lg border border-border bg-card p-2 shadow-sm">
@@ -817,9 +888,14 @@ export default function ManagerApprovalsRequestsPage() {
           </div>
 
           <div className="divide-y divide-border">
+            {attendanceLoading && filteredRows.length === 0 ? (
+              <div className="px-6 py-12 text-center text-sm text-muted-foreground">Loading attendance approvals…</div>
+            ) : null}
             {filteredRows.map((row) => {
               const isSelected = !!selectedIds[row.id];
-              const isApiLeave = row.source === "api";
+              const isApiLeave = row.source === "api-leave";
+              const isApiReg = row.source === "api-reg";
+              const isApiOt = row.source === "api-ot";
 
               return (
                 <div key={row.id} className={cn("group transition-all hover:bg-muted/30", isSelected && "bg-primary/5")}>
@@ -835,11 +911,17 @@ export default function ManagerApprovalsRequestsPage() {
                         className="mt-1 h-4 w-4 rounded border-border bg-background accent-primary"
                       />
                       <img src={row.photoUrl} alt={row.employeeName} className="h-10 w-10 rounded-full border border-border object-cover shrink-0" />
-                      <div className="min-w-0 cursor-pointer" onClick={() => setDrawerRow(row)}>
+                      <div className="min-w-0 cursor-pointer" onClick={() => void openDrawer(row)}>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-semibold text-foreground truncate">{row.employeeName}</p>
                           {isApiLeave && (
-                            <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-300">Leave App</span>
+                            <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-300">Leave</span>
+                          )}
+                          {isApiReg && (
+                            <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">Regularization</span>
+                          )}
+                          {isApiOt && (
+                            <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900 dark:text-violet-300">Overtime</span>
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -895,8 +977,8 @@ export default function ManagerApprovalsRequestsPage() {
 
                     {/* Status */}
                     <div className="col-span-2">
-                      {isApiLeave ? (
-                        <EmployeeLeaveStatusBadge status={row._apiLeave!.status} />
+                      {isApiLeave && row._apiLeave ? (
+                        <EmployeeLeaveStatusBadge status={row._apiLeave.status} />
                       ) : (
                         <span className={cn("inline-flex rounded-md px-2 py-1 text-[11px] font-medium", STATUS_STYLES[row.status])}>
                           {row.status}
@@ -914,7 +996,7 @@ export default function ManagerApprovalsRequestsPage() {
                         variant="outline"
                         size="sm"
                         className="h-8"
-                        onClick={() => setDrawerRow(row)}
+                        onClick={() => void openDrawer(row)}
                       >
                         Details
                       </Button>
@@ -999,6 +1081,9 @@ export default function ManagerApprovalsRequestsPage() {
           </DrawerHeader>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            {detailLoading ? (
+              <p className="text-sm text-muted-foreground">Loading full request details…</p>
+            ) : null}
             {/* Employee snapshot */}
             <section className="flex items-center gap-4">
               <img src={drawerRow?.photoUrl} alt="Avatar" className="h-16 w-16 rounded-full border border-border object-cover bg-secondary" />
@@ -1025,7 +1110,7 @@ export default function ManagerApprovalsRequestsPage() {
                 <div>
                   <p className="text-xs text-muted-foreground">Type</p>
                   <div className="mt-1 flex items-center gap-2">
-                    {drawerRow?.source === "api" && drawerRow.leaveTypeCode ? (
+                    {drawerRow?.source === "api-leave" && drawerRow.leaveTypeCode ? (
                       <><LeaveTypePill code={drawerRow.leaveTypeCode} /><span className="text-sm font-medium text-foreground">{drawerRow.leaveTypeName}</span></>
                     ) : (
                       <span className={cn("inline-flex rounded-md px-2 py-1 text-[11px] font-medium", TYPE_COLORS[drawerRow?.requestType ?? ""] || TYPE_COLORS.default)}>
@@ -1037,7 +1122,7 @@ export default function ManagerApprovalsRequestsPage() {
                 <div>
                   <p className="text-xs text-muted-foreground">Dates / Duration</p>
                   <p className="text-sm font-medium text-foreground mt-1">
-                    {drawerRow?.source === "api" && drawerRow.fromDate
+                    {drawerRow?.source === "api-leave" && drawerRow.fromDate
                       ? `${formatLeaveDate(drawerRow.fromDate)}${drawerRow.toDate && drawerRow.toDate !== drawerRow.fromDate ? ` — ${formatLeaveDate(drawerRow.toDate)}` : ""} · ${drawerRow.daysAffected} day${drawerRow.daysAffected !== 1 ? "s" : ""}`
                       : drawerRow?.daysAffected
                       ? `${formatDate(drawerRow.effectiveDate)} (${drawerRow.daysAffected} days)`
@@ -1123,7 +1208,7 @@ export default function ManagerApprovalsRequestsPage() {
                 {remarksError && <p className="mt-1 text-xs font-semibold text-[#EF4444] flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {remarksError}</p>}
               </div>
               <div className="flex items-center gap-3 w-full">
-                {drawerRow.source !== "api" && (
+                {drawerRow.source === "local" && (
                   <Button className="flex-1 bg-[#3B82F6] text-white hover:bg-[#2563EB]" onClick={() => drawerRow && handleRowAction(drawerRow, "Sent Back")}>
                     <CornerUpLeft className="mr-2 h-4 w-4" /> Send Back
                   </Button>
@@ -1161,6 +1246,18 @@ export default function ManagerApprovalsRequestsPage() {
             setApiRejectTarget(null);
             refreshTeam();
             showToast(`${apiRejectTarget.requestId} rejected.`);
+          }}
+        />
+      )}
+
+      {attendanceRejectTarget && (
+        <ApiAttendanceRejectDialog
+          row={attendanceRejectTarget}
+          onClose={() => setAttendanceRejectTarget(null)}
+          onDone={() => {
+            setAttendanceRejectTarget(null);
+            reloadAttendance();
+            showToast(`${attendanceRejectTarget.requestId} rejected.`);
           }}
         />
       )}
