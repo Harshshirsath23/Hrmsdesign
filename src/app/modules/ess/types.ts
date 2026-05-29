@@ -1,6 +1,6 @@
 import type { EmployeeDocumentKey, EmployeeDocumentMeta } from "../../components/employees/mockData";
 
-export type RequestStatus = "pending" | "approved" | "rejected";
+export type RequestStatus = "draft" | "pending" | "approved" | "rejected";
 
 export type AddressType = "current" | "permanent" | "temporary";
 
@@ -212,4 +212,9 @@ export interface ProfileChangeRequest {
   reviewed_by: string | null;
   reviewed_at: string | null;
   rejection_comment?: string;
+  supportingDoc?: {
+    fileName: string;
+    dataUrl: string;
+    uploadedAt: string;
+  };
 }
