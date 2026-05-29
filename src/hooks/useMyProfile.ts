@@ -90,8 +90,7 @@ export interface EducationInfo {
   university_detail?: MasterRef;
   institution_name: string;
   specialization: string;
-  from_date: string | null;
-  to_date: string | null;
+  year_of_passing: number | null;
   percentage_or_cgpa: string;
   grade: string;
 }
@@ -342,8 +341,7 @@ const DEMO_PROFILE: MyProfileData = {
       university_detail: { id: 'uni1', name: 'Savitribai Phule Pune University', code: 'SPPU' },
       institution_name: 'BVIMSR, Pune',
       specialization: 'Human Resource Management',
-      from_date: '2012-06-01',
-      to_date: '2016-05-31',
+      year_of_passing: 2016,
       percentage_or_cgpa: '72.4%',
       grade: 'A',
     },
@@ -354,8 +352,7 @@ const DEMO_PROFILE: MyProfileData = {
       university_detail: { id: 'uni2', name: 'Symbiosis International University', code: 'SIU' },
       institution_name: 'SIBM, Pune',
       specialization: 'Human Resources & Organizational Behaviour',
-      from_date: '2016-07-01',
-      to_date: '2018-05-31',
+      year_of_passing: 2018,
       percentage_or_cgpa: '8.4 CGPA',
       grade: 'A+',
     },

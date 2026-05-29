@@ -423,49 +423,54 @@ export function SwipeLogsPage() {
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950/50 relative overflow-hidden print:bg-white print:p-0">
       {/* Top Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-4 shadow-sm sticky top-0 z-50 print:hidden">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              <Home className="w-3 h-3" />
-              <ChevronRight className="w-3 h-3" />
-              <span>Attendance</span>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-emerald-500">Swipe Logs</span>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              Attendance Intelligence
-              <div 
-                className={cn(
-                  "px-2 py-0.5 rounded text-[10px] border font-bold uppercase flex items-center gap-1.5 cursor-pointer transition-all",
-                  isLiveEnabled 
-                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20" 
-                    : "bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-800"
-                )}
-                onClick={() => setIsLiveEnabled(!isLiveEnabled)}
-              >
-                <div className={cn("w-1.5 h-1.5 rounded-full", isLiveEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} />
-                {isLiveEnabled ? "Live Sync Active" : "Auto-Sync Paused"}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm sticky top-0 z-50 print:hidden">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                <Home className="w-2.5 h-2.5" />
+                <ChevronRight className="w-2.5 h-2.5" />
+                <span>Attendance</span>
+                <ChevronRight className="w-2.5 h-2.5" />
+                <span className="text-emerald-500">Swipe Logs</span>
               </div>
-            </h2>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                Attendance Intelligence
+                <div 
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[9px] border font-bold uppercase flex items-center gap-1 cursor-pointer transition-all",
+                    isLiveEnabled 
+                      ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20" 
+                      : "bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-800"
+                  )}
+                  onClick={() => setIsLiveEnabled(!isLiveEnabled)}
+                >
+                  <div className={cn("w-1.5 h-1.5 rounded-full", isLiveEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} />
+                  {isLiveEnabled ? "Live" : "Paused"}
+                </div>
+              </h2>
+            </div>
+
+            {/* Inline Filter Bar */}
+            <div className="print:hidden">
+              <SwipeLogsFilterBar filters={filters} setFilters={setFilters} />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 transition-all"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 transition-all"
               onClick={() => setShowBulkActionsModal(true)}
             >
-              <Zap className="w-3.5 h-3.5" /> BULK ACTIONS
+              <Zap className="w-3 h-3" /> BULK
             </Button>
-
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800">
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-blue-500" /> EXPORT REPORT <ChevronDown className="w-3 h-3 opacity-50" />
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800">
+                  <FileSpreadsheet className="w-3 h-3 text-blue-500" /> EXPORT <ChevronDown className="w-2.5 h-2.5 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -482,19 +487,19 @@ export function SwipeLogsPage() {
             </DropdownMenu>
 
             <Button 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-all"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-all"
               onClick={() => setShowManualEntryModal(true)}
             >
-              <Plus className="w-3.5 h-3.5" /> MANUAL ENTRY
+              <Plus className="w-3 h-3" /> MANUAL
             </Button>
             
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-9 w-9 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 w-8 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={handleRefresh}
             >
-              <RefreshCw className={cn("w-4 h-4 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
+              <RefreshCw className={cn("w-3.5 h-3.5 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
             <KebabMenu 
               items={[
@@ -511,12 +516,7 @@ export function SwipeLogsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-        {/* Sticky Filter Bar */}
-        <div className="print:hidden">
-          <SwipeLogsFilterBar filters={filters} setFilters={setFilters} />
-        </div>
-
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto w-full">
+        <div className="p-4 space-y-4 max-w-[1600px] mx-auto w-full">
           {/* Analytics Section */}
           <div className="print:hidden">
             <SwipeLogsAnalytics data={analyticsData} />

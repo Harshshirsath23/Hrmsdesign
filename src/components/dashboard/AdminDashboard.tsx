@@ -135,7 +135,8 @@ export function AdminDashboard() {
                 label="Total Employees"
                 value={data?.employees.total ?? 0}
                 tone="brand"
-                icon={<Users className="h-5 w-5 text-brand-600 dark:text-brand-300" />}
+                icon={<Users className="h-5 w-5 text-primary dark:text-white" />}
+
                 hint={`${data?.employees.active ?? 0} active`}
                 onClick={() => openModule('employees')}
               />
@@ -146,7 +147,8 @@ export function AdminDashboard() {
                 label="Present Today"
                 value={data?.attendance.present_today ?? 0}
                 tone="success"
-                icon={<UserCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />}
+                icon={<UserCheck className="h-5 w-5 text-primary dark:text-white" />}
+
                 hint={
                   data && data.attendance.absent_today > 0
                     ? `${data.attendance.absent_today} absent`
@@ -161,7 +163,8 @@ export function AdminDashboard() {
                 label="On Leave Today"
                 value={data?.employees.on_leave ?? 0}
                 tone="warning"
-                icon={<UserMinus className="h-5 w-5 text-amber-600 dark:text-amber-300" />}
+                icon={<UserMinus className="h-5 w-5 text-primary dark:text-white" />}
+
                 hint={(data?.employees.on_leave ?? 0) === 0 ? 'No leave today' : 'Review leave'}
                 onClick={() => openModule('leave')}
               />
@@ -172,7 +175,8 @@ export function AdminDashboard() {
                 label="Pending Approvals"
                 value={data?.leave.pending_approvals ?? 0}
                 tone="info"
-                icon={<Clock className="h-5 w-5 text-sky-600 dark:text-sky-300" />}
+                icon={<Clock className="h-5 w-5 text-primary dark:text-white" />}
+
                 hint={(data?.leave.pending_approvals ?? 0) === 0 ? 'No pending approvals 🎉' : 'Needs attention'}
                 onClick={() => openModule('leave')}
               />

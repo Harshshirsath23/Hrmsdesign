@@ -12,9 +12,6 @@ import {
   Trash2,
   UploadCloud,
   X,
-  ChevronDown,
-  ChevronRight,
-  FileSpreadsheet,
 } from "lucide-react";
 import type { EmployeeDocumentMeta } from "../../../components/employees/mockData";
 import type { DocumentTypeConfig } from "./types";
@@ -46,12 +43,48 @@ function parseStorageKey(storageKey: string, typeId: string): string | null {
   return storageKey.replace(`${typeId}_`, "");
 }
 
+const DOCUMENT_SECTIONS = [
+  {
+    id: "personal",
+    title: "Personal Documents",
+    description: "Identity, KYC and address records",
+    documentSection: "Personal",
+    Icon: ShieldCheck,
+  },
+  {
+    id: "official",
+    title: "Official Documents",
+    description: "Payroll, statutory, insurance and HR records",
+    documentSection: "Official",
+    Icon: Landmark,
+  },
+  {
+    id: "company",
+    title: "Company Documents",
+    description: "Onboarding, employment and company-issued letters",
+    documentSection: "Company",
+    Icon: BriefcaseBusiness,
+  },
+] as const;
+
+const FALLBACK_SECTION = {
+  id: "other",
+  title: "Other Documents",
+  description: "Additional employee records",
+  documentSection: "Company",
+  Icon: FileText,
+};
+
 const DOCUMENT_FILTERS: { id: DocumentFilter; label: string; description: string }[] = [
   { id: "all", label: "All", description: "Every configured document" },
   { id: "personal", label: "Personal", description: "Documents assigned to the Personal section" },
   { id: "official", label: "Official", description: "Documents assigned to the Official section" },
   { id: "company", label: "Company", description: "Documents assigned to the Company section" },
 ];
+
+function getDocumentSection(type: DocumentTypeConfig) {
+  return DOCUMENT_SECTIONS.find((section) => section.documentSection === type.documentSection) || FALLBACK_SECTION;
+}
 
 function formatBytes(bytes?: number) {
   if (!bytes) return "";
@@ -79,11 +112,6 @@ export function EmployeeDocumentsGrid({
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [err, setErr] = useState<string | null>(null);
   const [previewMeta, setPreviewMeta] = useState<EmployeeDocumentMeta | null>(null);
-  const [frontBackPreview, setFrontBackPreview] = useState<{
-    front: EmployeeDocumentMeta | null;
-    back: EmployeeDocumentMeta | null;
-    docName: string;
-  } | null>(null);
   const [activeFilter, setActiveFilter] = useState<DocumentFilter>("all");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   /** Extra added slots for "multiple" upload-type rows beyond the base 3 */
@@ -151,6 +179,25 @@ export function EmployeeDocumentsGrid({
   const filteredStorageKeys = useMemo(() => filteredDocumentTypes.flatMap(getStorageKeys), [filteredDocumentTypes]);
   const filteredUploadedCount = filteredStorageKeys.filter((key) => docs[key]?.fileName).length;
   const filteredRequiredCount = filteredDocumentTypes.filter((type) => type.mandatory).length;
+
+  const groupedDocumentTypes = useMemo(() => {
+    const buckets = new Map<string, { section: ReturnType<typeof getDocumentSection>; types: DocumentTypeConfig[] }>();
+
+    filteredDocumentTypes
+      .slice()
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .forEach((type) => {
+        const section = getDocumentSection(type);
+        const existing = buckets.get(section.id);
+        if (existing) {
+          existing.types.push(type);
+        } else {
+          buckets.set(section.id, { section, types: [type] });
+        }
+      });
+
+    return [...buckets.values()];
+  }, [filteredDocumentTypes]);
 
   const readFile = useCallback(
     (file: File, storageKey: string, type: DocumentTypeConfig) => {
@@ -235,7 +282,7 @@ export function EmployeeDocumentsGrid({
 
   if (!documentTypes.length) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground font-medium">
+      <p className="py-8 text-center text-sm text-muted-foreground">
         No document types configured. Add a document type to get started.
       </p>
     );
@@ -244,21 +291,17 @@ export function EmployeeDocumentsGrid({
   return (
     <>
       {err ? (
-        <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive flex items-center justify-between">
-          <span>{err}</span>
-          <button type="button" onClick={() => setErr(null)} className="text-destructive hover:opacity-80">
-            <X className="h-4 w-4" />
-          </button>
+        <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+          {err}
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        {/* Category filters header */}
-        <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-border bg-background p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Document Category</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
+              <p className="mt-1 text-sm font-medium text-foreground">
                 {DOCUMENT_FILTERS.find((filter) => filter.id === activeFilter)?.description}
               </p>
             </div>
@@ -272,9 +315,9 @@ export function EmployeeDocumentsGrid({
                     type="button"
                     onClick={() => setActiveFilter(filter.id)}
                     className={[
-                      "rounded-full border px-4 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer",
+                      "rounded-full border px-4 py-2 text-xs font-black uppercase tracking-widest transition-colors",
                       active
-                        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                        ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground",
                     ].join(" ")}
                   >
@@ -287,7 +330,7 @@ export function EmployeeDocumentsGrid({
             <select
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as DocumentFilter)}
-              className="h-10 rounded-lg border border-border bg-card px-3 text-xs font-bold text-foreground md:hidden"
+              className="h-10 rounded-lg border border-border bg-card px-3 text-xs font-black uppercase tracking-widest text-foreground md:hidden"
             >
               {DOCUMENT_FILTERS.map((filter) => (
                 <option key={filter.id} value={filter.id}>
@@ -297,10 +340,10 @@ export function EmployeeDocumentsGrid({
             </select>
 
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground lg:justify-end">
-              <span className="rounded-full border border-border bg-card px-3 py-1.5 font-bold">
+              <span className="rounded-full border border-border bg-card px-3 py-1.5">
                 {filteredUploadedCount}/{filteredStorageKeys.length} Uploaded
               </span>
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700 font-bold">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700">
                 {filteredRequiredCount} Required
               </span>
             </div>
@@ -340,27 +383,30 @@ export function EmployeeDocumentsGrid({
                     type.id.toLowerCase().includes("passbook");
 
                   return (
-                    <>
-                      <tr
-                        key={type.id}
-                        className={[
-                          "hover:bg-secondary/15 transition-colors group",
-                          isExpanded ? "bg-secondary/5" : "",
-                        ].join(" ")}
-                      >
-                        {/* Expand Icon */}
-                        <td className="py-4 pl-4">
-                          {isExpandable ? (
+                    <div key={type.id} className="flex min-h-48 flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-bold text-foreground">{type.documentName}</p>
+                            {type.mandatory ? (
+                              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-rose-600">
+                                Required
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {type.category} - {completeCount}/{typeStorageKeys.length} files
+                          </p>
+                        </div>
+                        {showTypeControls ? (
+                          <div className="flex flex-shrink-0 items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => toggleRow(type.id)}
-                              className="p-1 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                              title="Edit document type"
+                              className="rounded-md border border-border p-1.5 hover:bg-secondary"
+                              onClick={() => onEditType?.(type)}
                             >
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
+                              <Pencil className="h-3.5 w-3.5" />
                             </button>
                           ) : null}
                         </td>
@@ -549,9 +595,9 @@ export function EmployeeDocumentsGrid({
                                 className="p-1.5 rounded-lg border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
                                 onClick={() => onRemoveType?.(type)}
                               >
-                                <Trash className="h-4 w-4" />
+                                <Trash className="h-3.5 w-3.5" />
                               </button>
-                            )}
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -851,33 +897,22 @@ export function EmployeeDocumentsGrid({
               </tbody>
             </table>
           </div>
-        </div>
+        ) : null}
       </div>
 
-      {/* Single Document Preview Modal */}
       {previewMeta ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 transition-opacity duration-300"
-          onClick={() => setPreviewMeta(null)}
-        >
-          <div
-            className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4" onClick={() => setPreviewMeta(null)}>
+          <div className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">
-                  Document Preview
-                </h3>
-                <p className="mt-0.5 truncate text-xs font-semibold text-muted-foreground">
-                  {previewMeta.fileName}
-                </p>
+                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">Document Preview</h3>
+                <p className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{previewMeta.fileName}</p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
                 <button
                   type="button"
                   title="Download"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary"
                   onClick={() => download(previewMeta)}
                 >
                   <Download className="h-4 w-4" />
@@ -885,7 +920,7 @@ export function EmployeeDocumentsGrid({
                 <button
                   type="button"
                   title="Close"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary"
                   onClick={() => setPreviewMeta(null)}
                 >
                   <X className="h-4 w-4" />
@@ -894,128 +929,16 @@ export function EmployeeDocumentsGrid({
             </div>
             <div className="min-h-0 flex-1 bg-secondary/20 p-4">
               {getPreviewKind(previewMeta.fileName) === "image" ? (
-                <div className="flex h-full items-center justify-center overflow-auto rounded-xl bg-background border border-border/80">
-                  <img
-                    src={previewMeta.dataUrl}
-                    alt={previewMeta.fileName || "Document preview"}
-                    className="max-h-full max-w-full object-contain"
-                  />
+                <div className="flex h-full items-center justify-center overflow-auto rounded-xl bg-background">
+                  <img src={previewMeta.dataUrl} alt={previewMeta.fileName || "Document preview"} className="max-h-full max-w-full object-contain" />
                 </div>
               ) : (
                 <iframe
                   title={previewMeta.fileName || "Document preview"}
                   src={previewMeta.dataUrl}
-                  className="h-full w-full rounded-xl border border-border/80 bg-background"
+                  className="h-full w-full rounded-xl border border-border bg-background"
                 />
               )}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Side-by-Side Front & Back Preview Modal */}
-      {frontBackPreview ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 transition-opacity duration-300"
-          onClick={() => setFrontBackPreview(null)}
-        >
-          <div
-            className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">
-                  Side-by-Side Preview: {frontBackPreview.docName}
-                </h3>
-              </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  title="Close"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setFrontBackPreview(null)}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 bg-secondary/10 p-5 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
-              {/* Front Side */}
-              <div className="flex flex-col h-full min-h-[400px]">
-                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center justify-between">
-                  <span>Front Side</span>
-                  {frontBackPreview.front && (
-                    <button
-                      type="button"
-                      title="Download front side"
-                      onClick={() => frontBackPreview.front && download(frontBackPreview.front)}
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline"
-                    >
-                      <Download className="h-3 w-3" /> Download
-                    </button>
-                  )}
-                </h4>
-                <div className="flex-1 rounded-xl border border-border/80 bg-background overflow-hidden p-2 flex items-center justify-center min-h-[300px]">
-                  {frontBackPreview.front ? (
-                    getPreviewKind(frontBackPreview.front.fileName) === "image" ? (
-                      <img
-                        src={frontBackPreview.front.dataUrl}
-                        alt="Front side preview"
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <iframe
-                        title="Front side preview"
-                        src={frontBackPreview.front.dataUrl}
-                        className="h-full w-full border-0"
-                      />
-                    )
-                  ) : (
-                    <div className="text-center p-6 text-muted-foreground font-semibold italic">
-                      No front side file uploaded
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Back Side */}
-              <div className="flex flex-col h-full min-h-[400px]">
-                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 flex items-center justify-between">
-                  <span>Back Side</span>
-                  {frontBackPreview.back && (
-                    <button
-                      type="button"
-                      title="Download back side"
-                      onClick={() => frontBackPreview.back && download(frontBackPreview.back)}
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-primary hover:underline"
-                    >
-                      <Download className="h-3 w-3" /> Download
-                    </button>
-                  )}
-                </h4>
-                <div className="flex-1 rounded-xl border border-border/80 bg-background overflow-hidden p-2 flex items-center justify-center min-h-[300px]">
-                  {frontBackPreview.back ? (
-                    getPreviewKind(frontBackPreview.back.fileName) === "image" ? (
-                      <img
-                        src={frontBackPreview.back.dataUrl}
-                        alt="Back side preview"
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <iframe
-                        title="Back side preview"
-                        src={frontBackPreview.back.dataUrl}
-                        className="h-full w-full border-0"
-                      />
-                    )
-                  ) : (
-                    <div className="text-center p-6 text-muted-foreground font-semibold italic">
-                      No back side file uploaded
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
         </div>

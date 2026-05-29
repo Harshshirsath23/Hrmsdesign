@@ -34,23 +34,23 @@ export function AnalyticsPanel({ metrics, filters, setFilters }: AnalyticsPanelP
 
   return (
     <Card className="shadow-sm border-border h-full flex flex-col">
-      <CardHeader className="pb-4 border-b border-border/50">
-        <CardTitle className="text-base font-black text-foreground uppercase tracking-wider">
+      <CardHeader className="pb-3 border-b border-border/50 p-4">
+        <CardTitle className="text-sm font-black text-foreground uppercase tracking-wider">
           Monthly Summary
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-6 space-y-6 flex-1">
+      <CardContent className="pt-4 p-4 space-y-4 flex-1">
         {/* Internal Filters */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <Input 
             placeholder="Search employee..." 
             value={filters.search}
             onChange={(e) => updateFilter("search", e.target.value)}
-            className="h-9 text-xs font-bold bg-secondary/20 border-transparent focus:bg-background transition-all"
+            className="h-8 text-[11px] font-bold bg-secondary/20 border-transparent focus:bg-background transition-all"
           />
           <div className="grid grid-cols-2 gap-2">
             <Select value={filters.department} onValueChange={(v) => updateFilter("department", v)}>
-              <SelectTrigger className="h-9 text-[10px] font-bold bg-secondary/20 border-transparent">
+              <SelectTrigger className="h-8 text-[10px] font-bold bg-secondary/20 border-transparent">
                 <SelectValue placeholder="Dept" />
               </SelectTrigger>
               <SelectContent>
@@ -59,7 +59,7 @@ export function AnalyticsPanel({ metrics, filters, setFilters }: AnalyticsPanelP
               </SelectContent>
             </Select>
             <Select value={filters.team} onValueChange={(v) => updateFilter("team", v)}>
-              <SelectTrigger className="h-9 text-[10px] font-bold bg-secondary/20 border-transparent">
+              <SelectTrigger className="h-8 text-[10px] font-bold bg-secondary/20 border-transparent">
                 <SelectValue placeholder="Team" />
               </SelectTrigger>
               <SelectContent>
@@ -71,19 +71,19 @@ export function AnalyticsPanel({ metrics, filters, setFilters }: AnalyticsPanelP
         </div>
 
         {/* Metrics List */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           <TooltipProvider>
             {summaryItems.map((item) => (
               <div key={item.label} className="flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110`}>
-                    <item.icon className={`w-4.5 h-4.5 ${item.color}`} />
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-lg ${item.bg} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110`}>
+                    <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{item.label}</span>
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{item.label}</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <HelpCircle className="w-3 h-3 text-muted-foreground/50 cursor-help" />
+                        <HelpCircle className="w-2.5 h-2.5 text-muted-foreground/50 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent side="right">
                         <p className="text-[10px] font-bold">{item.tooltip}</p>
@@ -91,17 +91,17 @@ export function AnalyticsPanel({ metrics, filters, setFilters }: AnalyticsPanelP
                     </Tooltip>
                   </div>
                 </div>
-                <span className="text-sm font-black text-foreground">{item.value}</span>
+                <span className="text-xs font-black text-foreground">{item.value}</span>
               </div>
             ))}
           </TooltipProvider>
         </div>
 
         {/* Status indicator */}
-        <div className="mt-auto pt-6 border-t border-border/50">
-          <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-1">Health Check</p>
-             <p className="text-xs font-bold text-emerald-700 leading-relaxed">
+        <div className="mt-auto pt-4 border-t border-border/50">
+          <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+             <p className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-0.5">Health Check</p>
+             <p className="text-[11px] font-bold text-emerald-700 leading-relaxed">
                Attendance is trending <span className="underline decoration-2 underline-offset-2">upwards</span> by 4% compared to last month.
              </p>
           </div>

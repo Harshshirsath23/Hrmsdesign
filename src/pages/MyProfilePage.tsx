@@ -856,7 +856,7 @@ function EducationSection({ data, editing, isSaving, hasPendingApproval, onEdit,
   const add = () =>
     setRecords((prev) => [
       ...prev,
-      { id: `new-${Date.now()}`, qualification_detail: undefined, qualification_type_detail: undefined, university_detail: undefined, institution_name: '', specialization: '', from_date: null, to_date: null, percentage_or_cgpa: '', grade: '' },
+      { id: `new-${Date.now()}`, qualification_detail: undefined, qualification_type_detail: undefined, university_detail: undefined, institution_name: '', specialization: '', year_of_passing: null, percentage_or_cgpa: '', grade: '' },
     ]);
   const remove = (id: string) => setRecords((prev) => prev.filter((r) => r.id !== id));
 
@@ -887,8 +887,7 @@ function EducationSection({ data, editing, isSaving, hasPendingApproval, onEdit,
                 <FormInput  label="Specialization"   value={ed.specialization}                    onChange={(v) => update(ed.id, 'specialization', v)} />
                 <FormInput  label="Institution Name" value={ed.institution_name}                  onChange={(v) => update(ed.id, 'institution_name', v)} />
                 <FormInput  label="University"       value={ed.university_detail?.name ?? ''}     onChange={(v) => update(ed.id, 'university_detail', { id: '', name: v, code: '' })} />
-                <FormInput  label="From Date"  value={ed.from_date ?? ''}     onChange={(v) => update(ed.id, 'from_date', v || null)} type="date" />
-                <FormInput  label="To Date"    value={ed.to_date ?? ''}       onChange={(v) => update(ed.id, 'to_date', v || null)}   type="date" />
+                <FormInput  label="Year of Passing"  value={String(ed.year_of_passing ?? '')}     onChange={(v) => update(ed.id, 'year_of_passing', Number(v) || null)} type="number" />
                 <FormInput  label="Percentage / CGPA" value={ed.percentage_or_cgpa}              onChange={(v) => update(ed.id, 'percentage_or_cgpa', v)} />
                 <FormInput  label="Grade"            value={ed.grade}                             onChange={(v) => update(ed.id, 'grade', v)} />
               </div>
@@ -915,11 +914,7 @@ function EducationSection({ data, editing, isSaving, hasPendingApproval, onEdit,
                 </p>
                 <div className="mt-2 flex flex-wrap gap-4 text-xs text-surface-500 dark:text-white/40">
                   {ed.university_detail && <span>{ed.university_detail.name}</span>}
-                  {ed.from_date && ed.to_date && (
-                    <span>
-                      {formatDate(ed.from_date)} — {formatDate(ed.to_date)}
-                    </span>
-                  )}
+                  {ed.year_of_passing && <span>Passed: {ed.year_of_passing}</span>}
                   {ed.percentage_or_cgpa && <span>{ed.percentage_or_cgpa}</span>}
                 </div>
               </div>
@@ -1049,21 +1044,11 @@ function BankSection({ data, editing, isSaving, hasPendingApproval, onEdit, onCa
 
 function NomineeSection({ data, editing, isSaving, hasPendingApproval, onEdit, onCancel, onSubmit }: SectionProps) {
   const [nominees, setNominees] = useState<NomineeInfo[]>(data.nominees);
-  const parseNum = (v?: string) => {
-    const n = Number(v || 0);
-    return Number.isFinite(n) ? n : 0;
-  };
-  const totalAllocated = nominees.reduce((acc, n) => {
-    const anyType = parseNum((n as any).shareEPF) + parseNum((n as any).shareEPS) + parseNum((n as any).shareGratuity) + parseNum((n as any).shareCustom);
-    if (anyType > 0) return acc + anyType;
-    return acc + parseNum(n.percentage as unknown as string);
-  }, 0);
-  const remaining = Math.max(0, 100 - totalAllocated);
 
   const update = (id: string, key: keyof NomineeInfo, value: unknown) =>
     setNominees((prev) => prev.map((n) => n.id === id ? { ...n, [key]: value } : n));
   const add = () =>
-    setNominees((prev) => [...prev, { id: `new-${Date.now()}`, name: '', relation_detail: undefined, percentage: '', phone: '', email: '', nomineeType: 'EPF', shareEPF: '', shareEPS: '', shareGratuity: '', shareCustom: '', isMinor: false, guardian: { name: '', relationship: '', contactNumber: '', address: '' } } as NomineeInfo]);
+    setNominees((prev) => [...prev, { id: `new-${Date.now()}`, name: '', relation_detail: undefined, percentage: '', phone: '' }]);
   const remove = (id: string) => setNominees((prev) => prev.filter((n) => n.id !== id));
 
   return (
@@ -1080,10 +1065,6 @@ function NomineeSection({ data, editing, isSaving, hasPendingApproval, onEdit, o
     >
       {editing ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-surface-600 dark:text-white/60">Remaining allocation: <strong className="ml-1">{remaining}%</strong></div>
-            <div className="w-56 text-right text-xs text-surface-500">Total allocated: {totalAllocated}%</div>
-          </div>
           {nominees.map((n) => (
             <div key={n.id} className="rounded-xl border border-surface-100 p-4 dark:border-white/5">
               <div className="mb-3 flex items-center justify-between">
@@ -1093,38 +1074,14 @@ function NomineeSection({ data, editing, isSaving, hasPendingApproval, onEdit, o
                 </button>
               </div>
               <div className="grid gap-4 sm:grid-cols-4">
-                <FormInput label="Name" value={n.name} onChange={(v) => update(n.id, 'name', v)} />
-                <FormInput label="Relation" value={n.relation_detail?.name ?? ''} onChange={(v) => update(n.id, 'relation_detail', { id: '', name: v, code: '' })} />
-                <FormInput label="Email" value={(n as any).email ?? ''} onChange={(v) => update(n.id, 'email', v)} />
-                <FormSelect label="Nominee Type" value={(n as any).nomineeType ?? 'EPF'} onChange={(v) => update(n.id, 'nomineeType', v)} options={[{ value: 'EPF', label: 'EPF' }, { value: 'EPS', label: 'EPS' }, { value: 'Gratuity', label: 'Gratuity' }, { value: 'Custom', label: 'Custom' }]} />
+                <FormInput label="Name"      value={n.name}                          onChange={(v) => update(n.id, 'name', v)} />
+                <FormInput label="Relation"  value={n.relation_detail?.name ?? ''}   onChange={(v) => update(n.id, 'relation_detail', { id: '', name: v, code: '' })} />
+                <FormInput label="Share %"   value={String(n.percentage)}             onChange={(v) => update(n.id, 'percentage', v)} type="number" />
+                <FormInput label="Phone"     value={n.phone}                          onChange={(v) => update(n.id, 'phone', v)} type="tel" />
               </div>
-
-              <div className="mt-4 grid gap-4 sm:grid-cols-4">
-                <FormInput label="Share EPF %" type="number" value={(n as any).shareEPF ?? ''} onChange={(v) => update(n.id, 'shareEPF', v)} />
-                <FormInput label="Share EPS %" type="number" value={(n as any).shareEPS ?? ''} onChange={(v) => update(n.id, 'shareEPS', v)} />
-                <FormInput label="Share Gratuity %" type="number" value={(n as any).shareGratuity ?? ''} onChange={(v) => update(n.id, 'shareGratuity', v)} />
-                <FormInput label="Share Custom %" type="number" value={(n as any).shareCustom ?? ''} onChange={(v) => update(n.id, 'shareCustom', v)} />
-              </div>
-
-              <div className="mt-4 grid gap-4 sm:grid-cols-4">
-                <FormInput label="Phone" value={n.phone ?? ''} onChange={(v) => update(n.id, 'phone', v)} type="tel" />
-                <FormInput label="Legacy Share %" type="number" value={String(n.percentage ?? '')} onChange={(v) => update(n.id, 'percentage', v)} />
-                <div />
-                <div>
-                  <FormCheckbox label="Minor nominee" checked={Boolean((n as any).isMinor)} onChange={(v) => update(n.id, 'isMinor', v)} />
-                </div>
-              </div>
-
-              {(n as any).isMinor ? (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <FormInput label="Guardian Name" value={((n as any).guardian?.name) ?? ''} onChange={(v) => update(n.id, 'guardian', { ...(n as any).guardian, name: v })} />
-                  <FormInput label="Guardian Contact" value={((n as any).guardian?.contactNumber) ?? ''} onChange={(v) => update(n.id, 'guardian', { ...(n as any).guardian, contactNumber: v })} />
-                </div>
-              ) : null}
             </div>
           ))}
-
-          <button type="button" onClick={add} disabled={remaining <= 0} className={`flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-surface-300 py-3 text-sm text-surface-500 transition ${remaining <= 0 ? 'opacity-40 cursor-not-allowed' : 'hover:border-brand-400 hover:text-brand-600'} dark:border-white/10 dark:text-white/40` }>
+          <button type="button" onClick={add} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-surface-300 py-3 text-sm text-surface-500 transition hover:border-brand-400 hover:text-brand-600 dark:border-white/10 dark:text-white/40 dark:hover:border-brand-400/50 dark:hover:text-brand-400">
             <Plus className="h-4 w-4" /> Add Nominee
           </button>
         </div>

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   Users, UserCheck, CalendarOff, ClipboardCheck,
   Cake, CalendarDays, CheckSquare, ChevronRight,
-  UserPlus, ShieldCheck, Hourglass,
+  UserPlus, ShieldCheck, Hourglass, TrendingUp, Bell,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -14,13 +14,13 @@ import { leaveRequests, attendanceRecords } from "../../components/employees/moc
 
 /* ── Palette (monochrome) ──────────────────────────────────── */
 const P = {
-  darkest:  "#212529",
-  dark:     "#343A40",
-  mid:      "#495057",
-  muted:    "#6C757D",
-  light:    "#ADB5BD",
-  lighter:  "#CED4DA",
-  lightest: "#F8F9FA",
+  darkest: "#496091", // charcoal
+  dark: "#374151",
+  mid: "#6366F1",
+  muted: "#8B5CF6",
+  light: "#C4B5FD",
+  lighter: "#8677cc",
+  lightest: "#FAFAFF"
 };
 
 /* ── Derived stats ─────────────────────────────────────────── */
@@ -33,10 +33,10 @@ const notLoggedIn    = todayRecords.filter((r) => r.status === "Absent").length;
 const pendingCount   = leaveRequests.filter((l) => l.status === "Pending").length;
 
 const donutData = [
-  { name: "Present",      value: presentToday, color: P.darkest },
-  { name: "On Leave",     value: onLeaveToday, color: P.mid     },
-  { name: "Not Logged In",value: notLoggedIn,  color: P.lighter },
-  { name: "Half Day",     value: halfDayToday, color: P.muted   },
+  { name: "Present",       value: presentToday, color: "#003D7A" },  // deep ocean blue
+  { name: "On Leave",      value: onLeaveToday, color: "#0052B3" },  // ocean blue
+  { name: "Not Logged In", value: notLoggedIn,  color: "#0066E6" },  // light ocean blue
+  { name: "Half Day",      value: halfDayToday, color: "#3399FF" },  // sky blue
 ];
 
 const deptData = Object.entries(
@@ -49,53 +49,165 @@ const deptData = Object.entries(
   count,
 }));
 
-const BAR_COLORS = [P.darkest, P.dark, P.mid, P.muted, P.light, P.lighter, "#DEE2E6"];
+const BAR_COLORS = [
+  "#003D7A",  // deep ocean blue
+  "#0052B3",  // ocean blue
+  "#0066E6",  // light ocean blue
+  "#3399FF",  // sky blue
+  "#66B3FF",  // lighter ocean
+  "#99CCFF",  // pale ocean
+  "#CCE5FF"   // very light ocean
+];
 
 const EVENTS = {
   meetings: [
-    { id: "m1", title: "Q2 Quarterly Review",      desc: "Conference Room A", time: "2:00 PM",  tag: "Today",     tagType: "today"  as const },
-    { id: "m2", title: "Sprint Planning — Frontend",desc: "Zoom Call",         time: "11:00 AM", tag: "Today",     tagType: "today"  as const },
-    { id: "m3", title: "1:1 with Eng Lead",         desc: "Manager's Office",  time: "May 7",    tag: "In 2 days", tagType: "soon"   as const },
-    { id: "m4", title: "HR Policy Review",          desc: "HR Conf. Room",     time: "May 10",   tag: "In 5 days", tagType: "soon"   as const },
+    {
+      id: "m1",
+      title: "Q2 Quarterly Review",
+      desc: "Conference Room A",
+      time: "2:00 PM",
+      tag: "Today",
+      tagType: "today" as const
+    },
+    {
+      id: "m2",
+      title: "Sprint Planning — Frontend",
+      desc: "Zoom Call",
+      time: "11:00 AM",
+      tag: "Today",
+      tagType: "today" as const
+    },
+    {
+      id: "m3",
+      title: "1:1 with Eng Lead",
+      desc: "Manager's Office",
+      time: "May 7",
+      tag: "In 2 days",
+      tagType: "soon" as const
+    },
+    {
+      id: "m4",
+      title: "HR Policy Review",
+      desc: "HR Conf. Room",
+      time: "May 10",
+      tag: "In 5 days",
+      tagType: "soon" as const
+    },
   ],
+
   birthdays: [
-    { id: "b1", title: "Rajesh Kumar",  desc: "DevOps Engineer",   time: "Today",  tag: "Today",      tagType: "today" as const },
-    { id: "b2", title: "Vikram Mehta",  desc: "Product Manager",   time: "May 15", tag: "In 10 days", tagType: "soon"  as const },
-    { id: "b3", title: "Divya Pillai",  desc: "Finance Executive", time: "May 28", tag: "In 23 days", tagType: "later" as const },
+    {
+      id: "b1",
+      title: "Rajesh Kumar",
+      desc: "DevOps Engineer",
+      time: "Today",
+      tag: "Today",
+      tagType: "today" as const
+    },
+    {
+      id: "b2",
+      title: "Vikram Mehta",
+      desc: "Product Manager",
+      time: "May 15",
+      tag: "In 10 days",
+      tagType: "soon" as const
+    },
+    {
+      id: "b3",
+      title: "Divya Pillai",
+      desc: "Finance Executive",
+      time: "May 28",
+      tag: "In 23 days",
+      tagType: "later" as const
+    },
   ],
+
   holidays: [
-    { id: "h1", title: "Eid al-Adha",     desc: "National Holiday", time: "May 27", tag: "In 22 days",  tagType: "later" as const },
-    { id: "h2", title: "Independence Day", desc: "National Holiday", time: "Aug 15", tag: "~102 days",   tagType: "later" as const },
-    { id: "h3", title: "Gandhi Jayanti",   desc: "National Holiday", time: "Oct 2",  tag: "~150 days",   tagType: "later" as const },
+    {
+      id: "h1",
+      title: "Eid al-Adha",
+      desc: "National Holiday",
+      time: "May 27",
+      tag: "In 22 days",
+      tagType: "later" as const
+    },
+    {
+      id: "h2",
+      title: "Independence Day",
+      desc: "National Holiday",
+      time: "Aug 15",
+      tag: "~102 days",
+      tagType: "later" as const
+    },
+    {
+      id: "h3",
+      title: "Gandhi Jayanti",
+      desc: "National Holiday",
+      time: "Oct 2",
+      tag: "~150 days",
+      tagType: "later" as const
+    },
   ],
 };
 
 const ALL_EVENTS = [
-  ...EVENTS.meetings.map((e) => ({ ...e, category: "meeting"  })),
+  ...EVENTS.meetings.map((e) => ({ ...e, category: "meeting" })),
   ...EVENTS.birthdays.map((e) => ({ ...e, category: "birthday" })),
-  ...EVENTS.holidays.map((e) => ({ ...e, category: "holiday"  })),
+  ...EVENTS.holidays.map((e) => ({ ...e, category: "holiday" })),
 ].sort((a) => (a.tag === "Today" ? -1 : 0));
 
 const LIFECYCLE = [
   {
-    id: "lc1", icon: UserPlus,   title: "Onboarding Due",
+    id: "lc1",
+    icon: UserPlus,
+    title: "Onboarding Due",
     desc: "New joiners pending document submission",
-    count: 2, employees: ["Ananya Iyer", "Rajesh Kumar"],
+    count: 2,
+    employees: ["Ananya Iyer", "Rajesh Kumar"],
   },
   {
-    id: "lc2", icon: ShieldCheck, title: "Confirmation Pending",
+    id: "lc2",
+    icon: ShieldCheck,
+    title: "Confirmation Pending",
     desc: "Employees completing probation this month",
-    count: 1, employees: ["Sneha Krishnan"],
+    count: 1,
+    employees: ["Sneha Krishnan"],
   },
   {
-    id: "lc3", icon: Hourglass,   title: "Probation Ending Soon",
+    id: "lc3",
+    icon: Hourglass,
+    title: "Probation Ending Soon",
     desc: "Probation period ends within 30 days",
-    count: 3, employees: ["Arjun Sharma", "Priya Nair", "Karthik Reddy"],
+    count: 3,
+    employees: ["Arjun Sharma", "Priya Nair", "Karthik Reddy"],
   },
 ];
 
 type EventTab = "all" | "meetings" | "birthdays" | "holidays";
+type KpiTone = "purple" | "green" | "orange" | "red" | "gray";
 
+const KPI_ICON_TONES: Record<KpiTone, { background: string; boxShadow: string }> = {
+  purple: {
+    background: "linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)",
+    boxShadow: "0 10px 20px rgba(124, 58, 237, 0.28)",
+  },
+  orange: {
+    background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
+    boxShadow: "0 10px 20px rgba(249, 115, 22, 0.28)",
+  },
+  red: {
+    background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+    boxShadow: "0 10px 20px rgba(239, 68, 68, 0.28)",
+  },
+  gray: {
+    background: "linear-gradient(135deg, #6B7280 0%, #4B5563 100%)",
+    boxShadow: "0 10px 20px rgba(75, 85, 99, 0.24)",
+  },
+  green: {
+    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+    boxShadow: "0 10px 20px rgba(16, 185, 129, 0.28)",
+  },
+};
 /* ── Sub-components ────────────────────────────────────────── */
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -106,44 +218,114 @@ function SectionLabel({ label }: { label: string }) {
 }
 
 function KpiCard({
-  icon: Icon, label, value, sub,
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone,
 }: {
-  icon: React.ElementType; label: string; value: number | string; sub: string;
+  icon: React.ElementType;
+  label: string;
+  value: number | string;
+  sub: string;
+  tone: KpiTone;
 }) {
+  const iconTone = KPI_ICON_TONES[tone];
+
   return (
     <div className="flat-card flat-card-hover bg-card p-5 flex items-start gap-4">
-      <div className="w-11 h-11 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-        <Icon className="w-5 h-5 text-foreground" />
+      <div
+        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-white [&_svg]:stroke-white"
+        style={{
+          background: iconTone.background,
+          boxShadow: iconTone.boxShadow,
+          color: "#FFFFFF",
+        }}
+      >
+        <Icon className="w-5 h-5" />
       </div>
+
       <div>
-        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</p>
-        <p className="text-2xl font-bold text-foreground mt-0.5">{value}</p>
-        <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          {label}
+        </p>
+
+        <p className="text-2xl font-bold text-foreground mt-0.5">
+          {value}
+        </p>
+
+        <p className="text-xs text-muted-foreground mt-1">
+          {sub}
+        </p>
       </div>
     </div>
   );
 }
 
-function DonutCenter({ cx, cy, total }: { cx: number; cy: number; total: number }) {
+function DonutCenter({
+  cx,
+  cy,
+  total,
+}: {
+  cx: number;
+  cy: number;
+  total: number;
+}) {
   return (
     <g>
-      <text x={cx} y={cy - 4} textAnchor="middle"
-        style={{ fontSize: "22px", fontWeight: 700, fill: "var(--foreground)" }}
-      >{total}</text>
-      <text x={cx} y={cy + 14} textAnchor="middle"
-        style={{ fontSize: "11px", fill: "var(--muted-foreground)", fontWeight: 500 }}
-      >Total</text>
+      <text
+        x={cx}
+        y={cy - 4}
+        textAnchor="middle"
+        style={{
+          fontSize: "22px",
+          fontWeight: 700,
+          fill: "var(--foreground)",
+        }}
+      >
+        {total}
+      </text>
+
+      <text
+        x={cx}
+        y={cy + 14}
+        textAnchor="middle"
+        style={{
+          fontSize: "11px",
+          fill: "var(--muted-foreground)",
+          fontWeight: 500,
+        }}
+      >
+        Total
+      </text>
     </g>
   );
 }
 
-function DonutStat({ label, value, color }: { label: string; value: number; color: string }) {
+function DonutStat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) {
   return (
     <div className="flex items-center gap-3 p-3 bg-background border border-border rounded-lg">
-      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+      <div
+        className="w-2 h-2 rounded-full flex-shrink-0"
+        style={{ background: color }}
+      />
+
       <div>
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider leading-none mb-1">{label}</p>
-        <p className="text-lg font-bold text-foreground leading-none">{value}</p>
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider leading-none mb-1">
+          {label}
+        </p>
+
+        <p className="text-lg font-bold text-foreground leading-none">
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -151,6 +333,7 @@ function DonutStat({ label, value, color }: { label: string; value: number; colo
 
 const BarTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
+
   return (
     <div className="bg-foreground text-primary-foreground text-xs px-3 py-2 rounded-lg shadow-lg">
       <p className="text-muted mb-0.5">{label}</p>
@@ -159,34 +342,65 @@ const BarTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-const tagStyle = (type: "today" | "soon" | "later"): string => {
-  if (type === "today") return "bg-foreground text-primary-foreground";
-  if (type === "soon")  return "bg-secondary text-foreground border border-border";
+const tagStyle = (
+  type: "today" | "soon" | "later"
+): string => {
+  if (type === "today")
+    return "bg-foreground text-primary-foreground";
+
+  if (type === "soon")
+    return "bg-secondary text-foreground border border-border";
+
   return "bg-background text-muted-foreground border border-border";
 };
 
 const categoryIcon = (cat: string) => {
-  if (cat === "meeting")  return <CheckSquare className="w-3.5 h-3.5 text-foreground" />;
-  if (cat === "birthday") return <Cake className="w-3.5 h-3.5 text-muted-foreground" />;
-  return <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />;
+  if (cat === "meeting")
+    return (
+      <CheckSquare className="w-3.5 h-3.5 text-foreground" />
+    );
+
+  if (cat === "birthday")
+    return (
+      <Cake className="w-3.5 h-3.5 text-muted-foreground" />
+    );
+
+  return (
+    <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+  );
 };
 
 /* ── Main Page ─────────────────────────────────────────────── */
 export function DashboardPage() {
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
   const [eventTab, setEventTab] = useState<EventTab>("all");
 
   const displayEvents =
-    eventTab === "all"        ? ALL_EVENTS
-    : eventTab === "meetings"  ? EVENTS.meetings.map((e) => ({ ...e, category: "meeting"  }))
-    : eventTab === "birthdays" ? EVENTS.birthdays.map((e) => ({ ...e, category: "birthday" }))
-    : EVENTS.holidays.map((e) => ({ ...e, category: "holiday" }));
+    eventTab === "all"
+      ? ALL_EVENTS
+      : eventTab === "meetings"
+      ? EVENTS.meetings.map((e) => ({
+          ...e,
+          category: "meeting",
+        }))
+      : eventTab === "birthdays"
+      ? EVENTS.birthdays.map((e) => ({
+          ...e,
+          category: "birthday",
+        }))
+      : EVENTS.holidays.map((e) => ({
+          ...e,
+          category: "holiday",
+        }));
 
-  const tabs: { id: EventTab; label: string }[] = [
-    { id: "all",       label: "All"      },
-    { id: "meetings",  label: "Meetings" },
-    { id: "birthdays", label: "Birthdays"},
-    { id: "holidays",  label: "Holidays" },
+  const tabs: {
+    id: EventTab;
+    label: string;
+  }[] = [
+    { id: "all", label: "All" },
+    { id: "meetings", label: "Meetings" },
+    { id: "birthdays", label: "Birthdays" },
+    { id: "holidays", label: "Holidays" },
   ];
 
   return (
@@ -195,61 +409,206 @@ export function DashboardPage() {
       {/* ── KPI Cards ──────────────────────────────────── */}
       <section>
         <SectionLabel label="Overview" />
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard icon={Users}          label="Total Employees"  value={totalEmployees} sub="Across all departments" />
-          <KpiCard icon={UserCheck}      label="Present Today"    value={presentToday}   sub="Checked in today"       />
-          <KpiCard icon={CalendarOff}    label="On Leave Today"   value={onLeaveToday}   sub="Approved absences"      />
-          <KpiCard icon={ClipboardCheck} label="Pending Approvals"value={pendingCount}   sub="Awaiting your action"   />
+          <KpiCard
+            icon={Users}
+            label="Total Employees"
+            value={totalEmployees}
+            sub="Across all departments"
+            tone="purple"
+          />
+
+          <KpiCard
+            icon={UserCheck}
+            label="Present Today"
+            value={presentToday}
+            sub="Checked in today"
+            tone="green"
+          />
+
+          <KpiCard
+            icon={CalendarOff}
+            label="On Leave Today"
+            value={onLeaveToday}
+            sub="Approved absences"
+            tone="orange"
+          />
+
+          <KpiCard
+            icon={ClipboardCheck}
+            label="Pending Approvals"
+            value={pendingCount}
+            sub="Awaiting your action"
+            tone="red"
+          />
         </div>
       </section>
 
       {/* ── Charts ─────────────────────────────────────── */}
       <section>
         <SectionLabel label="Analytics" />
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Attendance donut */}
-          <div className="flat-card bg-card p-6">
-            <h2 className="text-base font-semibold text-foreground mb-1">Attendance Summary</h2>
-            <p className="text-xs text-muted-foreground mb-6">Today's workforce status breakdown</p>
+          <div className="flat-card flat-card-hover bg-card p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white"
+                style={{
+                  background: KPI_ICON_TONES.green.background,
+                  boxShadow: KPI_ICON_TONES.green.boxShadow,
+                }}
+              >
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Attendance Summary
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Today's workforce status breakdown
+                </p>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center gap-6">
+
               <div className="flex-shrink-0">
                 <ResponsiveContainer width={180} height={180}>
                   <PieChart>
                     <Pie
                       data={donutData}
-                      cx="50%" cy="50%"
-                      innerRadius={58} outerRadius={78}
-                      paddingAngle={3} dataKey="value"
-                      strokeWidth={0} cornerRadius={3}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={58}
+                      outerRadius={78}
+                      paddingAngle={3}
+                      dataKey="value"
+                      strokeWidth={0}
+                      cornerRadius={3}
                     >
-                      {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      {donutData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
                     </Pie>
-                    <DonutCenter cx={90} cy={90} total={todayRecords.length} />
+
+                    <DonutCenter
+                      cx={90}
+                      cy={90}
+                      total={todayRecords.length}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+
               <div className="grid grid-cols-2 gap-3 flex-1 w-full">
-                <DonutStat label="Present"      value={presentToday} color={P.darkest} />
-                <DonutStat label="On Leave"     value={onLeaveToday} color={P.mid}     />
-                <DonutStat label="Not Logged In"value={notLoggedIn}  color={P.lighter} />
-                <DonutStat label="Half Day"     value={halfDayToday} color={P.muted}   />
+                <DonutStat
+                  label="Present"
+                  value={presentToday}
+                  color="#10B981"
+                />
+
+                <DonutStat
+                  label="On Leave"
+                  value={onLeaveToday}
+                  color="#F59E0B"
+                />
+
+                <DonutStat
+                  label="Not Logged In"
+                  value={notLoggedIn}
+                  color="#3B5BDB"
+                />
+
+                <DonutStat
+                  label="Half Day"
+                  value={halfDayToday}
+                  color="#3B82F6"
+                />
               </div>
             </div>
           </div>
 
           {/* Dept bar chart */}
-          <div className="flat-card bg-card p-6">
-            <h2 className="text-base font-semibold text-foreground mb-1">Employees by Department</h2>
-            <p className="text-xs text-muted-foreground mb-6">Headcount across teams</p>
+          <div className="flat-card flat-card-hover bg-card p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white"
+                style={{
+                  background: KPI_ICON_TONES.purple.background,
+                  boxShadow: KPI_ICON_TONES.purple.boxShadow,
+                }}
+              >
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">
+                  Employees by Department
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Headcount across teams
+                </p>
+              </div>
+            </div>
+
             <ResponsiveContainer width="100%" height={190}>
-              <BarChart data={deptData} barSize={24} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="dept" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<BarTooltip />} cursor={{ fill: "var(--secondary)" }} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {deptData.map((_, i) => <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />)}
+              <BarChart
+                data={deptData}
+                barSize={24}
+                margin={{
+                  top: 4,
+                  right: 4,
+                  left: -22,
+                  bottom: 0,
+                }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--border)"
+                  vertical={false}
+                />
+
+                <XAxis
+                  dataKey="dept"
+                  tick={{
+                    fontSize: 10,
+                    fill: "var(--muted-foreground)",
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+
+                <YAxis
+                  tick={{
+                    fontSize: 10,
+                    fill: "var(--muted-foreground)",
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+
+                <Tooltip
+                  content={<BarTooltip />}
+                  cursor={{ fill: "var(--secondary)" }}
+                />
+
+                <Bar
+                  dataKey="count"
+                  radius={[4, 4, 0, 0]}
+                >
+                  {deptData.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={
+                        BAR_COLORS[
+                          i % BAR_COLORS.length
+                        ]
+                      }
+                    />
+                  ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -260,12 +619,18 @@ export function DashboardPage() {
       {/* ── Reminders & Alerts ─────────────────────────── */}
       <section>
         <SectionLabel label="Reminders & Alerts" />
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Events feed */}
-          <div className="flat-card bg-card p-6 flex flex-col">
-            <h2 className="text-base font-semibold text-foreground mb-1">Events & Reminders</h2>
-            <p className="text-xs text-muted-foreground mb-5">Tasks, birthdays & holidays</p>
+          <div className="flat-card flat-card-hover bg-card p-6 flex flex-col">
+            <h2 className="text-base font-semibold text-foreground mb-1">
+              Events & Reminders
+            </h2>
+
+            <p className="text-xs text-muted-foreground mb-5">
+              Tasks, birthdays & holidays
+            </p>
 
             {/* Tab strip */}
             <div className="flex gap-1 p-1 bg-secondary rounded-lg mb-4">
@@ -284,23 +649,35 @@ export function DashboardPage() {
               ))}
             </div>
 
-            <div className="space-y-2 overflow-y-auto max-h-[240px] pr-1">
+            {/* ✅ FIXED */}
+            <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
               {displayEvents.map((ev) => (
                 <div
                   key={ev.id}
                   className="flex items-center justify-between p-3 rounded-lg border border-border
-                    hover:bg-secondary transition-colors cursor-pointer group"
+                    hover:bg-secondary hover:border-foreground/20 hover:shadow-md transition-all duration-200 cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-md bg-secondary border border-border flex items-center justify-center flex-shrink-0">
                       {categoryIcon((ev as any).category)}
                     </div>
+
                     <div>
-                      <p className="text-sm font-medium text-foreground">{ev.title}</p>
-                      <p className="text-xs text-muted-foreground">{ev.desc} · {ev.time}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {ev.title}
+                      </p>
+
+                      <p className="text-xs text-muted-foreground">
+                        {ev.desc} · {ev.time}
+                      </p>
                     </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${tagStyle((ev as any).tagType)}`}>
+
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${tagStyle(
+                      (ev as any).tagType
+                    )}`}
+                  >
                     {ev.tag}
                   </span>
                 </div>
@@ -309,40 +686,76 @@ export function DashboardPage() {
           </div>
 
           {/* Lifecycle alerts */}
-          <div className="flat-card bg-card p-6 flex flex-col">
-            <h2 className="text-base font-semibold text-foreground mb-1">Lifecycle Alerts</h2>
-            <p className="text-xs text-muted-foreground mb-5">Employee milestones requiring attention</p>
+          <div className="flat-card flat-card-hover bg-card p-6 flex flex-col">
+            <h2 className="text-base font-semibold text-foreground mb-1">
+              Lifecycle Alerts
+            </h2>
+
+            <p className="text-xs text-muted-foreground mb-5">
+              Employee milestones requiring attention
+            </p>
 
             <div className="space-y-4">
-              {LIFECYCLE.map((alert) => {
+              {LIFECYCLE.map((alert, idx) => {
                 const Icon = alert.icon;
+                const tones: KpiTone[] = ["purple", "green", "orange"];
+                const tone = tones[idx % tones.length];
+                const iconTone = KPI_ICON_TONES[tone];
+
                 return (
-                  <div key={alert.id} className="p-4 rounded-lg border border-border bg-background hover:bg-secondary transition-colors">
+                  <div
+                    key={alert.id}
+                    className="p-4 rounded-lg border border-border bg-background hover:bg-secondary hover:border-foreground/20 hover:shadow-md transition-all duration-200 cursor-pointer"
+                  >
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-5 h-5 text-foreground" />
+
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white [&_svg]:stroke-white"
+                        style={{
+                          background: iconTone.background,
+                          boxShadow: iconTone.boxShadow,
+                        }}
+                      >
+                        <Icon className="w-5 h-5" />
                       </div>
+
                       <div className="flex-1 min-w-0">
+
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <p className="text-sm font-semibold text-foreground">{alert.title}</p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {alert.title}
+                          </p>
+
                           <span className="w-5 h-5 rounded-md bg-foreground text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                             {alert.count}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-3">{alert.desc}</p>
+
+                        <p className="text-xs text-muted-foreground mb-3">
+                          {alert.desc}
+                        </p>
+
                         <div className="flex flex-wrap gap-1.5 mb-3">
                           {alert.employees.map((name) => (
-                            <span key={name} className="text-xs font-medium text-foreground bg-secondary border border-border px-2 py-0.5 rounded-md">
+                            <span
+                              key={name}
+                              className="text-xs font-medium text-foreground bg-secondary border border-border px-2 py-0.5 rounded-md"
+                            >
                               {name}
                             </span>
                           ))}
                         </div>
+
                         <button
-                          onClick={() => navigate("/admin/employees")}
+                          onClick={() =>
+                            navigate("/admin/employees")
+                          }
                           className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          Take Action <ChevronRight className="w-3.5 h-3.5" />
+                          Take Action
+                          <ChevronRight className="w-3.5 h-3.5" />
                         </button>
+
                       </div>
                     </div>
                   </div>
@@ -350,6 +763,7 @@ export function DashboardPage() {
               })}
             </div>
           </div>
+
         </div>
       </section>
     </div>

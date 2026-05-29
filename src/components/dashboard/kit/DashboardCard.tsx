@@ -45,6 +45,7 @@ export function DashboardCard({ label, value, icon, tone, hint, onClick }: Dashb
             className={cn(
               'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110',
               styles.chip,
+              'ring-1 ring-white/30 dark:ring-white/10',
             )}
           >
             {icon}

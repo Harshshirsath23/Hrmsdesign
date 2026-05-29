@@ -19,18 +19,18 @@ export function AttendanceCharts() {
   });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-      <div className="flat-card bg-card p-3 h-56">
-        <p className="text-xs font-semibold mb-2">Attendance Distribution</p>
-        <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pie} dataKey="value">{pie.map((p) => <Cell key={p.name} fill={p.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+      <div className="flat-card bg-card p-2 h-44 flex flex-col">
+        <p className="text-[11px] font-semibold mb-1">Attendance Distribution</p>
+        <div className="flex-1"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pie} dataKey="value">{pie.map((p) => <Cell key={p.name} fill={p.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
       </div>
-      <div className="flat-card bg-card p-3 h-56">
-        <p className="text-xs font-semibold mb-2">Late vs On-time</p>
-        <ResponsiveContainer width="100%" height="100%"><BarChart data={bar}><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="count" fill="#334155" /></BarChart></ResponsiveContainer>
+      <div className="flat-card bg-card p-2 h-44 flex flex-col">
+        <p className="text-[11px] font-semibold mb-1">Late vs On-time</p>
+        <div className="flex-1"><ResponsiveContainer width="100%" height="100%"><BarChart data={bar} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}><XAxis dataKey="name" tick={{fontSize: 10}} /><YAxis tick={{fontSize: 10}} /><Tooltip /><Bar dataKey="count" fill="#334155" /></BarChart></ResponsiveContainer></div>
       </div>
-      <div className="flat-card bg-card p-3 h-56">
-        <p className="text-xs font-semibold mb-2">Work Hours Trend</p>
-        <ResponsiveContainer width="100%" height="100%"><LineChart data={line}><XAxis dataKey="day" /><YAxis /><Tooltip /><Line dataKey="avg" stroke="#111827" /></LineChart></ResponsiveContainer>
+      <div className="flat-card bg-card p-2 h-44 flex flex-col">
+        <p className="text-[11px] font-semibold mb-1">Work Hours Trend</p>
+        <div className="flex-1"><ResponsiveContainer width="100%" height="100%"><LineChart data={line} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}><XAxis dataKey="day" tick={{fontSize: 10}} /><YAxis tick={{fontSize: 10}} /><Tooltip /><Line dataKey="avg" stroke="#111827" /></LineChart></ResponsiveContainer></div>
       </div>
     </div>
   );

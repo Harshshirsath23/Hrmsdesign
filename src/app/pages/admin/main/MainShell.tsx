@@ -13,8 +13,8 @@ export function MainShell() {
   const activeTab = location.pathname.includes("/analytics")
     ? "analytics"
     : location.pathname.includes("/directory-module")
-    ? "directory-module"
-    : "directory";
+      ? "directory-module"
+      : "directory";
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -23,11 +23,10 @@ export function MainShell() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigate("/admin/employees/main/analytics")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "analytics"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "analytics"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <LayoutDashboard className="w-4 h-4" />
             Analytics Hub
@@ -35,11 +34,10 @@ export function MainShell() {
 
           <button
             onClick={() => navigate("/admin/employees/main/directory")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "directory"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "directory"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <Users className="w-4 h-4" />
             Employee Directory
@@ -47,11 +45,10 @@ export function MainShell() {
 
           <button
             onClick={() => navigate("/admin/employees/main/directory-module")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "directory-module"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "directory-module"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <Box className="w-4 h-4" />
             Employee Directory Module

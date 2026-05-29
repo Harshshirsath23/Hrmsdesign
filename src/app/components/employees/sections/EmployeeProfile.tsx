@@ -147,7 +147,7 @@ export function EmployeeProfile({ employee }: Props) {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="flat-card bg-[#0F172A] text-white p-8 relative overflow-hidden">
+      <div className="flat-card bg-card text-card-foreground p-8 relative overflow-hidden border border-border">
         <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none" />
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-10">
           <div className="relative group">
@@ -155,11 +155,11 @@ export function EmployeeProfile({ employee }: Props) {
               <img
                 src={employee.avatar}
                 alt={employee.name}
-                className="w-24 h-24 rounded-2xl object-cover border-4 border-white/10 shadow-2xl"
+                className="w-24 h-24 rounded-2xl object-cover border-4 border-background shadow-elevated"
               />
             ) : (
               <div
-                className="w-24 h-24 rounded-2xl flex items-center justify-center border-4 border-white/10 text-white text-3xl font-black shadow-2xl"
+                className="w-24 h-24 rounded-2xl flex items-center justify-center border-4 border-background text-white text-3xl font-black shadow-elevated"
                 style={{ backgroundColor: employee.avatarColor }}
               >
                 {employee.initials}
@@ -184,11 +184,11 @@ export function EmployeeProfile({ employee }: Props) {
           <div className="flex-1 text-center md:text-left space-y-4">
             <div>
               <h2 className="text-3xl font-black tracking-tight">{personal.name}</h2>
-              <p className="text-white/60 text-base font-bold mt-1 tracking-wide">{employee.designation}</p>
+              <p className="text-muted-foreground text-base font-bold mt-1 tracking-wide">{employee.designation}</p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
                 <span
                   className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                    statusStyle[employee.status] ?? "bg-white/10"
+                    statusStyle[employee.status] ?? "bg-secondary text-muted-foreground"
                   }`}
                 >
                   {employee.status}
@@ -197,7 +197,7 @@ export function EmployeeProfile({ employee }: Props) {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10 pt-8 border-t border-white/10 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10 pt-8 border-t border-border relative z-10">
           {[
             { icon: Mail, value: employee.email, label: "Email Address" },
             { icon: Phone, value: employee.phone, label: "Phone Number" },
@@ -206,13 +206,13 @@ export function EmployeeProfile({ employee }: Props) {
           ].map((contact) => (
             <div
               key={contact.label}
-              className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5"
+              className="flex items-center gap-4 bg-secondary p-4 rounded-2xl border border-border"
             >
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <contact.icon className="w-4 h-4 text-white/70" />
+              <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center border border-border">
+                <contact.icon className="w-4 h-4 text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">{contact.label}</p>
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{contact.label}</p>
                 <p className="text-sm font-bold truncate">{contact.value || "—"}</p>
               </div>
             </div>
@@ -350,20 +350,6 @@ export function EmployeeProfile({ employee }: Props) {
             value={personal.identificationMark || ""}
             editing={personalEdit}
             onChange={(v) => setPersonal((p) => ({ ...p, identificationMark: v }))}
-          />
-          <ProfileInfoField
-            label="Height"
-            value={personal.height || ""}
-            editing={personalEdit}
-            onChange={(v) => setPersonal((p) => ({ ...p, height: v }))}
-            placeholder="e.g. 175 cm"
-          />
-          <ProfileInfoField
-            label="Weight"
-            value={personal.weight || ""}
-            editing={personalEdit}
-            onChange={(v) => setPersonal((p) => ({ ...p, weight: v }))}
-            placeholder="e.g. 72 kg"
           />
           <ProfileInfoField
             label="Physically Challenged"
@@ -831,76 +817,6 @@ export function EmployeeProfile({ employee }: Props) {
             onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, conditions: v } }))}
             type="textarea"
           />
-          <div className="space-y-1.5">
-            <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Disease?</span>
-            {emEdit ? (
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={Boolean(emergency.med?.hasDisease)}
-                  onChange={(e) =>
-                    setEmergency((p) => ({
-                      ...p,
-                      med: {
-                        ...p.med,
-                        hasDisease: e.target.checked,
-                        diseaseDescription: e.target.checked ? p.med?.diseaseDescription || "" : "",
-                      },
-                    }))
-                  }
-                />
-                <span className="text-sm text-foreground">Yes</span>
-              </label>
-            ) : (
-              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-[2.5rem] flex items-center">
-                {emergency.med?.hasDisease ? "Yes" : "No"}
-              </div>
-            )}
-          </div>
-          {emEdit && emergency.med?.hasDisease ? (
-            <ProfileInfoField
-              label="Disease Description"
-              value={emergency.med?.diseaseDescription || ""}
-              editing={emEdit}
-              onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, diseaseDescription: v } }))}
-              type="textarea"
-            />
-          ) : null}
-          <div className="space-y-1.5">
-            <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">Any Surgery/Operation Done?</span>
-            {emEdit ? (
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={Boolean(emergency.med?.hasSurgery)}
-                  onChange={(e) =>
-                    setEmergency((p) => ({
-                      ...p,
-                      med: {
-                        ...p.med,
-                        hasSurgery: e.target.checked,
-                        surgeryDescription: e.target.checked ? p.med?.surgeryDescription || "" : "",
-                      },
-                    }))
-                  }
-                />
-                <span className="text-sm text-foreground">Yes</span>
-              </label>
-            ) : (
-              <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-[2.5rem] flex items-center">
-                {emergency.med?.hasSurgery ? "Yes" : "No"}
-              </div>
-            )}
-          </div>
-          {emEdit && emergency.med?.hasSurgery ? (
-            <ProfileInfoField
-              label="Surgery/Operation Description"
-              value={emergency.med?.surgeryDescription || ""}
-              editing={emEdit}
-              onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, surgeryDescription: v } }))}
-              type="textarea"
-            />
-          ) : null}
           <ProfileInfoField
             label="Allergies"
             value={emergency.med?.allergies || ""}

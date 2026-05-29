@@ -168,19 +168,23 @@ export function AttendanceDashboard() {
   }, [filteredDailyData]);
 
   return (
-    <div className="p-8 space-y-8 bg-slate-50/50 dark:bg-slate-950 h-full">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-2xl font-black text-foreground tracking-tight">Attendance Dashboard</h2>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">Operational Insights & Patterns</p>
+    <div className="p-4 space-y-4 bg-slate-50/50 dark:bg-slate-950 h-full">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card border border-border p-3 rounded-xl shadow-sm">
+        <div className="flex flex-col gap-0.5 min-w-[200px]">
+          <h2 className="text-xl font-black text-foreground tracking-tight">Attendance Dashboard</h2>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Operational Insights & Patterns</p>
+        </div>
+
+        <div className="flex-1 overflow-x-auto no-scrollbar">
+          <AttendanceFilterBar 
+            filters={globalFilters} 
+            setFilters={setGlobalFilters} 
+          />
+        </div>
       </div>
 
-      <AttendanceFilterBar 
-        filters={globalFilters} 
-        setFilters={setGlobalFilters} 
-      />
-
       {/* Row 1: Work Hours & Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <WorkHoursSummary data={chartData} />
         </div>
@@ -193,56 +197,16 @@ export function AttendanceDashboard() {
         </div>
       </div>
 
-      {/* Row 2: Yearly Leave Trend */}
-      <div className="grid grid-cols-1 gap-6">
-         <TotalLeaveTakenChart data={leaveYearlyData} />
+      {/* Row 2: Leave Trend + Today's Overview side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <TotalLeaveTakenChart data={leaveYearlyData} />
+        </div>
+        <div className="lg:col-span-1">
+          <TodayAttendanceOverview stats={todayStats.overview} />
+        </div>
       </div>
 
-      {/* Row 3: Today's Status & Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <WhosInToday 
-            data={todayStats.whosIn} 
-            filters={whosInFilters} 
-            setFilters={setWhosInFilters} 
-          />
-        </div>
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <TodayAttendanceOverview stats={todayStats.overview} />
-          
-          {/* Monthly Attendance Trend Sparkline */}
-          <Card className="shadow-sm border-border">
-            <CardHeader className="pb-2 border-b border-border/50">
-              <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-                Monthly Attendance Trend (%)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="h-[120px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={attendanceTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.3} />
-                    <XAxis dataKey="month" hide />
-                    <YAxis hide domain={[80, 100]} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', fontSize: '10px' }}
-                      labelStyle={{ fontWeight: 900 }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="percentage" 
-                      stroke="#10b981" 
-                      strokeWidth={3} 
-                      dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }

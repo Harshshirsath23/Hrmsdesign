@@ -64,7 +64,7 @@ export function AdminLayout() {
     <div className="app-shell flex h-screen overflow-hidden bg-background text-foreground">
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
-        className={`app-sidebar flex flex-col flex-shrink-0 bg-card border-r border-border
+        className={`app-sidebar flex flex-col flex-shrink-0 bg-gradient-to-br from-ocean-900 via-ocean-700 to-ocean-teal border-r border-border
           transition-all duration-200 ease-in-out overflow-hidden
           ${collapsed ? "w-[72px]" : "w-60"}`}
       >
@@ -106,10 +106,9 @@ export function AdminLayout() {
                 title={collapsed ? label : undefined}
                 className={`app-nav-item ${active ? "active" : ""} w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                   transition-all duration-150 group relative
-                  ${
-                    active
-                      ? "bg-secondary text-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  ${active
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }
                   ${collapsed ? "justify-center" : ""}`}
               >
@@ -179,7 +178,7 @@ export function AdminLayout() {
       {/* ── Main area ────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="app-topbar h-16 bg-card border-b border-border flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-30">
+        <header className="app-topbar h-16 bg-gradient-to-r from-ocean-700 via-ocean-600 to-ocean-green border-b border-border flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-30">
           <div>
             <h1 className="text-base font-semibold text-foreground">{currentPage}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">

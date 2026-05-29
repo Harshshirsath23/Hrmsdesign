@@ -1,11 +1,4 @@
-import { useEffect } from "react";
-
 export function AppChromeEffects() {
-  return (
-    <>
-      <div className="hrms-loader" aria-hidden="true">
-        <div className="hrms-loader-ring" />
-      </div>
-    </>
-  );
+  // Custom cursor and chrome effects have been removed for an enterprise feel.
+  return null;
 }

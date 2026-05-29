@@ -1,11 +1,9 @@
 import { 
-  X, Clock, Calendar as CalendarIcon, LogIn, LogOut, 
-  MapPin, AlertCircle, CheckCircle2, History, Info
+  X, LogIn, LogOut, MapPin
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { DailyAttendance } from "../../../modules/attendance/types";
-import { format, parseISO } from "date-fns";
-import { getStatusColor } from "./utils";
+import { format, parseISO, isAfter } from "date-fns";
 
 interface SwipeDetailsDrawerProps {
   isOpen: boolean;
@@ -16,10 +14,30 @@ interface SwipeDetailsDrawerProps {
 export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetailsDrawerProps) {
   if (!record) return null;
 
+  const isFutureDate = record.id?.startsWith("future-") || isAfter(parseISO(record.date), new Date());
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case "Present":
+        return "#10B981";
+      case "Absent":
+        return "#EF4444";
+      case "Half Day":
+        return "#F97316";
+      case "Holiday":
+        return "#3B82F6";
+      case "Week Off":
+        return "#9CA3AF";
+      default:
+        return "#9CA3AF";
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop Overlay with Blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -27,85 +45,169 @@ export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetail
             onClick={() => onOpenChange(false)}
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100]"
           />
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md z-[101] overflow-y-auto"
-          >
-            <div className="p-8 space-y-8 glassmorph-card">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-black text-foreground tracking-tight">Swipe Details</h2>
-                <button 
-                  onClick={() => onOpenChange(false)}
-                  className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-all"
-                >
-                  <X size={24} />
-                </button>
-              </div>
 
-              <div className="p-6 rounded-[2.5rem] bg-black/5 dark:bg-white/5 border border-white/10 space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-500"><CalendarIcon size={20} /></div>
-                  <div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Date</p>
-                    <h3 className="text-lg font-black text-foreground">{format(parseISO(record.date), "dd MMMM, yyyy")}</h3>
+          {/* Centered Modal / Mobile Bottom Sheet Wrapper */}
+          <div className="fixed inset-0 flex items-end sm:items-center justify-center z-[101] p-0 sm:p-4 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 15 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="w-full sm:w-[420px] bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-white/[0.06] shadow-xl rounded-t-[24px] sm:rounded-[24px] pointer-events-auto overflow-hidden text-[#0F172A] dark:text-[#F8FAFC]"
+            >
+              {isFutureDate ? (
+                /* FUTURE DATE MINIMAL POPUP */
+                <div className="p-6 space-y-6">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] font-bold text-[#6366F1] bg-[#6366F1]/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        Upcoming Shift
+                      </span>
+                      <h3 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC] mt-1">
+                        {format(parseISO(record.date), "dd MMMM, yyyy")}
+                      </h3>
+                    </div>
+                    <button 
+                      onClick={() => onOpenChange(false)}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 transition-all"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Info Block */}
+                  <div className="space-y-4 p-5 rounded-2xl bg-slate-500/5 dark:bg-white/5 border border-slate-200/40 dark:border-white/5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-400 font-medium">Assigned Shift</span>
+                      <span className="text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                        {record.shiftName || "General Shift"}
+                      </span>
+                    </div>
+                    <div className="h-px bg-slate-200/40 dark:bg-white/5" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-400 font-medium">Shift Timing</span>
+                      <span className="text-xs font-bold text-[#6366F1]">
+                        {record.firstIn && record.lastOut ? `${record.firstIn} - ${record.lastOut}` : "09:00 - 18:00"}
+                      </span>
+                    </div>
+                    <div className="h-px bg-slate-200/40 dark:bg-white/5" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-400 font-medium">Work Mode</span>
+                      <span className="text-xs font-bold text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-0.5 rounded-full uppercase">
+                        {record.workMode || "WFO"}
+                      </span>
+                    </div>
                   </div>
                 </div>
+              ) : (
+                /* REGULAR DATE MODERN POPUP */
+                <div className="p-6 space-y-6">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                        {format(parseISO(record.date), "dd MMMM, yyyy")}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5 uppercase tracking-wider">
+                        Daily Attendance Punch Details
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => onOpenChange(false)}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 transition-all"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
 
-                <div className={`p-6 rounded-[2rem] border flex items-center justify-between ${getStatusColor(record.status)} bg-opacity-5 border-opacity-20`}>
-                  <h4 className={`text-xl font-black ${getStatusColor(record.status)}`}>{record.status}</h4>
-                  <div className={`w-3 h-3 rounded-full ${record.status === 'Present' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]'}`} />
-                </div>
-              </div>
+                  {/* Status Badge */}
+                  <div 
+                    className="p-3.5 rounded-2xl border flex items-center justify-between transition-all duration-300"
+                    style={{
+                      backgroundColor: `${getStatusColor(record.status)}10`,
+                      borderColor: `${getStatusColor(record.status)}30`
+                    }}
+                  >
+                    <span 
+                      className="text-sm font-bold uppercase tracking-wider"
+                      style={{ color: getStatusColor(record.status) }}
+                    >
+                      {record.status}
+                    </span>
+                    <span 
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ 
+                        backgroundColor: getStatusColor(record.status),
+                        boxShadow: record.status === "Present" ? `0 0 10px ${getStatusColor(record.status)}` : "none"
+                      }}
+                    />
+                  </div>
 
-              <div className="space-y-4">
-                <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-2">Punch Timeline</h4>
-                <div className="space-y-3">
-                  {[
-                    { label: "Punch In", time: record.firstIn || "09:05 AM", icon: LogIn, color: "emerald", loc: "Main Entrance (Biometric)" },
-                    { label: "Lunch Break", time: "01:00 PM", icon: Clock, color: "amber", loc: "Canteen Area" },
-                    { label: "Return", time: "01:45 PM", icon: Clock, color: "amber", loc: "Workstation 4B" },
-                    { label: "Punch Out", time: record.lastOut || "06:15 PM", icon: LogOut, color: "rose", loc: "Web Login" },
-                  ].map((p, i) => (
-                    <div key={i} className="flex gap-4 p-4 rounded-3xl bg-white/40 dark:bg-slate-800/40 border border-white/20 group hover:scale-[1.02] transition-all">
-                      <div className={`p-3 rounded-2xl bg-${p.color}-500/10 text-${p.color}-500`}><p.icon size={18} /></div>
+                  {/* Main Entrance IN + Main Gate OUT Punches Only */}
+                  <div className="space-y-3">
+                    {/* Punch In */}
+                    <div className="flex gap-4 p-4 rounded-2xl bg-slate-500/5 dark:bg-white/5 border border-slate-200/40 dark:border-white/5">
+                      <div className="p-2.5 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center self-start">
+                        <LogIn size={16} />
+                      </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-foreground">{p.time}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">{p.label}</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                            {record.firstIn || "--:--"}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+                            Punch In
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1 mt-1 opacity-60">
+                        <div className="flex items-center gap-1 mt-0.5 text-slate-400">
                           <MapPin size={10} />
-                          <span className="text-[10px] font-medium">{p.loc}</span>
+                          <span className="text-[10px] font-medium">Main Entrance</span>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-6 rounded-[2rem] bg-black/5 dark:bg-white/5 border border-white/10">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">Work Hours</p>
-                  <p className="text-xl font-black text-foreground">{record.workHours.toFixed(1)}h</p>
-                </div>
-                <div className="p-6 rounded-[2rem] bg-black/5 dark:bg-white/5 border border-white/10">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">Overtime</p>
-                  <p className="text-xl font-black text-emerald-500">{record.overtime}m</p>
-                </div>
-              </div>
+                    {/* Punch Out */}
+                    <div className="flex gap-4 p-4 rounded-2xl bg-slate-500/5 dark:bg-white/5 border border-slate-200/40 dark:border-white/5">
+                      <div className="p-2.5 rounded-xl bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center self-start">
+                        <LogOut size={16} />
+                      </div>
+                      <div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                            {record.lastOut || "--:--"}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+                            Punch Out
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5 text-slate-400">
+                          <MapPin size={10} />
+                          <span className="text-[10px] font-medium">Main Gate Exit</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="p-6 rounded-[2.5rem] bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-white dark:bg-slate-800 shadow-xl text-emerald-500"><History size={20} /></div>
-                <div>
-                  <h5 className="text-xs font-black text-foreground mb-1">Historical Average</h5>
-                  <p className="text-[10px] font-medium text-muted-foreground uppercase">Usually leaves by 06:12 PM</p>
+                  {/* Secondary Info Metrics */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-slate-500/5 dark:bg-white/5 border border-slate-200/40 dark:border-white/5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Work Hours</span>
+                      <p className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC] mt-1">
+                        {record.workHours > 0 ? `${record.workHours.toFixed(1)}h` : "--"}
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-500/5 dark:bg-white/5 border border-slate-200/40 dark:border-white/5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Shift Timing</span>
+                      <p className="text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] mt-2">
+                        {record.shiftName ? record.shiftName.split(" (")[0] : "09:00 - 18:00"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </motion.div>
+              )}
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

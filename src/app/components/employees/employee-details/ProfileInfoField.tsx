@@ -70,7 +70,7 @@ export function ProfileInfoField({
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </>
       ) : (
-        <div className="rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-[2.5rem] flex items-center">
+        <div className="w-full rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm font-semibold text-foreground min-h-10 flex items-center shadow-sm">
           {display}
         </div>
       )}

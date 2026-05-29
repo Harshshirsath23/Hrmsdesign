@@ -72,8 +72,6 @@ interface FormState {
   reportingManager: string;
   status: string;
   joiningDate: string;
-  height: string;
-  weight: string;
   referredBy: string;
   allowSelfFill: boolean;
   probationPeriod: string;
@@ -241,8 +239,6 @@ const INIT: FormState = {
   reportingManager: "",
   status: "active",
   joiningDate: "",
-  height: "",
-  weight: "",
   referredBy: "",
   allowSelfFill: false,
   probationPeriod: "90",
@@ -1406,56 +1402,11 @@ export function AddEmployeePage() {
 
       {/* Scrollable form area */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-6 pb-4">
-        {/* Page header */}
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate("/admin/employees")}
-              className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0"
-            >
-              <ArrowLeft size={14} />
-            </button>
-            <div>
-              <h1 className="text-base font-semibold text-foreground leading-tight flex items-center gap-2">
-                {form.activeTab === "new" 
-                  ? "Add New Employee" 
-                  : form.activeTab === "rehire"
-                    ? "Rehire Former Employee"
-                    : "Bulk Employee Import"}
-                {form.activeTab === "rehire" && form.firstName && (
-                  <span className="px-1.5 py-0.5 rounded bg-indigo-500 text-white text-[8px] font-black uppercase tracking-tighter">
-                    Rehired
-                  </span>
-                )}
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {form.activeTab === "new" 
-                  ? "Register a fresh talent into the system" 
-                  : form.activeTab === "rehire"
-                    ? `Reactivating profile for ${form.firstName} ${form.lastName}`
-                    : "Import multiple employee records via excel file"}
-              </p>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-2">
-            {form.activeTab !== "bulk" && (
-              <button
-                type="button"
-                onClick={handleDraft}
-                disabled={draftSaving}
-                className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-secondary transition-all disabled:opacity-50"
-              >
-                {draftSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                Save Draft
-              </button>
-            )}
-          </div>
-        </div>
+        {/* Page header removed for cleaner layout */}
 
         {/* Layout: SectionNav + Form */}
         <div className="flex gap-8 items-stretch">
-          {form.activeTab === "new" || form.employeeId ? (
+          {form.activeTab === "new" || (form.activeTab === "rehire" && form.firstName) ? (
             <SectionNav active={activeSection} onSelect={setActiveSection} />
           ) : null}
 
@@ -1490,7 +1441,34 @@ export function AddEmployeePage() {
                 className="flex flex-col gap-4"
               >
                 {form.activeTab === "rehire" && (
-                  <div className="p-6 rounded-3xl border-2 border-indigo-500/30 bg-indigo-500/[0.03] shadow-xl shadow-indigo-500/5 mb-6 animate-in zoom-in-95 duration-500">
+                  <div>
+                    {/* Back Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm(f => ({
+                          ...f,
+                          firstName: "",
+                          lastName: "",
+                          email: "",
+                          phone: "",
+                          department: "",
+                          designation: "",
+                          rehireDate: "",
+                          rehireRemarks: "",
+                          employeeId: "",
+                          restoreSalary: false,
+                          restoreAssets: false,
+                          restoreLeaves: false,
+                        }));
+                      }}
+                      className="mb-4 flex items-center gap-2 h-9 px-4 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                    >
+                      <ArrowLeft size={14} />
+                      Back to Employees
+                    </button>
+                    
+                    <div className="p-6 rounded-3xl border-2 border-indigo-500/30 bg-indigo-500/[0.03] shadow-xl shadow-indigo-500/5 mb-6 animate-in zoom-in-95 duration-500">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg">
                         <RefreshCw size={20} />
@@ -1534,6 +1512,7 @@ export function AddEmployeePage() {
                       <Toggle on={form.restoreSalary} setOn={(v) => set("restoreSalary", v)} label="Restore Salary" desc="Prev. structure" />
                       <Toggle on={form.restoreAssets} setOn={(v) => set("restoreAssets", v)} label="Restore Assets" desc="Prev. assignments" />
                       <Toggle on={form.restoreLeaves} setOn={(v) => set("restoreLeaves", v)} label="Restore Leaves" desc="Prev. balances" />
+                    </div>
                     </div>
                   </div>
                 )}
@@ -2236,6 +2215,7 @@ export function AddEmployeePage() {
       </div>
 
       {/* ── Sticky Action Bar ─────────────────────────────── */}
+      {(form.activeTab === "new" || (form.activeTab === "rehire" && form.firstName)) && (
       <div className="sticky bottom-0 z-10 bg-card border-t border-border">
         <div className="px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -2282,6 +2262,7 @@ export function AddEmployeePage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   </div>
   );
