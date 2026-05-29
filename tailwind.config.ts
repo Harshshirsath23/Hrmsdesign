@@ -6,6 +6,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        ocean: {
+          900: '#003D7A',
+          700: '#0052B3',
+          600: '#0066E6',
+          500: '#3399FF',
+          400: '#66B3FF',
+          300: '#99CCFF',
+          200: '#CCE5FF',
+          teal: '#00A876',
+          green: '#00B894',
+        },
         brand: {
           50: '#EEF2FF',
           100: '#E0E7FF',

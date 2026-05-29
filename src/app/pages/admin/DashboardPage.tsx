@@ -33,10 +33,10 @@ const notLoggedIn    = todayRecords.filter((r) => r.status === "Absent").length;
 const pendingCount   = leaveRequests.filter((l) => l.status === "Pending").length;
 
 const donutData = [
-  { name: "Present",       value: presentToday, color: "#10B981" },  // success green
-  { name: "On Leave",      value: onLeaveToday, color: "#F59E0B" },  // warning amber
-  { name: "Not Logged In", value: notLoggedIn,  color: "#3B5BDB" },  // brand blue
-  { name: "Half Day",      value: halfDayToday, color: "#3B82F6" },  // info sky blue
+  { name: "Present",       value: presentToday, color: "#003D7A" },  // deep ocean blue
+  { name: "On Leave",      value: onLeaveToday, color: "#0052B3" },  // ocean blue
+  { name: "Not Logged In", value: notLoggedIn,  color: "#0066E6" },  // light ocean blue
+  { name: "Half Day",      value: halfDayToday, color: "#3399FF" },  // sky blue
 ];
 
 const deptData = Object.entries(
@@ -50,13 +50,13 @@ const deptData = Object.entries(
 }));
 
 const BAR_COLORS = [
-  "#3B5BDB",  // brand blue
-  "#10B981",  // success green
-  "#F59E0B",  // warning amber
-  "#3B82F6",  // info sky blue
-  "#8B5CF6",  // purple
-  "#EF4444",  // danger red
-  "#DEE2E6"   // gray
+  "#003D7A",  // deep ocean blue
+  "#0052B3",  // ocean blue
+  "#0066E6",  // light ocean blue
+  "#3399FF",  // sky blue
+  "#66B3FF",  // lighter ocean
+  "#99CCFF",  // pale ocean
+  "#CCE5FF"   // very light ocean
 ];
 
 const EVENTS = {

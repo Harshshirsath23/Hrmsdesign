@@ -25,16 +25,16 @@ export function EmployeesShell() {
   const activeTab = isInformation
     ? "information"
     : isAddEmployee
-    ? "add"
-    : isManagement
-    ? "management"
-    : isSetup
-    ? "setup"
-    : isOrgChart
-    ? "org-chart"
-    : isOffboarding
-    ? "offboarding"
-    : "directory";
+      ? "add"
+      : isManagement
+        ? "management"
+        : isSetup
+          ? "setup"
+          : isOrgChart
+            ? "org-chart"
+            : isOffboarding
+              ? "offboarding"
+              : "directory";
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -47,11 +47,10 @@ export function EmployeesShell() {
               clearSelection();
               navigate("/admin/employees");
             }}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "directory"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "directory"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <Users className="w-4 h-4" />
             Employee List
@@ -59,11 +58,10 @@ export function EmployeesShell() {
 
           <button
             onClick={() => navigate("/admin/employees/add")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "add"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "add"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <UserPlus className="w-4 h-4" />
             Add Employee
@@ -71,11 +69,10 @@ export function EmployeesShell() {
 
           <button
             onClick={() => navigate("/admin/employees/management/generate-letter")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "management"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "management"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <Briefcase className="w-4 h-4" />
             Management
@@ -83,11 +80,10 @@ export function EmployeesShell() {
 
           <button
             onClick={() => navigate("/admin/employees/setup")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "setup"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "setup"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <Settings className="w-4 h-4" />
             Setup
@@ -95,11 +91,10 @@ export function EmployeesShell() {
 
           <button
             onClick={() => navigate("/admin/employees/org-chart")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "org-chart"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "org-chart"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <GitGraph className="w-4 h-4" />
             Org Chart
@@ -107,11 +102,10 @@ export function EmployeesShell() {
 
           <button
             onClick={() => navigate("/admin/employees/offboarding")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-              activeTab === "offboarding"
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "offboarding"
                 ? "bg-secondary text-foreground font-semibold"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
+              }`}
           >
             <LogOut className="w-4 h-4" />
             Employee Offboarding
@@ -120,11 +114,10 @@ export function EmployeesShell() {
           {selectedEmployeeId && (
             <button
               onClick={() => navigate(`/admin/employees/information/${selectedEmployeeId}`)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${
-                activeTab === "information"
+              className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium ${activeTab === "information"
                   ? "bg-secondary text-foreground font-semibold"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              }`}
+                }`}
             >
               <Info className="w-4 h-4" />
               Information
