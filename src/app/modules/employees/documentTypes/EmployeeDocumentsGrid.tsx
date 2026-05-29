@@ -30,6 +30,12 @@ interface Props {
   onRemoveType?: (type: DocumentTypeConfig) => void;
 }
 
+interface FrontBackPreview {
+  front: EmployeeDocumentMeta | null;
+  back: EmployeeDocumentMeta | null;
+  docName: string;
+}
+
 function sideLabel(side: string | null): string | null {
   if (!side) return null;
   if (side === "front") return "Front Side";
@@ -112,11 +118,9 @@ export function EmployeeDocumentsGrid({
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [err, setErr] = useState<string | null>(null);
   const [previewMeta, setPreviewMeta] = useState<EmployeeDocumentMeta | null>(null);
+  const [frontBackPreview, setFrontBackPreview] = useState<FrontBackPreview | null>(null);
   const [activeFilter, setActiveFilter] = useState<DocumentFilter>("all");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-  /** Extra added slots for "multiple" upload-type rows beyond the base 3 */
-  const [extraSlots, setExtraSlots] = useState<Record<string, number>>({});
-  /** Tracks verified state for PAN Card and Aadhaar Card */
   const [verifiedDocs, setVerifiedDocs] = useState<Record<string, boolean>>({});
 
   const now = useMemo(() => new Date(), []);
@@ -180,6 +184,7 @@ export function EmployeeDocumentsGrid({
   const filteredUploadedCount = filteredStorageKeys.filter((key) => docs[key]?.fileName).length;
   const filteredRequiredCount = filteredDocumentTypes.filter((type) => type.mandatory).length;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const groupedDocumentTypes = useMemo(() => {
     const buckets = new Map<string, { section: ReturnType<typeof getDocumentSection>; types: DocumentTypeConfig[] }>();
 
@@ -257,9 +262,10 @@ export function EmployeeDocumentsGrid({
   };
 
   const downloadAll = (type: DocumentTypeConfig) => {
-    const keys = type.id === "salarySlips"
-      ? Object.keys(docs).filter((k) => k.startsWith("salarySlips_"))
-      : getStorageKeys(type);
+    const keys =
+      type.id === "salarySlips"
+        ? Object.keys(docs).filter((k) => k.startsWith("salarySlips_"))
+        : getStorageKeys(type);
     keys.forEach((key) => {
       const meta = docs[key];
       if (meta?.fileName && meta?.dataUrl) {
@@ -270,15 +276,18 @@ export function EmployeeDocumentsGrid({
 
   const deleteAll = (type: DocumentTypeConfig) => {
     if (!window.confirm(`Delete all files for "${type.documentName}"?`)) return;
-    const keys = type.id === "salarySlips"
-      ? Object.keys(docs).filter((k) => k.startsWith("salarySlips_"))
-      : getStorageKeys(type);
+    const keys =
+      type.id === "salarySlips"
+        ? Object.keys(docs).filter((k) => k.startsWith("salarySlips_"))
+        : getStorageKeys(type);
     const n = { ...docs };
     keys.forEach((key) => {
       delete n[key];
     });
     onChange(n);
   };
+
+  const PROTECTED_IDS = ["panCard", "aadhaarCard", "educationalCertificates", "salarySlips", "insuranceDocuments"];
 
   if (!documentTypes.length) {
     return (
@@ -297,6 +306,7 @@ export function EmployeeDocumentsGrid({
       ) : null}
 
       <div className="space-y-5">
+        {/* Filter Bar */}
         <div className="rounded-2xl border border-border bg-background p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -369,10 +379,10 @@ export function EmployeeDocumentsGrid({
                   const isExpandable = type.uploadType !== "single";
                   const isExpanded = !!expandedRows[type.id];
                   const accept = fileTypesToAccept(type.allowedFileTypes);
-                  const completeCount = type.id === "salarySlips"
-                    ? Object.keys(docs).filter((k) => k.startsWith("salarySlips_") && docs[k]?.fileName).length
-                    : typeStorageKeys.filter((key) => docs[key]?.fileName).length;
-                  const allUploaded = type.id === "salarySlips" ? false : completeCount === typeStorageKeys.length;
+                  const completeCount =
+                    type.id === "salarySlips"
+                      ? Object.keys(docs).filter((k) => k.startsWith("salarySlips_") && docs[k]?.fileName).length
+                      : typeStorageKeys.filter((key) => docs[key]?.fileName).length;
                   const singleKey = typeStorageKeys[0];
                   const singleMeta = docs[singleKey];
                   const isVerifiable =
@@ -383,32 +393,20 @@ export function EmployeeDocumentsGrid({
                     type.id.toLowerCase().includes("passbook");
 
                   return (
-                    <div key={type.id} className="flex min-h-48 flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-bold text-foreground">{type.documentName}</p>
-                            {type.mandatory ? (
-                              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-rose-600">
-                                Required
-                              </span>
-                            ) : null}
-                          </div>
-                          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            {type.category} - {completeCount}/{typeStorageKeys.length} files
-                          </p>
-                        </div>
-                        {showTypeControls ? (
-                          <div className="flex flex-shrink-0 items-center gap-1">
+                    <>
+                      <tr key={type.id} className="hover:bg-secondary/5 transition-colors">
+                        {/* Expand toggle cell */}
+                        <td className="pl-4 py-4">
+                          {isExpandable && (
                             <button
                               type="button"
-                              title="Edit document type"
-                              className="rounded-md border border-border p-1.5 hover:bg-secondary"
-                              onClick={() => onEditType?.(type)}
+                              onClick={() => toggleRow(type.id)}
+                              className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                              title={isExpanded ? "Collapse" : "Expand"}
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <span className="text-base leading-none">{isExpanded ? "▾" : "▸"}</span>
                             </button>
-                          ) : null}
+                          )}
                         </td>
 
                         {/* Document Name */}
@@ -421,7 +419,6 @@ export function EmployeeDocumentsGrid({
                                   Required
                                 </span>
                               )}
-                              {/* Verified checkbox for PAN & Aadhaar */}
                               {isVerifiable && (
                                 <label className="inline-flex items-center gap-1.5 cursor-pointer select-none ml-1">
                                   <input
@@ -443,7 +440,6 @@ export function EmployeeDocumentsGrid({
                                 </label>
                               )}
                             </div>
-                            {/* If single upload type, show filename under the name */}
                             {!isExpandable && singleMeta?.fileName && (
                               <span className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-xs font-mono">
                                 📄 {singleMeta.fileName} ({formatBytes(singleMeta.sizeBytes)})
@@ -469,7 +465,7 @@ export function EmployeeDocumentsGrid({
                         {/* Actions */}
                         <td className="px-6 py-4 text-right pr-6">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* If single type and uploaded */}
+                            {/* Single upload: preview + download if file exists */}
                             {!isExpandable && singleMeta?.fileName && (
                               <>
                                 <button
@@ -491,7 +487,7 @@ export function EmployeeDocumentsGrid({
                               </>
                             )}
 
-                            {/* Front/Back multi-view button */}
+                            {/* Front/Back: side-by-side preview button */}
                             {type.uploadType === "frontBack" && completeCount > 0 && (
                               <button
                                 type="button"
@@ -509,8 +505,8 @@ export function EmployeeDocumentsGrid({
                               </button>
                             )}
 
-                            {/* Edit Document Settings if showTypeControls is true or it's not a protected core type */}
-                            {((showTypeControls || !["panCard", "aadhaarCard", "educationalCertificates", "salarySlips", "insuranceDocuments"].includes(type.id)) && onEditType) && (
+                            {/* Edit Document Settings */}
+                            {((showTypeControls || !PROTECTED_IDS.includes(type.id)) && onEditType) && (
                               <button
                                 type="button"
                                 title="Edit Document Settings"
@@ -521,7 +517,7 @@ export function EmployeeDocumentsGrid({
                               </button>
                             )}
 
-                            {/* For single upload and isEditing: Show Upload button if empty, otherwise Replace */}
+                            {/* Single upload: upload / replace button */}
                             {!isExpandable && isEditing && (
                               <label className="cursor-pointer">
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-border bg-card text-xs font-bold text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all">
@@ -537,11 +533,11 @@ export function EmployeeDocumentsGrid({
                                     if (f) readFile(f, singleKey, type);
                                     e.target.value = "";
                                   }}
-                                  />
+                                />
                               </label>
                             )}
 
-                            {/* Expand button for frontBack/multiple edit state */}
+                            {/* Expandable: Edit Files / Collapse toggle */}
                             {isExpandable && isEditing && (
                               <button
                                 type="button"
@@ -552,7 +548,7 @@ export function EmployeeDocumentsGrid({
                               </button>
                             )}
 
-                            {/* Download All if expandable */}
+                            {/* Expandable: Download All */}
                             {isExpandable && completeCount > 0 && (
                               <button
                                 type="button"
@@ -564,7 +560,7 @@ export function EmployeeDocumentsGrid({
                               </button>
                             )}
 
-                            {/* Delete files in row */}
+                            {/* Single: Delete */}
                             {!isExpandable && singleMeta && isEditing && (
                               <button
                                 type="button"
@@ -576,6 +572,7 @@ export function EmployeeDocumentsGrid({
                               </button>
                             )}
 
+                            {/* Expandable: Delete All */}
                             {isExpandable && completeCount > 0 && isEditing && (
                               <button
                                 type="button"
@@ -587,8 +584,8 @@ export function EmployeeDocumentsGrid({
                               </button>
                             )}
 
-                            {/* Delete Document Type button - shown for all document types except the protected core ones */}
-                            {(!["panCard", "aadhaarCard", "educationalCertificates", "salarySlips", "insuranceDocuments"].includes(type.id) && onRemoveType) && (
+                            {/* Delete Document Type */}
+                            {!PROTECTED_IDS.includes(type.id) && onRemoveType && (
                               <button
                                 type="button"
                                 title="Delete Document Type"
@@ -597,21 +594,23 @@ export function EmployeeDocumentsGrid({
                               >
                                 <Trash className="h-3.5 w-3.5" />
                               </button>
-                            ) : null}
+                            )}
                           </div>
                         </td>
                       </tr>
 
                       {/* Expandable Sub-Rows */}
                       {isExpandable && isExpanded && (
-                        <tr>
+                        <tr key={`${type.id}-expanded`}>
                           {type.id === "salarySlips" ? (
                             <td colSpan={5} className="bg-secondary/10 px-6 py-4 border-t border-b border-border/40">
                               <div className="rounded-xl border border-border/80 bg-background overflow-hidden shadow-inner p-4">
                                 {/* Month-wise filter */}
                                 <div className="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-border/60">
                                   <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Year</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                      Select Year
+                                    </label>
                                     <select
                                       value={selectedSlipYear}
                                       onChange={(e) => setSelectedSlipYear(Number(e.target.value))}
@@ -629,7 +628,9 @@ export function EmployeeDocumentsGrid({
                                   </div>
 
                                   <div className="flex flex-col gap-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Month</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                      Select Month
+                                    </label>
                                     <select
                                       value={selectedSlipMonth}
                                       onChange={(e) => setSelectedSlipMonth(Number(e.target.value))}
@@ -637,7 +638,7 @@ export function EmployeeDocumentsGrid({
                                     >
                                       {[
                                         "January", "February", "March", "April", "May", "June",
-                                        "July", "August", "September", "October", "November", "December"
+                                        "July", "August", "September", "October", "November", "December",
                                       ].map((m, idx) => (
                                         <option key={idx} value={idx}>
                                           {m}
@@ -647,106 +648,111 @@ export function EmployeeDocumentsGrid({
                                   </div>
 
                                   <div className="ml-auto text-xs font-semibold text-muted-foreground">
-                                    Total Slips Uploaded: <span className="font-black text-foreground">{completeCount}</span>
+                                    Total Slips Uploaded:{" "}
+                                    <span className="font-black text-foreground">{completeCount}</span>
                                   </div>
                                 </div>
 
-                                {/* Selected month's slip details & actions */}
-                                <div>
-                                  {(() => {
-                                    const key = `salarySlips_${selectedSlipYear}-${String(selectedSlipMonth + 1).padStart(2, "0")}`;
-                                    const meta = docs[key];
-                                    const pct = progress[key] || 0;
-                                    const monthName = [
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ][selectedSlipMonth];
+                                {/* Selected month slip */}
+                                {(() => {
+                                  const key = `salarySlips_${selectedSlipYear}-${String(selectedSlipMonth + 1).padStart(2, "0")}`;
+                                  const meta = docs[key];
+                                  const pct = progress[key] || 0;
+                                  const monthName = [
+                                    "January", "February", "March", "April", "May", "June",
+                                    "July", "August", "September", "October", "November", "December",
+                                  ][selectedSlipMonth];
 
-                                    return (
-                                      <div className="flex flex-col gap-3">
-                                        <div className="flex items-center justify-between">
-                                          <h4 className="text-xs font-bold text-foreground">
-                                            Salary Slip for {monthName} {selectedSlipYear}
-                                          </h4>
-                                        </div>
-
-                                        {meta?.fileName ? (
-                                          <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-secondary/20 p-3">
-                                            <div className="flex min-w-0 items-center gap-2">
-                                              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
-                                                <FileCheck2 className="h-4 w-4" />
-                                              </div>
-                                              <div className="min-w-0">
-                                                <p className="truncate text-xs font-bold text-foreground font-mono">{meta.fileName}</p>
-                                                <p className="text-[10px] font-medium text-muted-foreground">Uploaded · {formatBytes(meta.sizeBytes)}</p>
-                                              </div>
-                                            </div>
-                                            <div className="flex flex-shrink-0 items-center gap-1.5">
-                                              <button
-                                                type="button"
-                                                title="Preview"
-                                                className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                                onClick={() => previewDocument(meta)}
-                                              >
-                                                <Eye className="h-4 w-4" />
-                                              </button>
-                                              <button
-                                                type="button"
-                                                title="Download"
-                                                className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
-                                                onClick={() => download(meta)}
-                                              >
-                                                <Download className="h-4 w-4" />
-                                              </button>
-                                              {isEditing && (
-                                                <button
-                                                  type="button"
-                                                  title="Delete"
-                                                  className="p-1.5 rounded-lg border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
-                                                  onClick={() => remove(key)}
-                                                >
-                                                  <Trash2 className="h-4 w-4" />
-                                                </button>
-                                              )}
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <div className="rounded-xl border border-dashed border-border bg-secondary/5 p-4 text-center">
-                                            <span className="text-xs text-muted-foreground italic">No slip uploaded for this month</span>
-                                          </div>
-                                        )}
-
-                                        {pct > 0 && pct < 100 && (
-                                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                                            <div
-                                              className="h-full bg-primary transition-all duration-300"
-                                              style={{ width: `${pct}%` }}
-                                            />
-                                          </div>
-                                        )}
-
-                                        {isEditing && (
-                                          <label className="cursor-pointer mt-1">
-                                            <span className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-border bg-card text-xs font-bold text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all w-full">
-                                              <UploadCloud className="h-4 w-4" />
-                                              {meta ? "Replace Slip" : "Upload Salary Slip"}
-                                            </span>
-                                            <input
-                                              type="file"
-                                              accept={accept}
-                                              className="hidden"
-                                              onChange={(e) => {
-                                                const f = e.target.files?.[0];
-                                                if (f) readFile(f, key, type);
-                                                e.target.value = "";
-                                              }}
-                                            />
-                                          </label>
-                                        )}
+                                  return (
+                                    <div className="flex flex-col gap-3">
+                                      <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-bold text-foreground">
+                                          Salary Slip for {monthName} {selectedSlipYear}
+                                        </h4>
                                       </div>
-                                    );
-                                  })()}
-                                </div>
+
+                                      {meta?.fileName ? (
+                                        <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-secondary/20 p-3">
+                                          <div className="flex min-w-0 items-center gap-2">
+                                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                                              <FileCheck2 className="h-4 w-4" />
+                                            </div>
+                                            <div className="min-w-0">
+                                              <p className="truncate text-xs font-bold text-foreground font-mono">
+                                                {meta.fileName}
+                                              </p>
+                                              <p className="text-[10px] font-medium text-muted-foreground">
+                                                Uploaded · {formatBytes(meta.sizeBytes)}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <div className="flex flex-shrink-0 items-center gap-1.5">
+                                            <button
+                                              type="button"
+                                              title="Preview"
+                                              className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                                              onClick={() => previewDocument(meta)}
+                                            >
+                                              <Eye className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              title="Download"
+                                              className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors"
+                                              onClick={() => download(meta)}
+                                            >
+                                              <Download className="h-4 w-4" />
+                                            </button>
+                                            {isEditing && (
+                                              <button
+                                                type="button"
+                                                title="Delete"
+                                                className="p-1.5 rounded-lg border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
+                                                onClick={() => remove(key)}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="rounded-xl border border-dashed border-border bg-secondary/5 p-4 text-center">
+                                          <span className="text-xs text-muted-foreground italic">
+                                            No slip uploaded for this month
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {pct > 0 && pct < 100 && (
+                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                          <div
+                                            className="h-full bg-primary transition-all duration-300"
+                                            style={{ width: `${pct}%` }}
+                                          />
+                                        </div>
+                                      )}
+
+                                      {isEditing && (
+                                        <label className="cursor-pointer mt-1">
+                                          <span className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-border bg-card text-xs font-bold text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all w-full">
+                                            <UploadCloud className="h-4 w-4" />
+                                            {meta ? "Replace Slip" : "Upload Salary Slip"}
+                                          </span>
+                                          <input
+                                            type="file"
+                                            accept={accept}
+                                            className="hidden"
+                                            onChange={(e) => {
+                                              const f = e.target.files?.[0];
+                                              if (f) readFile(f, key, type);
+                                              e.target.value = "";
+                                            }}
+                                          />
+                                        </label>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </td>
                           ) : (
@@ -769,12 +775,10 @@ export function EmployeeDocumentsGrid({
 
                                       return (
                                         <tr key={storageKey} className="hover:bg-secondary/5 transition-colors">
-                                          {/* Slot Name */}
                                           <td className="px-4 py-3 font-semibold text-foreground">
                                             {sideTitle || "File Slot"}
                                           </td>
 
-                                          {/* File Details */}
                                           <td className="px-4 py-3">
                                             {meta?.fileName ? (
                                               <div className="flex flex-col min-w-0">
@@ -786,10 +790,10 @@ export function EmployeeDocumentsGrid({
                                                 </span>
                                               </div>
                                             ) : (
-                                              <span className="text-muted-foreground italic font-medium">No file uploaded</span>
+                                              <span className="text-muted-foreground italic font-medium">
+                                                No file uploaded
+                                              </span>
                                             )}
-
-                                            {/* Progress bar */}
                                             {pct > 0 && pct < 100 && (
                                               <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                                                 <div
@@ -800,7 +804,6 @@ export function EmployeeDocumentsGrid({
                                             )}
                                           </td>
 
-                                          {/* Actions */}
                                           <td className="px-4 py-3 text-right pr-4">
                                             <div className="flex items-center justify-end gap-1.5">
                                               {meta?.fileName && (
@@ -846,7 +849,9 @@ export function EmployeeDocumentsGrid({
                                               {isEditing && (type.uploadType === "multiple" || meta) && (
                                                 <button
                                                   type="button"
-                                                  title={type.uploadType === "multiple" ? "Delete slot" : "Delete file"}
+                                                  title={
+                                                    type.uploadType === "multiple" ? "Delete slot" : "Delete file"
+                                                  }
                                                   className="p-1 rounded border border-destructive/20 bg-card text-destructive hover:bg-destructive/10 transition-colors"
                                                   onClick={() => {
                                                     if (type.uploadType === "multiple") {
@@ -866,7 +871,6 @@ export function EmployeeDocumentsGrid({
                                     })}
                                   </tbody>
                                 </table>
-                                {/* + Add Document button for multiple upload type */}
                                 {type.uploadType === "multiple" && isEditing && (
                                   <div className="px-4 py-2.5 border-t border-border/50 bg-secondary/5">
                                     <button
@@ -897,15 +901,24 @@ export function EmployeeDocumentsGrid({
               </tbody>
             </table>
           </div>
-        ) : null}
+        </div>
       </div>
 
+      {/* Single document preview modal */}
       {previewMeta ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4" onClick={() => setPreviewMeta(null)}>
-          <div className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4"
+          onClick={() => setPreviewMeta(null)}
+        >
+          <div
+            className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div className="min-w-0">
-                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">Document Preview</h3>
+                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">
+                  Document Preview
+                </h3>
                 <p className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{previewMeta.fileName}</p>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
@@ -930,7 +943,11 @@ export function EmployeeDocumentsGrid({
             <div className="min-h-0 flex-1 bg-secondary/20 p-4">
               {getPreviewKind(previewMeta.fileName) === "image" ? (
                 <div className="flex h-full items-center justify-center overflow-auto rounded-xl bg-background">
-                  <img src={previewMeta.dataUrl} alt={previewMeta.fileName || "Document preview"} className="max-h-full max-w-full object-contain" />
+                  <img
+                    src={previewMeta.dataUrl}
+                    alt={previewMeta.fileName || "Document preview"}
+                    className="max-h-full max-w-full object-contain"
+                  />
                 </div>
               ) : (
                 <iframe
@@ -939,6 +956,69 @@ export function EmployeeDocumentsGrid({
                   className="h-full w-full rounded-xl border border-border bg-background"
                 />
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Front / Back side-by-side preview modal */}
+      {frontBackPreview ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4"
+          onClick={() => setFrontBackPreview(null)}
+        >
+          <div
+            className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-black uppercase tracking-widest text-foreground">
+                  {frontBackPreview.docName}
+                </h3>
+                <p className="mt-0.5 text-xs font-medium text-muted-foreground">Front &amp; Back</p>
+              </div>
+              <button
+                type="button"
+                title="Close"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-secondary"
+                onClick={() => setFrontBackPreview(null)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 grid grid-cols-2 gap-4 bg-secondary/20 p-4">
+              {(["front", "back"] as const).map((side) => {
+                const meta = frontBackPreview[side];
+                return (
+                  <div key={side} className="flex flex-col gap-2 overflow-hidden rounded-xl border border-border bg-background">
+                    <p className="px-3 pt-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      {side === "front" ? "Front Side" : "Back Side"}
+                    </p>
+                    {meta?.dataUrl ? (
+                      getPreviewKind(meta.fileName) === "image" ? (
+                        <div className="flex flex-1 items-center justify-center overflow-auto p-2">
+                          <img
+                            src={meta.dataUrl}
+                            alt={meta.fileName || side}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <iframe
+                          title={meta.fileName || side}
+                          src={meta.dataUrl}
+                          className="h-full w-full border-0"
+                        />
+                      )
+                    ) : (
+                      <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground italic">
+                        No file uploaded
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -154,44 +154,46 @@ function RecordCard({
           {title} #{index + 1}
         </h3>
         {!readOnly && (
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <button
-                type="button"
-                onClick={onSave}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
-              >
-                <Save className="w-3.5 h-3.5" /> Save
-              </button>
-              <button
-                type="button"
-                onClick={onCancel}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-              >
-                <X className="w-3.5 h-3.5" /> Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={onEdit}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Edit
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-destructive/40 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </button>
-            </>
-          )}
-        </div>
-        )}
+  <div className="flex items-center gap-2">
+    {isEditing ? (
+      <>
+        <button
+          type="button"
+          onClick={onSave}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+        >
+          <Save className="w-3.5 h-3.5" /> Save
+        </button>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+        >
+          <X className="w-3.5 h-3.5" /> Cancel
+        </button>
+      </>
+    ) : (
+      <>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" /> Edit
+        </button>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-destructive/40 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" /> Delete
+        </button>
+      </>
+    )}
+  </div>
+)}
       </div>
       {children}
     </div>
@@ -262,89 +264,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
     setBankDeleteId(null);
   };
 
-  // ── PF records ─────────────────────────────────────────────────────────────
-  const pfBaseline = useMemo(() => employee.pfRecords || [], [employee.pfRecords]);
-  const [pfRecords, setPfRecords] = useState<PfDetails[]>(pfBaseline);
-  const [pfEditingId, setPfEditingId] = useState<string | null>(null);
-  const [pfDeleteId, setPfDeleteId] = useState<string | null>(null);
-
-  useEffect(() => { setPfRecords(pfBaseline); }, [pfBaseline]);
-
-  const updatePf = (id: string, patch: Partial<PfDetails>) =>
-    setPfRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-
-  const handleAddPf = () => {
-    const rec = emptyPf();
-    setPfRecords((prev) => [...prev, rec]);
-    setPfEditingId(rec.id);
-  };
-
-  const handleEditPf = (id: string) => {
-    setPfRecords(pfBaseline.map((r) => ({ ...r })));
-    setPfEditingId(id);
-  };
-
-  const handleSavePf = async (id: string) => {
-    const ok = await handleAdminSave("PF Details", employee, { ...employee, pfRecords });
-    if (ok) setPfEditingId(null);
-  };
-
-  const handleCancelPf = (id: string) => {
-    const isNew = !pfBaseline.find((r) => r.id === id);
-    if (isNew) setPfRecords(pfBaseline.map((r) => ({ ...r })));
-    else setPfRecords(pfBaseline.map((r) => ({ ...r })));
-    setPfEditingId(null);
-  };
-
-  const confirmDeletePf = async () => {
-    if (!pfDeleteId) return;
-    const next = pfRecords.filter((r) => r.id !== pfDeleteId);
-    const ok = await handleAdminSave("PF Details", employee, { ...employee, pfRecords: next });
-    if (ok) { setPfRecords(next); if (pfEditingId === pfDeleteId) setPfEditingId(null); }
-    setPfDeleteId(null);
-  };
-
-  // ── ESI records ────────────────────────────────────────────────────────────
-  const esiBaseline = useMemo(() => employee.esiRecords || [], [employee.esiRecords]);
-  const [esiRecords, setEsiRecords] = useState<EsiDetails[]>(esiBaseline);
-  const [esiEditingId, setEsiEditingId] = useState<string | null>(null);
-  const [esiDeleteId, setEsiDeleteId] = useState<string | null>(null);
-
-  useEffect(() => { setEsiRecords(esiBaseline); }, [esiBaseline]);
-
-  const updateEsi = (id: string, patch: Partial<EsiDetails>) =>
-    setEsiRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-
-  const handleAddEsi = () => {
-    const rec = emptyEsi();
-    setEsiRecords((prev) => [...prev, rec]);
-    setEsiEditingId(rec.id);
-  };
-
-  const handleEditEsi = (id: string) => {
-    setEsiRecords(esiBaseline.map((r) => ({ ...r })));
-    setEsiEditingId(id);
-  };
-
-  const handleSaveEsi = async (id: string) => {
-    const ok = await handleAdminSave("ESI Details", employee, { ...employee, esiRecords });
-    if (ok) setEsiEditingId(null);
-  };
-
-  const handleCancelEsi = (id: string) => {
-    const isNew = !esiBaseline.find((r) => r.id === id);
-    if (isNew) setEsiRecords(esiBaseline.map((r) => ({ ...r })));
-    else setEsiRecords(esiBaseline.map((r) => ({ ...r })));
-    setEsiEditingId(null);
-  };
-
-  const confirmDeleteEsi = async () => {
-    if (!esiDeleteId) return;
-    const next = esiRecords.filter((r) => r.id !== esiDeleteId);
-    const ok = await handleAdminSave("ESI Details", employee, { ...employee, esiRecords: next });
-    if (ok) { setEsiRecords(next); if (esiEditingId === esiDeleteId) setEsiEditingId(null); }
-    setEsiDeleteId(null);
-  };
+  // PF/ESI simplified UI uses `statutoryData` (single record) instead of separate lists
 
   const bankSelectOptionsFor = (current: string) =>
     bankOptions.some((o) => o.value === current) || !current
@@ -502,7 +422,6 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
           <BankInfoRow label="Aadhaar Number" value={statutoryData.aadhaarNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, aadhaarNumber: v }))} />
           <BankInfoRow label="Tax Regime" value={statutoryData.taxRegime || ""} isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, taxRegime: v }))} options={taxRegimeOptions} />
         </div>
-      </EditableSectionCard>
 
         <div className="mt-6 border-t border-border pt-4 space-y-4">
           <div className="flex items-center gap-4 py-2 border-b border-border last:border-0">
@@ -620,66 +539,10 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               </div>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* ── ESI Records ──────────────────────────────────────────────────── */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between py-1">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-muted-foreground" />
-            Employee State Insurance (ESI)
-            <span className="ml-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-secondary text-muted-foreground border border-border">
-              {esiRecords.length}
-            </span>
-          </h3>
-          {!disableEdit && (
-            <button
-              type="button"
-              onClick={handleAddEsi}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
-            >
-              <Plus size={12} /> Add ESI
-            </button>
-          )}
         </div>
+      </EditableSectionCard>
 
-        {esiRecords.length === 0 ? (
-          <div className="flat-card bg-card border border-dashed border-border p-8 text-center">
-            <Building2 className="w-7 h-7 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground font-semibold">No ESI records added yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {esiRecords.map((rec, index) => {
-              const isEditing = esiEditingId === rec.id;
-              return (
-                <RecordCard
-                  key={rec.id}
-                  index={index}
-                  title="ESI Record"
-                  icon={Building2}
-                  isEditing={isEditing}
-                  onEdit={() => handleEditEsi(rec.id)}
-                  onSave={() => handleSaveEsi(rec.id)}
-                  onCancel={() => handleCancelEsi(rec.id)}
-                  onDelete={() => setEsiDeleteId(rec.id)}
-                  readOnly={disableEdit}
-                >
-                  <div className="grid grid-cols-1 gap-3">
-                    <ProfileInfoField label="ESI Number" value={rec.esiNumber} editing={isEditing} onChange={(v) => updateEsi(rec.id, { esiNumber: v })} />
-                    <ProfileInfoField label="ESI Type" value={rec.esiType} editing={isEditing} onChange={(v) => updateEsi(rec.id, { esiType: v })} options={esiSchemeOptions.length ? esiSchemeOptions : ESI_TYPE_OPTIONS} />
-                    <ProfileInfoField label="Employee Contribution" value={rec.employeeContribution} editing={isEditing} onChange={(v) => updateEsi(rec.id, { employeeContribution: v })} />
-                    <ProfileInfoField label="Employer Contribution" value={rec.employerContribution} editing={isEditing} onChange={(v) => updateEsi(rec.id, { employerContribution: v })} />
-                    <ProfileInfoField label="Dispensary" value={rec.dispensary} editing={isEditing} onChange={(v) => updateEsi(rec.id, { dispensary: v })} />
-                    <ProfileInfoField label="Status" value={rec.status} editing={isEditing} onChange={(v) => updateEsi(rec.id, { status: v })} options={STATUS_OPTIONS} />
-                  </div>
-                </RecordCard>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* PF/ESI/LWF simplified coverage — replaced multi-record management */}
 
       {/* ── Confirmation dialogs ──────────────────────────────────────────── */}
       <ConfirmationDialog
@@ -691,24 +554,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         destructive
         onConfirm={confirmDeleteBank}
       />
-      <ConfirmationDialog
-        open={pfDeleteId !== null}
-        onOpenChange={(o) => !o && setPfDeleteId(null)}
-        title="Delete PF record?"
-        description="This Provident Fund record will be permanently removed."
-        confirmLabel="Delete"
-        destructive
-        onConfirm={confirmDeletePf}
-      />
-      <ConfirmationDialog
-        open={esiDeleteId !== null}
-        onOpenChange={(o) => !o && setEsiDeleteId(null)}
-        title="Delete ESI record?"
-        description="This Employee State Insurance record will be permanently removed."
-        confirmLabel="Delete"
-        destructive
-        onConfirm={confirmDeleteEsi}
-      />
+      
     </div>
   );
 }
