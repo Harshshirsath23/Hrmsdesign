@@ -1,19 +1,16 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { 
-  FileText, 
   Megaphone, 
   Send, 
-  ShieldCheck, 
-  Handshake, 
 } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 
 const TABS = [
-  { label: "Identity Verification", path: "/admin/employees/management/verification", icon: ShieldCheck },
-  { label: "Contract Details", path: "/admin/employees/management/contracts", icon: Handshake },
+  { label: "Bulletin Board", path: "/admin/communication-center/bulletin-board", icon: Megaphone },
+  { label: "Mass Communication", path: "/admin/communication-center/communication", icon: Send },
 ];
 
-export function EmployeeManagementLayout() {
+export function CommunicationCenterLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -22,7 +19,7 @@ export function EmployeeManagementLayout() {
       {/* Secondary Top Navbar (Sub-navbar) */}
       <div className="bg-card/50 backdrop-blur-md border-b border-border px-6 py-2 flex items-center gap-1 overflow-x-auto no-scrollbar sticky top-0 z-20 shadow-sm">
         {TABS.map((tab) => {
-          const isActive = location.pathname === tab.path;
+          const isActive = location.pathname === tab.path || (location.pathname === "/admin/communication-center" && tab.path.endsWith("bulletin-board"));
           const Icon = tab.icon;
           return (
             <button

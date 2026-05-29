@@ -12,11 +12,11 @@ export function AttendanceSummaryCards() {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
       {cards.map((card) => (
-        <div key={card.label} className="flat-card bg-card p-4">
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{card.label}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{card.value}</p>
+        <div key={card.label} className="flat-card bg-card p-3 flex flex-col justify-center">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{card.label}</p>
+          <p className="text-xl font-bold text-foreground mt-0.5">{card.value}</p>
         </div>
       ))}
     </div>

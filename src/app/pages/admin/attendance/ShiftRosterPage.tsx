@@ -277,71 +277,73 @@ export function ShiftRosterPage() {
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950/50 relative overflow-hidden">
       {/* Top Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-4 shadow-sm sticky top-0 z-40">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              <Home className="w-3 h-3" />
-              <ChevronRight className="w-3 h-3" />
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm sticky top-0 z-40">
+        <div className="flex items-center justify-between gap-4">
+          {/* Left: breadcrumb + title */}
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              <Home className="w-2.5 h-2.5" />
+              <ChevronRight className="w-2.5 h-2.5" />
               <span>Attendance</span>
-              <ChevronRight className="w-3 h-3" />
+              <ChevronRight className="w-2.5 h-2.5" />
               <span className="text-emerald-500">Shift Roster</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               Shift Roster
               {publishStatus.isPublished ? (
-                <div className="px-2 py-0.5 rounded text-[10px] bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 font-bold uppercase flex items-center gap-1">
-                  <Check className="w-3 h-3" /> Published
+                <div className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 font-bold uppercase flex items-center gap-1">
+                  <Check className="w-2.5 h-2.5" /> Published
                 </div>
               ) : (
-                <div className="px-2 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 font-bold uppercase">
+                <div className="px-1.5 py-0.5 rounded text-[9px] bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 font-bold uppercase">
                   Draft
                 </div>
               )}
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right: action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={handleExport}
               disabled={isExporting}
             >
-              <Download className={cn("w-3.5 h-3.5 text-blue-500", isExporting && "animate-bounce")} /> 
-              {isExporting ? "EXPORTING..." : "EXPORT EXCEL"}
+              <Download className={cn("w-3 h-3 text-blue-500", isExporting && "animate-bounce")} /> 
+              {isExporting ? "EXPORTING..." : "EXPORT"}
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={() => setShowGenerateModal(true)}
             >
-              <RotateCw className="w-3.5 h-3.5 text-indigo-500" /> GENERATE ROSTER
+              <RotateCw className="w-3 h-3 text-indigo-500" /> GENERATE
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={() => setShowBulkAssignModal(true)}
             >
-              <Plus className="w-3.5 h-3.5 text-emerald-500" /> BULK ASSIGN
+              <Plus className="w-3 h-3 text-emerald-500" /> BULK ASSIGN
             </Button>
             <Button 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
               onClick={() => setShowPublishModal(true)}
               disabled={publishStatus.isPublished}
             >
-              <CheckCircle className="w-3.5 h-3.5" /> {publishStatus.isPublished ? "PUBLISHED" : "PUBLISH SCHEDULE"}
+              <CheckCircle className="w-3 h-3" /> {publishStatus.isPublished ? "PUBLISHED" : "PUBLISH"}
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-9 w-9 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 w-8 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={handleRefresh}
             >
-              <RefreshCw className={cn("w-4 h-4 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
+              <RefreshCw className={cn("w-3 h-3 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
           </div>
         </div>
@@ -356,38 +358,38 @@ export function ShiftRosterPage() {
           setSelectedDate={setSelectedDate}
         />
 
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto w-full">
+        <div className="p-4 space-y-4 max-w-[1600px] mx-auto w-full">
           {/* Analytics Section */}
           <RosterAnalytics data={analyticsData} />
 
           {/* Conflict Warning or Status Info */}
           {publishStatus.isPublished ? (
-            <div className="bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-200/50 dark:border-emerald-500/20 p-3 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Check className="w-4 h-4 text-emerald-600" />
+            <div className="bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-200/50 dark:border-emerald-500/20 p-2.5 rounded-xl flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
               </div>
               <div className="flex-1">
-                <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Schedule Live</p>
-                <p className="text-[11px] text-emerald-700 dark:text-emerald-500 font-medium">
+                <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Schedule Live</p>
+                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 font-medium">
                   This roster was published by {publishStatus.publishedBy} on {format(parseISO(publishStatus.timestamp!), "dd MMM yyyy, hh:mm a")}.
                 </p>
               </div>
               <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/10" onClick={() => setPublishStatus({isPublished: false})}>UNPUBLISH TO EDIT</Button>
             </div>
           ) : (
-            <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200/50 dark:border-amber-500/20 p-3 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Info className="w-4 h-4 text-amber-600" />
+            <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200/50 dark:border-amber-500/20 p-2.5 rounded-xl flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Info className="w-3.5 h-3.5 text-amber-600" />
               </div>
               <div className="flex-1">
-                <p className="text-[11px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Draft Mode</p>
-                <p className="text-[11px] text-amber-700 dark:text-amber-500 font-medium">Changes are saved as draft. Click Publish to make them visible to employees.</p>
+                <p className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Draft Mode</p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-500 font-medium">Changes are saved as draft. Click Publish to make them visible to employees.</p>
               </div>
             </div>
           )}
 
           {/* Main Roster Grid */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col">
             <RosterGrid 
               roster={filteredRoster} 
               days={days} 
@@ -406,69 +408,69 @@ export function ShiftRosterPage() {
       <Dialog open={showGenerateModal} onOpenChange={setShowGenerateModal}>
         <DialogContent className="sm:max-w-[450px] rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <RotateCw className="w-5 h-5 text-indigo-500" /> Generate Shift Roster
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <RotateCw className="w-4 h-4 text-indigo-500" /> Generate Shift Roster
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Auto-generate shifts for the selected criteria using organizational rotation rules.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Month</Label>
+          <div className="grid gap-3 py-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Month</Label>
                 <Select defaultValue="5">
-                  <SelectTrigger className="h-10 rounded-xl">
+                  <SelectTrigger className="h-8 rounded-lg text-xs">
                     <SelectValue placeholder="Select Month" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="5">May</SelectItem>
-                    <SelectItem value="6">June</SelectItem>
+                    <SelectItem value="5" className="text-xs">May</SelectItem>
+                    <SelectItem value="6" className="text-xs">June</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Year</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Year</Label>
                 <Select defaultValue="2026">
-                  <SelectTrigger className="h-10 rounded-xl">
+                  <SelectTrigger className="h-8 rounded-lg text-xs">
                     <SelectValue placeholder="Select Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2026">2026</SelectItem>
+                    <SelectItem value="2026" className="text-xs">2026</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rotation Type</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Rotation Type</Label>
               <Select defaultValue="weekly">
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="h-8 rounded-lg text-xs">
                   <SelectValue placeholder="Select Rotation" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="weekly">Weekly Rotation</SelectItem>
-                  <SelectItem value="monthly">Monthly Rotation</SelectItem>
-                  <SelectItem value="cyclic">Cyclic (Custom)</SelectItem>
+                  <SelectItem value="weekly" className="text-xs">Weekly Rotation</SelectItem>
+                  <SelectItem value="monthly" className="text-xs">Monthly Rotation</SelectItem>
+                  <SelectItem value="cyclic" className="text-xs">Cyclic (Custom)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shift Pattern</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Shift Pattern</Label>
               <Select defaultValue="gen-off">
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="h-8 rounded-lg text-xs">
                   <SelectValue placeholder="Select Pattern" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gen-off">5 Days GEN + 2 OFF</SelectItem>
-                  <SelectItem value="rotational">FS → SS → NS Rotation</SelectItem>
+                  <SelectItem value="gen-off" className="text-xs">5 Days GEN + 2 OFF</SelectItem>
+                  <SelectItem value="rotational" className="text-xs">FS → SS → NS Rotation</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowGenerateModal(false)} className="rounded-xl font-bold text-xs">CANCEL</Button>
+            <Button variant="ghost" onClick={() => setShowGenerateModal(false)} className="rounded-lg h-8 font-bold text-xs">CANCEL</Button>
             <Button 
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-6 font-bold text-xs"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-8 px-6 font-bold text-xs"
               onClick={handleGenerateRoster}
               disabled={isGenerating}
             >
@@ -482,55 +484,55 @@ export function ShiftRosterPage() {
       <Dialog open={showBulkAssignModal} onOpenChange={setShowBulkAssignModal}>
         <DialogContent className="sm:max-w-[500px] rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Plus className="w-5 h-5 text-emerald-500" /> Bulk Assign Shifts
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Plus className="w-4 h-4 text-emerald-500" /> Bulk Assign Shifts
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-5 py-4">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Selected Employees</Label>
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
+          <div className="grid gap-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Selected Employees</Label>
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400">
                 {bulkAssignForm.employeeIds.length === 0 ? "All Filtered Employees (10)" : `${bulkAssignForm.employeeIds.length} Employees Selected`}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Start Date</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Start Date</Label>
                 <Input 
                   type="date" 
-                  className="rounded-xl h-10" 
+                  className="rounded-lg h-8 text-xs" 
                   value={bulkAssignForm.startDate}
                   onChange={(e) => setBulkAssignForm({...bulkAssignForm, startDate: e.target.value})}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">End Date</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">End Date</Label>
                 <Input 
                   type="date" 
-                  className="rounded-xl h-10" 
+                  className="rounded-lg h-8 text-xs" 
                   value={bulkAssignForm.endDate}
                   onChange={(e) => setBulkAssignForm({...bulkAssignForm, endDate: e.target.value})}
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Shift to Assign</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Shift to Assign</Label>
               <Select value={bulkAssignForm.shiftCode} onValueChange={(v) => setBulkAssignForm({...bulkAssignForm, shiftCode: v})}>
-                <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <SelectTrigger className="h-8 rounded-lg text-xs bg-slate-50 dark:bg-slate-800/50">
                   <SelectValue placeholder="Select Shift" />
                 </SelectTrigger>
                 <SelectContent>
                   {SHIFT_DEFINITIONS.map(s => (
-                    <SelectItem key={s.code} value={s.code}>{s.name} ({s.code})</SelectItem>
+                    <SelectItem key={s.code} value={s.code} className="text-xs">{s.name} ({s.code})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setShowBulkAssignModal(false)} className="rounded-xl font-bold text-xs">CANCEL</Button>
+            <Button variant="ghost" onClick={() => setShowBulkAssignModal(false)} className="rounded-lg h-8 font-bold text-xs">CANCEL</Button>
             <Button 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-8 font-bold text-xs"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 rounded-lg px-8 font-bold text-xs"
               onClick={handleBulkAssign}
               disabled={isBulkAssigning}
             >
@@ -543,19 +545,19 @@ export function ShiftRosterPage() {
       {/* PUBLISH CONFIRMATION MODAL */}
       <Dialog open={showPublishModal} onOpenChange={setShowPublishModal}>
         <DialogContent className="sm:max-w-[400px] rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
-          <div className="flex flex-col items-center text-center p-4 space-y-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-emerald-600" />
+          <div className="flex flex-col items-center text-center p-3 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Publish Roster Schedule?</h3>
-              <p className="text-sm text-slate-500">
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Publish Roster Schedule?</h3>
+              <p className="text-xs text-slate-500">
                 Are you sure you want to publish this roster? Once published, employees can see their schedules and rows will be locked for editing.
               </p>
             </div>
-            <div className="w-full flex flex-col gap-2 pt-4">
+            <div className="w-full flex flex-col gap-2 pt-3">
               <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11 font-bold shadow-lg shadow-emerald-500/20"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg h-9 font-bold shadow-lg shadow-emerald-500/20 text-xs"
                 onClick={handlePublish}
                 disabled={isPublishing}
               >
@@ -563,7 +565,7 @@ export function ShiftRosterPage() {
               </Button>
               <Button 
                 variant="ghost" 
-                className="w-full h-11 rounded-xl text-slate-500 font-bold"
+                className="w-full h-9 rounded-lg text-slate-500 font-bold text-xs"
                 onClick={() => setShowPublishModal(false)}
               >
                 BACK TO DRAFT

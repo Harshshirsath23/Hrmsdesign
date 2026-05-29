@@ -19,6 +19,7 @@ export interface DocumentTypeConfig {
   status: DocumentTypeStatus;
   /** Built-in HRMS types — cannot be deleted */
   isSystem?: boolean;
+  needsVerification?: boolean;
 }
 
 export const ALLOWED_FILE_TYPE_OPTIONS: { value: AllowedFileType; label: string }[] = [
