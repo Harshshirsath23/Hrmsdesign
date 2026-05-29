@@ -500,65 +500,125 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
           <BankInfoRow label="PAN Number" value={statutoryData.panNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, panNumber: v }))} />
           <BankInfoRow label="Aadhaar Number" value={statutoryData.aadhaarNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, aadhaarNumber: v }))} />
-          <BankInfoRow label="UAN Number" value={statutoryData.uanNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, uanNumber: v }))} />
           <BankInfoRow label="Tax Regime" value={statutoryData.taxRegime || ""} isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, taxRegime: v }))} options={taxRegimeOptions} />
         </div>
       </EditableSectionCard>
 
-      {/* ── PF Records ───────────────────────────────────────────────────── */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between py-1">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <Shield className="w-4 h-4 text-muted-foreground" />
-            Provident Fund (PF)
-            <span className="ml-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-secondary text-muted-foreground border border-border">
-              {pfRecords.length}
-            </span>
-          </h3>
-          {!disableEdit && (
-            <button
-              type="button"
-              onClick={handleAddPf}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
-            >
-              <Plus size={12} /> Add PF
-            </button>
-          )}
-        </div>
-
-        {pfRecords.length === 0 ? (
-          <div className="flat-card bg-card border border-dashed border-border p-8 text-center">
-            <Shield className="w-7 h-7 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground font-semibold">No PF records added yet.</p>
+        <div className="mt-6 border-t border-border pt-4 space-y-4">
+          <div className="flex items-center gap-4 py-2 border-b border-border last:border-0">
+            <div className="flex items-center gap-3 w-96 shrink-0">
+              <input
+                type="checkbox"
+                checked={Boolean(statutoryData.isPfCovered)}
+                disabled={!statutoryEditing}
+                onChange={(e) => setStatutoryData((p) => ({ ...p, isPfCovered: e.target.checked }))}
+                className="h-4 w-4 rounded border-border text-primary-600"
+              />
+              <div>
+                <div className="text-sm font-medium">Is Employee Covered Under PF?</div>
+                <div className="text-xs text-muted-foreground">Provide PF number if applicable</div>
+              </div>
+            </div>
+            {statutoryData.isPfCovered ? (
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">PF Number</span>
+                  <input
+                    type="text"
+                    value={statutoryData.pfNumber || ''}
+                    disabled={!statutoryEditing}
+                    onChange={(e) => setStatutoryData((p) => ({ ...p, pfNumber: e.target.value }))}
+                    placeholder="PF Number"
+                    className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">UAN Number</span>
+                  <input
+                    type="text"
+                    value={statutoryData.uanNumber || ''}
+                    disabled={!statutoryEditing}
+                    onChange={(e) => setStatutoryData((p) => ({ ...p, uanNumber: e.target.value }))}
+                    placeholder="UAN Number"
+                    className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
-        ) : (
-          <div className="space-y-4">
-            {pfRecords.map((rec, index) => {
-              const isEditing = pfEditingId === rec.id;
-              return (
-                <RecordCard
-                  key={rec.id}
-                  index={index}
-                  title="PF Record"
-                  icon={Shield}
-                  isEditing={isEditing}
-                  onEdit={() => handleEditPf(rec.id)}
-                  onSave={() => handleSavePf(rec.id)}
-                  onCancel={() => handleCancelPf(rec.id)}
-                  onDelete={() => setPfDeleteId(rec.id)}
-                  readOnly={disableEdit}
-                >
-                  <div className="grid grid-cols-1 gap-3">
-                    <ProfileInfoField label="PF Number" value={rec.pfNumber} editing={isEditing} onChange={(v) => updatePf(rec.id, { pfNumber: v })} />
-                    <ProfileInfoField label="PF Type" value={rec.pfType} editing={isEditing} onChange={(v) => updatePf(rec.id, { pfType: v })} options={pfSchemeOptions.length ? pfSchemeOptions : PF_TYPE_OPTIONS} />
-                    <ProfileInfoField label="Monthly Contribution" value={rec.monthlyContribution} editing={isEditing} onChange={(v) => updatePf(rec.id, { monthlyContribution: v })} />
-                    <ProfileInfoField label="Employee Share" value={rec.employeeShare} editing={isEditing} onChange={(v) => updatePf(rec.id, { employeeShare: v })} />
-                    <ProfileInfoField label="Employer Share" value={rec.employerShare} editing={isEditing} onChange={(v) => updatePf(rec.id, { employerShare: v })} />
-                    <ProfileInfoField label="Status" value={rec.status} editing={isEditing} onChange={(v) => updatePf(rec.id, { status: v })} options={STATUS_OPTIONS} />
-                  </div>
-                </RecordCard>
-              );
-            })}
+
+          <div className="flex items-center gap-4 py-2 border-b border-border last:border-0">
+            <div className="flex items-center gap-3 w-96 shrink-0">
+              <input
+                type="checkbox"
+                checked={Boolean(statutoryData.isEsiCovered)}
+                disabled={!statutoryEditing}
+                onChange={(e) => setStatutoryData((p) => ({ ...p, isEsiCovered: e.target.checked }))}
+                className="h-4 w-4 rounded border-border text-primary-600"
+              />
+              <div>
+                <div className="text-sm font-medium">Is Employee Covered Under ESI?</div>
+                <div className="text-xs text-muted-foreground">Provide ESI number if applicable</div>
+              </div>
+            </div>
+            {statutoryData.isEsiCovered ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ESI Number</span>
+                <input
+                  type="text"
+                  value={statutoryData.esiNumber || ''}
+                  disabled={!statutoryEditing}
+                  onChange={(e) => setStatutoryData((p) => ({ ...p, esiNumber: e.target.value }))}
+                  placeholder="ESI Number"
+                  className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-4 py-2 border-b border-border">
+            <div className="flex items-center gap-3 w-96 shrink-0">
+              <input
+                type="checkbox"
+                checked={Boolean(statutoryData.isLwfCovered)}
+                disabled={!statutoryEditing}
+                onChange={(e) => setStatutoryData((p) => ({ ...p, isLwfCovered: e.target.checked }))}
+                className="h-4 w-4 rounded border-border text-primary-600"
+              />
+              <div>
+                <div className="text-sm font-medium">Is Employee Covered Under LWF?</div>
+                <div className="text-xs text-muted-foreground">Provide LIN number if applicable</div>
+              </div>
+            </div>
+            {statutoryData.isLwfCovered ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">LIN Number</span>
+                <input
+                  type="text"
+                  value={statutoryData.linNumber || ''}
+                  disabled={!statutoryEditing}
+                  onChange={(e) => setStatutoryData((p) => ({ ...p, linNumber: e.target.value }))}
+                  placeholder="LIN Number"
+                  className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-4 py-2 last:border-0">
+            <div className="flex items-center gap-3 w-96 shrink-0">
+              <input
+                type="checkbox"
+                checked={Boolean(statutoryData.isEarlierMemberOfPensionOnHigherWages)}
+                disabled={!statutoryEditing}
+                onChange={(e) => setStatutoryData((p) => ({ ...p, isEarlierMemberOfPensionOnHigherWages: e.target.checked }))}
+                className="h-4 w-4 rounded border-border text-primary-600"
+              />
+              <div>
+                <div className="text-sm font-medium">Earlier Member of Pension on Higher Wages?</div>
+                <div className="text-xs text-muted-foreground">Check if applicable for this employee</div>
+              </div>
+            </div>
           </div>
         )}
       </div>

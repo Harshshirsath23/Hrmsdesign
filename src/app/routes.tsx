@@ -16,12 +16,15 @@ const AttendanceMatrixPage = lazy(() => import("./pages/admin/attendance/Attenda
 const AttendanceRequestsPage = lazy(() => import("./pages/admin/attendance/AttendanceRequestsPage").then(m => ({ default: m.AttendanceRequestsPage })));
 import { LeavePage } from "./pages/admin/LeavePage";
 import { PayrollPage } from "./pages/admin/PayrollPage";
+import { PayrollLayout } from "./pages/admin/payroll/PayrollLayout";
 import { DocumentsPage } from "./pages/admin/DocumentsPage";
 import { AdminSettingsPage } from "./pages/admin/SettingsPage";
 import { EmployeesShell } from "./pages/admin/employees/EmployeesShell";
 import { AddEmployeePage } from "./pages/admin/employees/AddEmployeePage";
 import { EmployeeManagementLayout } from "./pages/admin/employees/EmployeeManagementLayout";
 import { EmployeeSetupLayout } from "./pages/admin/employees/EmployeeSetupLayout";
+import { LettersPoliciesLayout } from "./pages/admin/letters-policies/LettersPoliciesLayout";
+import { CommunicationCenterLayout } from "./pages/admin/communication-center/CommunicationCenterLayout";
 import { MASTER_CATEGORIES } from "./modules/masters/config";
 // import { MainShell } from "./pages/admin/main/MainShell";
 // import { AnalyticsHubPage } from "./pages/admin/main/AnalyticsHubPage";
@@ -116,7 +119,33 @@ export const router = createBrowserRouter([
         ]
       },
       { path: "leave", Component: LeavePage },
-      { path: "payroll", Component: PayrollPage },
+      {
+        path: "payroll",
+        Component: PayrollLayout,
+        children: [
+          { index: true, element: <Navigate to="overview" replace /> },
+          { path: "overview", Component: PayrollPage },
+          { path: "fines-damages", element: <Suspense fallback={<ManagementSkeleton />}><FinesDamagesPage /></Suspense> },
+        ]
+      },
+      {
+        path: "letters-policies",
+        Component: LettersPoliciesLayout,
+        children: [
+          { index: true, element: <Navigate to="generate-letter" replace /> },
+          { path: "generate-letter", element: <Suspense fallback={<ManagementSkeleton />}><GenerateLetterPage /></Suspense> },
+          { path: "policies", element: <Suspense fallback={<ManagementSkeleton />}><PoliciesFormsPage /></Suspense> },
+        ]
+      },
+      {
+        path: "communication-center",
+        Component: CommunicationCenterLayout,
+        children: [
+          { index: true, element: <Navigate to="bulletin-board" replace /> },
+          { path: "bulletin-board", element: <Suspense fallback={<ManagementSkeleton />}><BulletinBoardPage /></Suspense> },
+          { path: "communication", element: <Suspense fallback={<ManagementSkeleton />}><MassCommunicationPage /></Suspense> },
+        ]
+      },
       { path: "documents", Component: DocumentsPage },
       { path: "settings", Component: AdminSettingsPage },
       { path: "profile-requests", Component: ProfileChangeRequestsPage },
@@ -136,33 +165,28 @@ export const router = createBrowserRouter([
           //   ],
           // },
           { path: "add", Component: AddEmployeePage },
-          { path: "import", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
+          { path: "import", element: <Navigate to="/admin/letters-policies/generate-letter" replace /> },
           { path: "information/:id", Component: InformationLayout },
           {
             path: "management",
             Component: EmployeeManagementLayout,
             children: [
-              { index: true, element: <Navigate to="generate-letter" replace /> },
-              { path: "generate-letter", element: <Suspense fallback={<ManagementSkeleton />}><GenerateLetterPage /></Suspense> },
-              { path: "bulletin-board", element: <Suspense fallback={<ManagementSkeleton />}><BulletinBoardPage /></Suspense> },
-              { path: "communication", element: <Suspense fallback={<ManagementSkeleton />}><MassCommunicationPage /></Suspense> },
+              { index: true, element: <Navigate to="verification" replace /> },
               { path: "verification", element: <Suspense fallback={<ManagementSkeleton />}><IdentityVerificationPage /></Suspense> },
               { path: "contracts", element: <Suspense fallback={<ManagementSkeleton />}><ContractDetailsPage /></Suspense> },
-              { path: "excel-import", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
-              { path: "photo-upload", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
-              { path: "data-drive", element: <Navigate to="/admin/employees/management/generate-letter" replace /> },
+              { path: "excel-import", element: <Navigate to="/admin/letters-policies/generate-letter" replace /> },
+              { path: "photo-upload", element: <Navigate to="/admin/letters-policies/generate-letter" replace /> },
+              { path: "data-drive", element: <Navigate to="/admin/letters-policies/generate-letter" replace /> },
             ]
           },
           {
             path: "setup",
             Component: EmployeeSetupLayout,
             children: [
-              { index: true, element: <Navigate to="policies" replace /> },
-              { path: "policies", element: <Suspense fallback={<ManagementSkeleton />}><PoliciesFormsPage /></Suspense> },
+              { index: true, element: <Navigate to="segment" replace /> },
               { path: "segment", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeSegmentPage /></Suspense> },
               { path: "roles", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeRolesPage /></Suspense> },
               { path: "filter", element: <Suspense fallback={<ManagementSkeleton />}><EmployeeFilterPage /></Suspense> },
-              { path: "fines-damages", element: <Suspense fallback={<ManagementSkeleton />}><FinesDamagesPage /></Suspense> },
             ]
           },
           { path: "reports", element: <div className="p-8 text-center text-muted-foreground font-medium">Employee Reports Module (Coming Soon)</div> },

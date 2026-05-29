@@ -11,10 +11,23 @@ function loadFromStorage(): DocumentTypeConfig[] {
     if (!raw) return buildDefaultDocumentTypes();
     const parsed = JSON.parse(raw) as DocumentTypeConfig[];
     if (!Array.isArray(parsed) || !parsed.length) return buildDefaultDocumentTypes();
-    return parsed.map((type) => ({
-      ...type,
-      documentSection: type.documentSection || inferDocumentSection(type.category || "General"),
-    }));
+    let migrated = false;
+    const result = parsed.map((type) => {
+      let uploadType = type.uploadType;
+      if (type.id === "insuranceDocuments" && uploadType !== "multiple") {
+        uploadType = "multiple";
+        migrated = true;
+      }
+      return {
+        ...type,
+        uploadType,
+        documentSection: type.documentSection || inferDocumentSection(type.category || "General"),
+      };
+    });
+    if (migrated) {
+      persist(result);
+    }
+    return result;
   } catch {
     return buildDefaultDocumentTypes();
   }

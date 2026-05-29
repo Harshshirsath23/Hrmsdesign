@@ -1198,10 +1198,6 @@ export function AddEmployeePage() {
         "joiningDate",
         "aadhaarNumber",
         "reportingManager",
-        "assetCategory",
-        "assetId",
-        "assetName",
-        "assignDate",
       ];
       if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1241,10 +1237,6 @@ export function AddEmployeePage() {
       "joiningDate",
       "aadhaarNumber",
       "reportingManager",
-      "assetCategory",
-      "assetId",
-      "assetName",
-      "assignDate",
     ];
     if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1546,19 +1538,11 @@ export function AddEmployeePage() {
                 </FF>
 
                 <FF label="Employee Number Series" required>
-                  <div className="space-y-1.5">
-                    <MasterSelect
-                      masterName="EmployeeNumberSeries"
-                      value={form.employeeSeries}
-                      onChange={(v) => set("employeeSeries", v)}
-                    />
-                    <button
-                      type="button"
-                      className="text-[10px] font-bold text-foreground hover:underline flex items-center gap-1 uppercase tracking-wider"
-                    >
-                      Manage Employee Number Series <ExternalLink size={10} />
-                    </button>
-                  </div>
+                  <MasterSelect
+                    masterName="EmployeeNumberSeries"
+                    value={form.employeeSeries}
+                    onChange={(v) => set("employeeSeries", v)}
+                  />
                 </FF>
 
                 <FF label="Employee No" required hint="Based on selected series">
@@ -1651,6 +1635,15 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <FF label="Height">
+                    <Inp value={form.height} onChange={(e) => set("height", e.target.value)} placeholder="e.g. 175 cm" />
+                  </FF>
+                  <FF label="Weight">
+                    <Inp value={form.weight} onChange={(e) => set("weight", e.target.value)} placeholder="e.g. 72 kg" />
+                  </FF>
+                </div>
+
                 <FF label="Referred By">
                   <Sel
                     value={form.referredBy}
@@ -1666,12 +1659,6 @@ export function AddEmployeePage() {
                     checked={form.allowSelfFill}
                     onChange={(v) => set("allowSelfFill", v)}
                   />
-                  <button
-                    type="button"
-                    className="text-[10px] font-bold text-foreground hover:underline flex items-center gap-1 uppercase tracking-wider w-fit"
-                  >
-                    Employee Onboarding Policy <ExternalLink size={10} />
-                  </button>
                 </div>
               </div>
 
@@ -2068,7 +2055,7 @@ export function AddEmployeePage() {
               desc="Company property and equipment assigned to the employee"
               Icon={Monitor}
             >
-              <FF label="Asset Name" required error={errors.assetName}>
+              <FF label="Asset Name" error={errors.assetName}>
                 <Inp
                   value={form.assetName}
                   onChange={(e) => set("assetName", e.target.value)}
@@ -2076,7 +2063,7 @@ export function AddEmployeePage() {
                 />
               </FF>
 
-              <FF label="Asset ID" required error={errors.assetId}>
+              <FF label="Asset ID" error={errors.assetId}>
                 <Inp
                   value={form.assetId}
                   onChange={(e) => set("assetId", e.target.value)}
@@ -2085,7 +2072,7 @@ export function AddEmployeePage() {
                 />
               </FF>
 
-              <FF label="Asset Category" required error={errors.assetCategory}>
+              <FF label="Asset Category" error={errors.assetCategory}>
                 <Sel
                   value={form.assetCategory}
                   onChange={(e) => set("assetCategory", e.target.value)}
@@ -2108,7 +2095,7 @@ export function AddEmployeePage() {
                 />
               </FF>
 
-              <FF label="Assign Date" required error={errors.assignDate}>
+              <FF label="Assign Date" error={errors.assignDate}>
                 <Inp
                   type="date"
                   value={form.assignDate}
