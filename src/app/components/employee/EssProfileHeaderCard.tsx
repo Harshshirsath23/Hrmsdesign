@@ -133,10 +133,16 @@ export function EssProfileHeaderCard({ employeeId, profile }: Props) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
         <ProfileImageUploader
           value={draft.profilePhotoDataUrl}
-          readOnly={!editing}
+          readOnly={false}
           nameHint={displayName}
-          onChange={(url) => setDraft((d) => ({ ...d, profilePhotoDataUrl: url }))}
-          onRemove={() => setDraft((d) => ({ ...d, profilePhotoDataUrl: "" }))}
+          onChange={(url) => {
+            if (!editing) startEdit();
+            setDraft((d) => ({ ...d, profilePhotoDataUrl: url }));
+          }}
+          onRemove={() => {
+            if (!editing) startEdit();
+            setDraft((d) => ({ ...d, profilePhotoDataUrl: "" }));
+          }}
         />
 
         <div className="min-w-0 flex-1 space-y-3">
