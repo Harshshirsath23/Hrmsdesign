@@ -25,18 +25,18 @@ const P = {
 
 /* ── Derived stats ─────────────────────────────────────────── */
 const totalEmployees = employees.length;
-const todayRecords   = attendanceRecords.filter((r) => r.date === "2026-05-05");
-const presentToday   = todayRecords.filter((r) => r.status === "Present").length;
-const onLeaveToday   = todayRecords.filter((r) => r.status === "On Leave").length;
-const halfDayToday   = todayRecords.filter((r) => r.status === "Half Day").length;
-const notLoggedIn    = todayRecords.filter((r) => r.status === "Absent").length;
-const pendingCount   = leaveRequests.filter((l) => l.status === "Pending").length;
+const todayRecords = attendanceRecords.filter((r) => r.date === "2026-05-05");
+const presentToday = todayRecords.filter((r) => r.status === "Present").length;
+const onLeaveToday = todayRecords.filter((r) => r.status === "On Leave").length;
+const halfDayToday = todayRecords.filter((r) => r.status === "Half Day").length;
+const notLoggedIn = todayRecords.filter((r) => r.status === "Absent").length;
+const pendingCount = leaveRequests.filter((l) => l.status === "Pending").length;
 
 const donutData = [
-  { name: "Present",       value: presentToday, color: "#003D7A" },  // deep ocean blue
-  { name: "On Leave",      value: onLeaveToday, color: "#0052B3" },  // ocean blue
-  { name: "Not Logged In", value: notLoggedIn,  color: "#0066E6" },  // light ocean blue
-  { name: "Half Day",      value: halfDayToday, color: "#3399FF" },  // sky blue
+  { name: "Present", value: presentToday, color: "#6366F1" },  // deep ocean blue
+  { name: "On Leave", value: onLeaveToday, color: "#8B5CF6" },  // ocean blue
+  { name: "Not Logged In", value: notLoggedIn, color: "#8677cc" },  // light ocean blue
+  { name: "Half Day", value: halfDayToday, color: "#496091" },  // sky blue
 ];
 
 const deptData = Object.entries(
@@ -50,13 +50,13 @@ const deptData = Object.entries(
 }));
 
 const BAR_COLORS = [
-  "#003D7A",  // deep ocean blue
-  "#0052B3",  // ocean blue
-  "#0066E6",  // light ocean blue
-  "#3399FF",  // sky blue
-  "#66B3FF",  // lighter ocean
-  "#99CCFF",  // pale ocean
-  "#CCE5FF"   // very light ocean
+  "#8B5CF6",  // deep ocean blue
+  "#8B5CF6",  // ocean blue
+  "#8B5CF6",  // light ocean blue
+  "#8B5CF6",  // sky blue
+  "#8B5CF6",  // lighter ocean
+  "#8B5CF6",  // pale ocean
+  "#8B5CF6"   // very light ocean
 ];
 
 const EVENTS = {
@@ -379,29 +379,29 @@ export function DashboardPage() {
     eventTab === "all"
       ? ALL_EVENTS
       : eventTab === "meetings"
-      ? EVENTS.meetings.map((e) => ({
+        ? EVENTS.meetings.map((e) => ({
           ...e,
           category: "meeting",
         }))
-      : eventTab === "birthdays"
-      ? EVENTS.birthdays.map((e) => ({
-          ...e,
-          category: "birthday",
-        }))
-      : EVENTS.holidays.map((e) => ({
-          ...e,
-          category: "holiday",
-        }));
+        : eventTab === "birthdays"
+          ? EVENTS.birthdays.map((e) => ({
+            ...e,
+            category: "birthday",
+          }))
+          : EVENTS.holidays.map((e) => ({
+            ...e,
+            category: "holiday",
+          }));
 
   const tabs: {
     id: EventTab;
     label: string;
   }[] = [
-    { id: "all", label: "All" },
-    { id: "meetings", label: "Meetings" },
-    { id: "birthdays", label: "Birthdays" },
-    { id: "holidays", label: "Holidays" },
-  ];
+      { id: "all", label: "All" },
+      { id: "meetings", label: "Meetings" },
+      { id: "birthdays", label: "Birthdays" },
+      { id: "holidays", label: "Holidays" },
+    ];
 
   return (
     <div className="p-6 space-y-8">
@@ -513,7 +513,7 @@ export function DashboardPage() {
                 <DonutStat
                   label="On Leave"
                   value={onLeaveToday}
-                  color="#F59E0B"
+                  color="#f50b0ba6"
                 />
 
                 <DonutStat
@@ -604,7 +604,7 @@ export function DashboardPage() {
                       key={i}
                       fill={
                         BAR_COLORS[
-                          i % BAR_COLORS.length
+                        i % BAR_COLORS.length
                         ]
                       }
                     />
@@ -638,18 +638,16 @@ export function DashboardPage() {
                 <button
                   key={tab.id}
                   onClick={() => setEventTab(tab.id)}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${
-                    eventTab === tab.id
-                      ? "bg-card text-foreground shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${eventTab === tab.id
+                    ? "bg-card text-foreground shadow-sm border border-border"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
                 >
                   {tab.label}
                 </button>
               ))}
             </div>
 
-            {/* ✅ FIXED */}
             <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
               {displayEvents.map((ev) => (
                 <div
