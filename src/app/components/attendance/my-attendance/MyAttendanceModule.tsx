@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { isSameMonth, parseISO } from "date-fns";
 import { SummaryCards } from "./SummaryCards";
 import { Filters } from "./Filters";
@@ -19,6 +19,11 @@ interface MyAttendanceModuleProps {
   subtitle?: string;
   readOnly?: boolean;
   showTitle?: boolean;
+  /** When set, uses API-backed records instead of the local mock dataset. */
+  externalRecords?: DailyAttendance[];
+  externalLoading?: boolean;
+  externalError?: string | null;
+  onPeriodChange?: (date: Date) => void;
 }
 
 export function MyAttendanceModule({
@@ -27,18 +32,32 @@ export function MyAttendanceModule({
   subtitle = "Track your work hours, presence, and punctuality insights.",
   readOnly = false,
   showTitle = true,
+  externalRecords,
+  externalLoading = false,
+  externalError = null,
+  onPeriodChange,
 }: MyAttendanceModuleProps) {
   const [view, setView] = useState<"calendar" | "list" | "regularization">("calendar");
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 1)); // Default to May 2026
+  const [currentDate, setCurrentDate] = useState(() =>
+    externalRecords !== undefined ? new Date() : new Date(2026, 4, 1),
+  );
   const [searchTerm, setSearchTerm] = useState("");
   
   const [isSwipeOpen, setIsSwipeOpen] = useState(false);
   const [selectedDateForRegularize, setSelectedDateForRegularize] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<DailyAttendance | null>(null);
 
+  useEffect(() => {
+    onPeriodChange?.(currentDate);
+  }, [currentDate, onPeriodChange]);
+
+  const usesExternalData = externalRecords !== undefined;
+
   // Filter records for the current employee and selected month
   const employeeRecords = useMemo(() => {
-    let records = attendanceDataset.records.filter(r => r.employeeId === employeeId);
+    let records = usesExternalData
+      ? (externalRecords ?? [])
+      : attendanceDataset.records.filter(r => r.employeeId === employeeId);
 
     // Filter by month/year unless in regularization tab where we might need historical data
     if (view !== "regularization") {
@@ -58,7 +77,7 @@ export function MyAttendanceModule({
     }
 
     return records;
-  }, [employeeId, currentDate, searchTerm, view]);
+  }, [employeeId, currentDate, searchTerm, view, usesExternalData, externalRecords]);
 
   const metrics = useMemo(() => calculateMetrics(employeeRecords), [employeeRecords]);
 
@@ -84,6 +103,18 @@ export function MyAttendanceModule({
         </div>
       ) : null}
 
+      {externalError ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+          {externalError}
+        </div>
+      ) : null}
+
+      {externalLoading ? (
+        <div className="attendance-empty flex min-h-[120px] items-center justify-center text-sm text-muted-foreground">
+          Loading attendance…
+        </div>
+      ) : null}
+
       {/* Summary Cards */}
       <SummaryCards metrics={metrics} />
 
@@ -105,7 +136,7 @@ export function MyAttendanceModule({
       {/* Main Content Area */}
       <div className="relative">
         <AnimatePresence mode="wait">
-          {employeeRecords.length > 0 || view === "regularization" ? (
+          {externalLoading ? null : employeeRecords.length > 0 || view === "regularization" ? (
             <motion.div
               key={view + currentDate.getTime()}
               initial={{ opacity: 0, y: 20 }}

@@ -31,6 +31,7 @@ export interface DailyAttendance {
   lop: number;
   otMins: number;
   exception: boolean;
+  exceptionType?: string;
   approvalPending: boolean;
   geoViolation: boolean;
   locked: boolean;
