@@ -69,16 +69,16 @@ const DEMO: Record<
   { email: string; password: string }
 > = {
   admin: {
-    email: "admin@hrms.com",
-    password: "Admin@123",
+    email: "hr.admin@acme.com",
+    password: "Password@123",
   },
   manager: {
     email: "manager@hrms.com",
     password: "Manager@123",
   },
   employee: {
-    email: "emp001@company.com",
-    password: "Emp@123",
+    email: "amit.patel@acme.com",
+    password: "Password@123",
   },
 };
 
