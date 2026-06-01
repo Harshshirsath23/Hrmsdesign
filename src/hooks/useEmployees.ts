@@ -1,6 +1,11 @@
+/// <reference types="vite/client" />
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@api/client';
 
+const API_BASE_URL =
+  (import.meta.env['VITE_API_BASE_URL'] as string | undefined)?.replace(/\/$/, '') ||
+  'http://acme.localhost:8000';
 const EMP_STORAGE_KEY = 'hrms-demo-employees';
 
 const DEMO_EMPLOYEES: EmployeeListItem[] = [
@@ -73,10 +78,34 @@ export interface EmployeeListItem {
   work_email: string;
 }
 
+export interface EmployeeDirectoryFilters {
+  search?: string;
+  departmentId?: string;
+  team?: string;
+  teamId?: string;
+  designationId?: string;
+  status?: string;
+  joiningFrom?: string;
+  joiningTo?: string;
+}
+
+export interface EmployeeDirectoryItem extends EmployeeListItem {
+  department_id?: string | null;
+  designation_id?: string | null;
+  team_id?: string | null;
+  team?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  status_display?: string | null;
+}
+
 export interface MasterOption {
   id: string;
   name: string;
   code: string;
+  title?: string;
+  label?: string;
+  is_active?: boolean;
 }
 
 export interface InviteEmployeePayload {
@@ -198,11 +227,194 @@ async function fetchMaster(endpoint: string): Promise<MasterOption[]> {
   return fallback[endpoint] ?? [];
 }
 
+function extractRows<T>(payload: unknown): T[] {
+  const data = payload as {
+    results?: T[];
+    data?: T[] | { results?: T[]; data?: T[] };
+  };
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data?.data)) return data.data;
+  if (data?.data && Array.isArray(data.data.results)) return data.data.results;
+  if (data?.data && Array.isArray(data.data.data)) return data.data.data;
+  return Array.isArray(payload) ? payload as T[] : [];
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return {};
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function syncCompanyIdFromToken(token: string) {
+  const companyId = decodeJwtPayload(token).company_id;
+  if (typeof companyId === 'string' && companyId.trim()) {
+    localStorage.setItem('hrms_company_id', companyId);
+  }
+}
+
+async function refreshDirectoryAccessToken(): Promise<string | null> {
+  const refresh = localStorage.getItem('hrms_refresh_token');
+  if (!refresh) return null;
+
+  const refreshUrls = [
+    `${API_BASE_URL}/api/employee/refresh/`,
+    `${API_BASE_URL}/api/employees/login/refresh/`,
+  ];
+
+  for (const url of refreshUrls) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh }),
+      });
+      if (!response.ok) continue;
+      const payload = (await response.json()) as { access?: string };
+      if (!payload.access) continue;
+      localStorage.setItem('hrms_access_token', payload.access);
+      syncCompanyIdFromToken(payload.access);
+      return payload.access;
+    } catch {
+      // Try the next known refresh endpoint.
+    }
+  }
+
+  localStorage.removeItem('hrms_access_token');
+  localStorage.removeItem('hrms_refresh_token');
+  return null;
+}
+
+async function requestJson<T>(url: string): Promise<T> {
+  const requestUrl = `${API_BASE_URL}${url}`;
+  const buildHeaders = (token: string | null) => ({
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  });
+
+  let token = localStorage.getItem('hrms_access_token');
+  let response = await fetch(requestUrl, {
+    credentials: 'include',
+    headers: buildHeaders(token),
+  });
+
+  if (response.status === 401) {
+    const refreshed = await refreshDirectoryAccessToken();
+    if (refreshed) {
+      token = refreshed;
+      response = await fetch(requestUrl, {
+        credentials: 'include',
+        headers: buildHeaders(token),
+      });
+    }
+  }
+
+  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  const contentType = response.headers.get('Content-Type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Expected JSON from ${requestUrl}, received ${contentType || 'unknown content type'}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+function normalizeMasterOption(row: MasterOption): MasterOption {
+  const name = row.name ?? row.title ?? row.label ?? row.code ?? String(row.id);
+  return {
+    ...row,
+    id: String(row.id),
+    name,
+    code: row.code ?? name,
+  };
+}
+
+function normalizeDateParam(value?: string): string {
+  const raw = value?.trim();
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const match = raw.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (!match) return raw;
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+}
+
+async function fetchOrganizationMaster(endpoint: 'departments' | 'teams' | 'designations'): Promise<MasterOption[]> {
+  const params = new URLSearchParams();
+  const companyId = localStorage.getItem('hrms_company_id');
+  if (companyId) params.set('company_id', companyId);
+  const query = params.toString();
+  const payload = await requestJson<unknown>(`/api/masters/organization/${endpoint}/${query ? `?${query}` : ''}`);
+  return extractRows<MasterOption>(payload)
+    .filter((item) => item.is_active !== false)
+    .map(normalizeMasterOption);
+}
+
+async function fetchEmployeeDirectory(filters: EmployeeDirectoryFilters): Promise<EmployeeDirectoryItem[]> {
+  const params = new URLSearchParams();
+  const joiningFrom = normalizeDateParam(filters.joiningFrom);
+  const joiningTo = normalizeDateParam(filters.joiningTo);
+  const effectiveJoiningFrom = joiningFrom || joiningTo;
+  const effectiveJoiningTo = joiningTo || joiningFrom;
+
+  if (filters.search) params.set('search', filters.search);
+  if (filters.departmentId) params.set('department_id', filters.departmentId);
+  if (filters.teamId) params.set('team_id', filters.teamId);
+  if (filters.team) params.set('team', filters.team);
+  if (filters.designationId) params.set('designation_id', filters.designationId);
+  if (filters.status) params.set('status', filters.status);
+  if (effectiveJoiningFrom) params.set('joining_from', effectiveJoiningFrom);
+  if (effectiveJoiningTo) params.set('joining_to', effectiveJoiningTo);
+  const companyId = localStorage.getItem('hrms_company_id');
+  if (companyId) params.set('company_id', companyId);
+
+  const query = params.toString();
+  const payload = await requestJson<unknown>(`/api/admin/employees/list/${query ? `?${query}` : ''}`);
+  return extractRows<EmployeeDirectoryItem>(payload);
+}
+
 export function useEmployeeList() {
   return useQuery({
     queryKey: ['employees-list'],
     queryFn: fetchEmployees,
     staleTime: 60_000,
+  });
+}
+
+export function useEmployeeDirectoryList(filters: EmployeeDirectoryFilters) {
+  return useQuery({
+    queryKey: ['admin-employee-directory', filters],
+    queryFn: () => fetchEmployeeDirectory(filters),
+    staleTime: 60_000,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useOrganizationDepartments() {
+  return useQuery({
+    queryKey: ['organization-masters', 'departments'],
+    queryFn: () => fetchOrganizationMaster('departments'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useOrganizationTeams() {
+  return useQuery({
+    queryKey: ['organization-masters', 'teams'],
+    queryFn: () => fetchOrganizationMaster('teams'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useOrganizationDesignations() {
+  return useQuery({
+    queryKey: ['organization-masters', 'designations'],
+    queryFn: () => fetchOrganizationMaster('designations'),
+    staleTime: 10 * 60_000,
   });
 }
 

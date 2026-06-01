@@ -166,8 +166,11 @@ export interface Employee {
   lastName?: string;
   employeeId: string;
   designation: string;
+  designationId?: string;
   department: string;
+  departmentId?: string;
   team: string;
+  teamId?: string;
   email: string;
   phone: string;
   joiningDate: string;

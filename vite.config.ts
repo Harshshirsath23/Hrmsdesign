@@ -1,44 +1,64 @@
-import { defineConfig } from 'vite'
-import path from 'path'
+/// <reference types="vite/client" />
+
+import { defineConfig, loadEnv } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
+function fromConfigRoot(relativePath: string) {
+  const pathname = new URL(relativePath, import.meta.url).pathname
+  const decoded = decodeURIComponent(pathname)
+  return /^[A-Za-z]:/.test(decoded.slice(1)) ? decoded.slice(1) : decoded
+}
 
 function figmaAssetResolver() {
   return {
     name: 'figma-asset-resolver',
-    resolveId(id) {
+    resolveId(id: string) {
       if (id.startsWith('figma:asset/')) {
         const filename = id.replace('figma:asset/', '')
-        return path.resolve(__dirname, 'src/assets', filename)
+        return fromConfigRoot(`./src/assets/${filename}`)
       }
     },
   }
 }
 
-export default defineConfig({
-  plugins: [
-    figmaAssetResolver(),
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
-    react(),
-    tailwindcss(),
-  ],
-  resolve: {
-    alias: {
-      // Alias @ to the src directory
-      '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@pages': path.resolve(__dirname, './src/pages'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@store': path.resolve(__dirname, './src/store'),
-      '@types': path.resolve(__dirname, './src/types'),
-      '@api': path.resolve(__dirname, './src/api'),
-      '@utils': path.resolve(__dirname, './src/lib'),
-      '@assets': path.resolve(__dirname, './src/assets'),
-    },
-  },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const backendTarget = env.VITE_API_PROXY_TARGET || 'http://acme.localhost:8000'
+  const tenantHost = env.VITE_TENANT_HOST || 'acme.localhost:8000'
 
-  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
-  assetsInclude: ['**/*.svg', '**/*.csv'],
+  return {
+    plugins: [
+      figmaAssetResolver(),
+      react(),
+      tailwindcss(),
+    ],
+    resolve: {
+      alias: {
+        '@': fromConfigRoot('./src'),
+        '@components': fromConfigRoot('./src/components'),
+        '@pages': fromConfigRoot('./src/pages'),
+        '@hooks': fromConfigRoot('./src/hooks'),
+        '@store': fromConfigRoot('./src/store'),
+        '@types': fromConfigRoot('./src/types'),
+        '@api': fromConfigRoot('./src/api'),
+        '@utils': fromConfigRoot('./src/lib'),
+        '@assets': fromConfigRoot('./src/assets'),
+      },
+    },
+    server: {
+      proxy: {
+        '/api': {
+          target: backendTarget,
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('Host', tenantHost)
+            })
+          },
+        },
+      },
+    },
+    assetsInclude: ['**/*.svg', '**/*.csv'],
+  }
 })
