@@ -8,8 +8,8 @@ import {
   ProfileInfoField,
   EmptyStateCard,
   ConfirmationDialog,
+  validateEducationYear,
   validatePercentageCgpa,
-  validateDateOrder,
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
 
@@ -23,8 +23,7 @@ const emptyEdu = (): EducationEntry => ({
   specialization: "",
   institutionName: "",
   university: "",
-  fromDate: "",
-  toDate: "",
+  yearOfPassing: "",
   percentageCgpa: "",
   grade: "",
 });
@@ -57,20 +56,15 @@ export function EducationDetails({ employee, showAddButton = true }: Props) {
   };
 
   const handleSave = async () => {
-      for (let i = 0; i < draft.length; i++) {
+    for (let i = 0; i < draft.length; i++) {
       const row = draft[i];
       const hasAny = Object.values(row).some((v) => String(v).trim() !== "");
       if (!hasAny) continue;
-        // require both from/to dates and validate order
-        if (!String(row.fromDate).trim() || !String(row.toDate).trim()) {
-          setFormError(`Education ${i + 1}: From and To dates are required.`);
-          return;
-        }
-        const dateErr = validateDateOrder(row.fromDate, row.toDate);
-        if (dateErr) {
-          setFormError(`Education ${i + 1}: ${dateErr}`);
-          return;
-        }
+      const yErr = validateEducationYear(row.yearOfPassing);
+      if (yErr) {
+        setFormError(`Education ${i + 1}: ${yErr}`);
+        return;
+      }
       const pErr = validatePercentageCgpa(row.percentageCgpa);
       if (pErr) {
         setFormError(`Education ${i + 1}: ${pErr}`);
@@ -167,18 +161,10 @@ export function EducationDetails({ employee, showAddButton = true }: Props) {
                     options={boardOptions}
                   />
                   <ProfileInfoField
-                    label="From Date"
-                    value={row.fromDate}
+                    label="Year Of Passing"
+                    value={row.yearOfPassing}
                     editing={isEditing}
-                    onChange={(v) => updateRow(index, { fromDate: v })}
-                    type="date"
-                  />
-                  <ProfileInfoField
-                    label="To Date"
-                    value={row.toDate}
-                    editing={isEditing}
-                    onChange={(v) => updateRow(index, { toDate: v })}
-                    type="date"
+                    onChange={(v) => updateRow(index, { yearOfPassing: v })}
                   />
                   <ProfileInfoField
                     label="Percentage / CGPA"

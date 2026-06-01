@@ -1,11 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, CheckCircle, XCircle, Clock, Eye, AlertCircle, Calendar, Loader2 } from 'lucide-react';
-import {
-  useAttendanceRequests,
-  useAttendanceRequestStats,
-  useRequestApprovalMutations,
-} from '../../../modules/attendance/hooks';
-import { mapAttendanceRequestApi } from '../../../modules/attendance/mappers';
+import { Search, Filter, Download, CheckCircle, XCircle, Clock, Eye, AlertCircle, Calendar } from 'lucide-react';
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
@@ -163,18 +157,9 @@ export function AttendanceRequestsPage() {
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<AttendanceRequest | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const requestsQuery = useAttendanceRequests(search || undefined);
-  const statsQuery = useAttendanceRequestStats();
-  const { approve, reject } = useRequestApprovalMutations();
-
-  const allRequests = useMemo(
-    () => (requestsQuery.data ?? []).map((r) => mapAttendanceRequestApi(r)),
-    [requestsQuery.data],
-  );
-
   // Filter Data
   const filteredRequests = useMemo(() => {
-    return allRequests.filter(req => {
+    return MOCK_REQUESTS.filter(req => {
       const matchSearch = req.employeeName.toLowerCase().includes(search.toLowerCase()) || req.id.toLowerCase().includes(search.toLowerCase());
       const matchType = filterType === 'All' || req.requestType === filterType;
       const matchDept = filterDept === 'All' || req.department === filterDept;
@@ -183,21 +168,13 @@ export function AttendanceRequestsPage() {
       
       return matchSearch && matchType && matchDept && matchStatus;
     });
-  }, [search, filterType, filterDept, filterStatus, allRequests]);
+  }, [search, filterType, filterDept, filterStatus]);
 
+  // Summary Stats
   const stats = useMemo(() => {
-    const apiStats = statsQuery.data;
-    if (apiStats) {
-      return {
-        pending: apiStats.pending ?? 0,
-        managerApproved: apiStats.manager_approved ?? apiStats.managerApproved ?? 0,
-        pendingAdmin: apiStats.pending_admin ?? apiStats.pendingAdmin ?? 0,
-        approved: apiStats.approved ?? 0,
-        rejected: apiStats.rejected ?? 0,
-      };
-    }
     let pending = 0, managerApproved = 0, pendingAdmin = 0, approved = 0, rejected = 0;
-    allRequests.forEach((req) => {
+    
+    MOCK_REQUESTS.forEach(req => {
       const final = getFinalStatus(req.managerStatus, req.adminStatus);
       if (req.managerStatus === 'Pending' && req.adminStatus === 'Pending') pending++;
       if (req.managerStatus === 'Approved') managerApproved++;
@@ -205,8 +182,9 @@ export function AttendanceRequestsPage() {
       if (final === 'Fully Approved') approved++;
       if (final === 'Rejected') rejected++;
     });
+
     return { pending, managerApproved, pendingAdmin, approved, rejected };
-  }, [statsQuery.data, allRequests]);
+  }, []);
 
   // Handlers
   const toggleSelection = (id: string) => {
@@ -231,121 +209,89 @@ export function AttendanceRequestsPage() {
   };
 
   const handleAction = (id: string, action: 'Approve' | 'Reject') => {
-    const numericId = id.replace(/^REQ-0*/, '');
-    const mutation = action === 'Approve' ? approve : reject;
-    mutation.mutate(
-      { id: numericId },
-      {
-        onSuccess: () => {
-          setIsDrawerOpen(false);
-          requestsQuery.refetch();
-          statsQuery.refetch();
-        },
-      },
-    );
+    console.log(`${action} request ${id}`);
+    setIsDrawerOpen(false);
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <div className="p-4 space-y-4 max-w-[1600px] mx-auto animate-in fade-in duration-500">
       
-      {/* Header & Stats */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Attendance Requests</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage and approve employee attendance corrections.</p>
-        </div>
-      </div>
+      {/* Compact Header — title + stats + filters inline */}
+      <div className="bg-card border border-border rounded-xl px-4 py-3 shadow-sm space-y-3">
+        {/* Row 1: Title + Filters */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Attendance Requests</h1>
+            <p className="text-muted-foreground text-xs hidden md:block">Manage and approve attendance corrections.</p>
+          </div>
 
-      {requestsQuery.isLoading && (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Loading requests…
-        </div>
-      )}
-      {requestsQuery.error && (
-        <p className="text-sm text-destructive">{(requestsQuery.error as Error).message}</p>
-      )}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-40">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input 
+                value={search} 
+                onChange={e => setSearch(e.target.value)} 
+                placeholder="Name or ID..." 
+                className="pl-8 h-8 text-xs"
+              />
+            </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatCard title="Pending Requests" value={stats.pending} icon={Clock} color="text-orange-500" bg="bg-orange-500/10" />
-        <StatCard title="Approved by Manager" value={stats.managerApproved} icon={CheckCircle} color="text-emerald-500" bg="bg-emerald-500/10" />
-        <StatCard title="Pending Admin" value={stats.pendingAdmin} icon={AlertCircle} color="text-blue-500" bg="bg-blue-500/10" />
-        <StatCard title="Fully Approved" value={stats.approved} icon={CheckCircle} color="text-emerald-500" bg="bg-emerald-500/10" />
-        <StatCard title="Rejected" value={stats.rejected} icon={XCircle} color="text-red-500" bg="bg-red-500/10" />
-      </div>
+            <select 
+              value={filterType} 
+              onChange={e => setFilterType(e.target.value)}
+              className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="All">All Types</option>
+              <option value="Attendance Regularization">Regularization</option>
+              <option value="Late Login Justification">Late Login</option>
+              <option value="Missing Punch Request">Missing Punch</option>
+              <option value="Work From Home Attendance Adjustment">WFH Adj.</option>
+              <option value="Half-Day Attendance Correction">Half-Day</option>
+            </select>
 
-      {/* Filters */}
-      <div className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-wrap gap-4 items-end">
-        <div className="w-full md:w-64">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Search Employee</label>
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              placeholder="Name or ID..." 
-              className="pl-9 h-9"
-            />
+            <select 
+              value={filterDept} 
+              onChange={e => setFilterDept(e.target.value)}
+              className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="All">All Depts</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="HR">HR</option>
+            </select>
+
+            <select 
+              value={filterStatus} 
+              onChange={e => setFilterStatus(e.target.value)}
+              className="h-8 rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Pending Admin Approval">Pending Admin</option>
+              <option value="Fully Approved">Fully Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+
+            <Button variant="outline" className="h-8 text-xs" size="sm" onClick={() => { setSearch(''); setFilterType('All'); setFilterDept('All'); setFilterStatus('All'); }}>
+              Clear
+            </Button>
+            <Button variant="outline" className="h-8 text-xs gap-1.5" size="sm">
+              <Download className="w-3.5 h-3.5" /> Export
+            </Button>
           </div>
         </div>
-        
-        <div className="w-full md:w-48">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Request Type</label>
-          <select 
-            value={filterType} 
-            onChange={e => setFilterType(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <option value="All">All Types</option>
-            <option value="Attendance Regularization">Attendance Regularization</option>
-            <option value="Late Login Justification">Late Login Justification</option>
-            <option value="Missing Punch Request">Missing Punch Request</option>
-            <option value="Work From Home Attendance Adjustment">WFH Adjustment</option>
-            <option value="Half-Day Attendance Correction">Half-Day Correction</option>
-          </select>
-        </div>
 
-        <div className="w-full md:w-40">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Department</label>
-          <select 
-            value={filterDept} 
-            onChange={e => setFilterDept(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <option value="All">All Departments</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Sales">Sales</option>
-            <option value="HR">HR</option>
-          </select>
-        </div>
-
-        <div className="w-full md:w-40">
-          <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
-          <select 
-            value={filterStatus} 
-            onChange={e => setFilterStatus(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Pending Admin Approval">Pending Admin</option>
-            <option value="Fully Approved">Fully Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </div>
-
-        <div className="flex-1" />
-
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setSearch(''); setFilterType('All'); setFilterDept('All'); setFilterStatus('All'); }}>
-            Clear Filters
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="w-4 h-4" /> Export
-          </Button>
+        {/* Row 2: Stats Inline */}
+        <div className="grid grid-cols-5 gap-2 border-t border-border pt-3">
+          <StatCard title="Pending" value={stats.pending} icon={Clock} color="text-orange-500" bg="bg-orange-500/10" />
+          <StatCard title="Mgr Approved" value={stats.managerApproved} icon={CheckCircle} color="text-emerald-500" bg="bg-emerald-500/10" />
+          <StatCard title="Pending Admin" value={stats.pendingAdmin} icon={AlertCircle} color="text-blue-500" bg="bg-blue-500/10" />
+          <StatCard title="Approved" value={stats.approved} icon={CheckCircle} color="text-emerald-500" bg="bg-emerald-500/10" />
+          <StatCard title="Rejected" value={stats.rejected} icon={XCircle} color="text-red-500" bg="bg-red-500/10" />
         </div>
       </div>
+
 
       {/* Bulk Actions */}
       {selectedRequests.size > 0 && (
@@ -361,10 +307,10 @@ export function AttendanceRequestsPage() {
       {/* Table Area */}
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-muted-foreground uppercase bg-secondary/50 border-b border-border">
+          <table className="w-full text-xs text-left">
+            <thead className="text-[10px] font-bold text-muted-foreground uppercase bg-secondary/50 border-b border-border tracking-wider">
               <tr>
-                <th className="px-4 py-3 w-10">
+                <th className="px-3 py-2 w-10">
                   <input 
                     type="checkbox" 
                     className="rounded border-input"
@@ -372,18 +318,18 @@ export function AttendanceRequestsPage() {
                     onChange={selectAllValid}
                   />
                 </th>
-                <th className="px-4 py-3 font-medium">Request ID</th>
-                <th className="px-4 py-3 font-medium">Employee</th>
-                <th className="px-4 py-3 font-medium">Type & Date</th>
-                <th className="px-4 py-3 font-medium">Manager Status</th>
-                <th className="px-4 py-3 font-medium">Final Status</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                <th className="px-3 py-2">Request ID</th>
+                <th className="px-3 py-2">Employee</th>
+                <th className="px-3 py-2">Type & Date</th>
+                <th className="px-3 py-2">Manager Status</th>
+                <th className="px-3 py-2">Final Status</th>
+                <th className="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Search className="w-8 h-8 opacity-20" />
                       <p>No attendance requests found.</p>
@@ -397,7 +343,7 @@ export function AttendanceRequestsPage() {
                   
                   return (
                     <tr key={req.id} className="border-b border-border hover:bg-secondary/20 transition-colors">
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <input 
                           type="checkbox" 
                           className="rounded border-input disabled:opacity-50"
@@ -406,40 +352,40 @@ export function AttendanceRequestsPage() {
                           onChange={() => toggleSelection(req.id)}
                         />
                       </td>
-                      <td className="px-4 py-3 font-medium text-foreground">{req.id}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 font-medium text-foreground">{req.id}</td>
+                      <td className="px-3 py-2">
                         <div className="flex flex-col">
                           <span className="font-medium text-foreground">{req.employeeName}</span>
-                          <span className="text-xs text-muted-foreground">{req.employeeId} • {req.department}</span>
+                          <span className="text-[10px] text-muted-foreground">{req.employeeId} • {req.department}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <div className="flex flex-col">
                           <span className="text-foreground">{req.requestType}</span>
-                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1 mt-0.5">
                             <Calendar className="w-3 h-3" /> {req.attendanceDate}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <Badge variant={req.managerStatus === 'Approved' ? 'success' : req.managerStatus === 'Rejected' ? 'danger' : 'warning'}>
                           {req.managerStatus}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <Badge variant={getStatusColor(finalStatus) as any}>
                           {finalStatus}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end items-center gap-2">
-                          <Button variant="ghost" size="sm" iconOnly onClick={() => openDetails(req)}>
-                            <Eye className="w-4 h-4" />
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex justify-end items-center gap-1.5">
+                          <Button variant="ghost" size="sm" className="h-7 w-7" iconOnly onClick={() => openDetails(req)}>
+                            <Eye className="w-3.5 h-3.5" />
                           </Button>
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 disabled:opacity-50"
+                            className="h-7 text-[10px] text-emerald-600 border-emerald-200 hover:bg-emerald-50 disabled:opacity-50"
                             disabled={req.managerStatus !== 'Approved' || req.adminStatus !== 'Pending'}
                             onClick={() => handleAction(req.id, 'Approve')}
                           >
@@ -448,7 +394,7 @@ export function AttendanceRequestsPage() {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50"
+                            className="h-7 text-[10px] text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50"
                             disabled={req.managerStatus !== 'Approved' || req.adminStatus !== 'Pending'}
                             onClick={() => handleAction(req.id, 'Reject')}
                           >
@@ -625,13 +571,13 @@ export function AttendanceRequestsPage() {
 // Simple Stat Card component
 function StatCard({ title, value, icon: Icon, color, bg }: { title: string, value: number, icon: any, color: string, bg: string }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 shadow-sm flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-colors">
-      <div className={cn("w-12 h-12 rounded-full flex items-center justify-center shrink-0", bg, color)}>
-        <Icon className="w-6 h-6" />
+    <div className="bg-card border border-border rounded-xl p-3 shadow-sm flex items-center gap-3 cursor-pointer hover:border-primary/50 transition-colors">
+      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0", bg, color)}>
+        <Icon className="w-5 h-5" />
       </div>
       <div>
-        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">{title}</p>
-        <p className="text-2xl font-bold text-foreground">{value}</p>
+        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">{title}</p>
+        <p className="text-xl font-bold text-foreground">{value}</p>
       </div>
     </div>
   );

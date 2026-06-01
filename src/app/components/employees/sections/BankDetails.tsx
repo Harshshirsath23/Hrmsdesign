@@ -154,44 +154,46 @@ function RecordCard({
           {title} #{index + 1}
         </h3>
         {!readOnly && (
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <button
-                type="button"
-                onClick={onSave}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
-              >
-                <Save className="w-3.5 h-3.5" /> Save
-              </button>
-              <button
-                type="button"
-                onClick={onCancel}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-              >
-                <X className="w-3.5 h-3.5" /> Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={onEdit}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Edit
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-destructive/40 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </button>
-            </>
-          )}
-        </div>
-        )}
+  <div className="flex items-center gap-2">
+    {isEditing ? (
+      <>
+        <button
+          type="button"
+          onClick={onSave}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+        >
+          <Save className="w-3.5 h-3.5" /> Save
+        </button>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+        >
+          <X className="w-3.5 h-3.5" /> Cancel
+        </button>
+      </>
+    ) : (
+      <>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" /> Edit
+        </button>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-destructive/40 text-destructive text-xs font-bold hover:bg-destructive/10 transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" /> Delete
+        </button>
+      </>
+    )}
+  </div>
+)}
       </div>
       {children}
     </div>
@@ -204,7 +206,8 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
   const taxRegimeOptions = useMasterOptions("TaxRegime");
   const pfSchemeOptions = useMasterOptions("PfScheme");
   const esiSchemeOptions = useMasterOptions("EsiScheme");
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const [sectionEditing, setSectionEditing] = useState(false);
 
   // ── Statutory (single record) ──────────────────────────────────────────────
   const [statutoryEditing, setStatutoryEditing] = useState(false);
@@ -223,7 +226,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
   // ── Bank accounts ──────────────────────────────────────────────────────────
   const bankBaseline = useMemo(() => employee.bankAccounts || [], [employee.bankAccounts]);
   const [bankRecords, setBankRecords] = useState<BankAccount[]>(bankBaseline);
-  const [bankEditingId, setBankEditingId] = useState<string | null>(null);
+  const [bankEditingId, setBankEditingId] = useState<string | 'all' | null>(null);
   const [bankDeleteId, setBankDeleteId] = useState<string | null>(null);
 
   useEffect(() => { setBankRecords(bankBaseline); }, [bankBaseline]);
@@ -235,6 +238,22 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
     const rec = emptyBank();
     setBankRecords((prev) => [...prev, rec]);
     setBankEditingId(rec.id);
+  };
+
+  const startSectionEdit = () => {
+    setStatutoryData(employee);
+    setBankRecords(bankBaseline.map((r) => ({ ...r })));
+    setSectionEditing(true);
+    setStatutoryEditing(true);
+    setBankEditingId('all');
+  };
+
+  const startSectionEditAndAdd = () => {
+    setStatutoryData(employee);
+    setBankRecords([...bankBaseline.map((r) => ({ ...r })), emptyBank()]);
+    setSectionEditing(true);
+    setStatutoryEditing(true);
+    setBankEditingId('all');
   };
 
   const handleEditBank = (id: string) => {
@@ -262,6 +281,24 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
     setBankDeleteId(null);
   };
 
+  const handleSaveSection = async () => {
+    const updated = { ...statutoryData, bankAccounts: bankRecords } as Employee;
+    const ok = await handleAdminSave("Bank / PF / ESI Details", employee, updated);
+    if (ok) {
+      setSectionEditing(false);
+      setStatutoryEditing(false);
+      setBankEditingId(null);
+    }
+  };
+
+  const handleCancelSection = () => {
+    setStatutoryData(employee);
+    setBankRecords(bankBaseline.map((r) => ({ ...r })));
+    setSectionEditing(false);
+    setStatutoryEditing(false);
+    setBankEditingId(null);
+  };
+
   // PF/ESI simplified UI uses `statutoryData` (single record) instead of separate lists
 
   const bankSelectOptionsFor = (current: string) =>
@@ -279,7 +316,28 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
       </div>
 
       {/* ── Bank Accounts ────────────────────────────────────────────────── */}
-      <div className="space-y-1">
+      <EditableSectionCard
+        title="Bank / PF / ESI Details"
+        icon={Building2}
+        sectionId="bank-pf-esi-details"
+        canEmployeeEdit={employee.editableSections?.includes("bank-pf-esi-details")}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "bank-pf-esi-details", v)}
+        requestStatus={employee.editRequestStatus}
+        isEditing={sectionEditing}
+        onEdit={startSectionEdit}
+        onSave={handleSaveSection}
+        onCancel={handleCancelSection}
+        headerExtra={!sectionEditing && !disableEdit ? (
+          <button
+            type="button"
+            onClick={() => (sectionEditing ? handleAddBank() : startSectionEditAndAdd())}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
+          >
+            <Plus size={12} /> Add Bank
+          </button>
+        ) : null}
+      >
+        <div className="space-y-1">
         <div className="flex items-center justify-between py-1">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-muted-foreground" />
@@ -288,15 +346,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               {bankRecords.length}
             </span>
           </h3>
-          {!disableEdit && (
-            <button
-              type="button"
-              onClick={handleAddBank}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
-            >
-              <Plus size={12} /> Add Bank
-            </button>
-          )}
+          {!disableEdit && null}
         </div>
 
         {bankRecords.length === 0 ? (
@@ -307,7 +357,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         ) : (
           <div className="space-y-4">
             {bankRecords.map((rec, index) => {
-              const isEditing = bankEditingId === rec.id;
+              const isEditing = bankEditingId === 'all' || bankEditingId === rec.id;
               return (
                 <RecordCard
                   key={rec.id}
@@ -393,6 +443,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
           </div>
         )}
       </div>
+      </EditableSectionCard>
 
       {/* ── Statutory Documents (single record) ─────────────────────────── */}
       <EditableSectionCard
@@ -418,7 +469,6 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
           <BankInfoRow label="PAN Number" value={statutoryData.panNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, panNumber: v }))} />
           <BankInfoRow label="Aadhaar Number" value={statutoryData.aadhaarNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, aadhaarNumber: v }))} />
-          <BankInfoRow label="UAN Number" value={statutoryData.uanNumber || ""} mono isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, uanNumber: v }))} />
           <BankInfoRow label="Tax Regime" value={statutoryData.taxRegime || ""} isEditing={statutoryEditing} onChange={(v) => setStatutoryData((p) => ({ ...p, taxRegime: v }))} options={taxRegimeOptions} />
         </div>
 
@@ -438,14 +488,30 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               </div>
             </div>
             {statutoryData.isPfCovered ? (
-              <input
-                type="text"
-                value={statutoryData.pfNumber || ''}
-                disabled={!statutoryEditing}
-                onChange={(e) => setStatutoryData((p) => ({ ...p, pfNumber: e.target.value }))}
-                placeholder="PF Number"
-                className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2 py-1 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">PF Number</span>
+                  <input
+                    type="text"
+                    value={statutoryData.pfNumber || ''}
+                    disabled={!statutoryEditing}
+                    onChange={(e) => setStatutoryData((p) => ({ ...p, pfNumber: e.target.value }))}
+                    placeholder="PF Number"
+                    className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">UAN Number</span>
+                  <input
+                    type="text"
+                    value={statutoryData.uanNumber || ''}
+                    disabled={!statutoryEditing}
+                    onChange={(e) => setStatutoryData((p) => ({ ...p, uanNumber: e.target.value }))}
+                    placeholder="UAN Number"
+                    className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                  />
+                </div>
+              </div>
             ) : null}
           </div>
 
@@ -464,18 +530,21 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               </div>
             </div>
             {statutoryData.isEsiCovered ? (
-              <input
-                type="text"
-                value={statutoryData.esiNumber || ''}
-                disabled={!statutoryEditing}
-                onChange={(e) => setStatutoryData((p) => ({ ...p, esiNumber: e.target.value }))}
-                placeholder="ESI Number"
-                className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2 py-1 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">ESI Number</span>
+                <input
+                  type="text"
+                  value={statutoryData.esiNumber || ''}
+                  disabled={!statutoryEditing}
+                  onChange={(e) => setStatutoryData((p) => ({ ...p, esiNumber: e.target.value }))}
+                  placeholder="ESI Number"
+                  className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                />
+              </div>
             ) : null}
           </div>
 
-          <div className="flex items-center gap-4 py-2 last:border-0">
+          <div className="flex items-center gap-4 py-2 border-b border-border">
             <div className="flex items-center gap-3 w-96 shrink-0">
               <input
                 type="checkbox"
@@ -490,21 +559,37 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               </div>
             </div>
             {statutoryData.isLwfCovered ? (
-              <input
-                type="text"
-                value={statutoryData.linNumber || ''}
-                disabled={!statutoryEditing}
-                onChange={(e) => setStatutoryData((p) => ({ ...p, linNumber: e.target.value }))}
-                placeholder="LIN Number"
-                className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2 py-1 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">LIN Number</span>
+                <input
+                  type="text"
+                  value={statutoryData.linNumber || ''}
+                  disabled={!statutoryEditing}
+                  onChange={(e) => setStatutoryData((p) => ({ ...p, linNumber: e.target.value }))}
+                  placeholder="LIN Number"
+                  className="text-sm font-mono font-semibold bg-secondary/50 border border-border rounded-md px-2.5 py-1.5 w-56 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-80"
+                />
+              </div>
             ) : null}
+          </div>
+
+          <div className="flex items-center gap-4 py-2 last:border-0">
+            <div className="flex items-center gap-3 w-96 shrink-0">
+              <input
+                type="checkbox"
+                checked={Boolean(statutoryData.isEarlierMemberOfPensionOnHigherWages)}
+                disabled={!statutoryEditing}
+                onChange={(e) => setStatutoryData((p) => ({ ...p, isEarlierMemberOfPensionOnHigherWages: e.target.checked }))}
+                className="h-4 w-4 rounded border-border text-primary-600"
+              />
+              <div>
+                <div className="text-sm font-medium">Earlier Member of Pension on Higher Wages?</div>
+                <div className="text-xs text-muted-foreground">Check if applicable for this employee</div>
+              </div>
+            </div>
           </div>
         </div>
       </EditableSectionCard>
-
-      {/* PF/ESI/LWF simplified coverage — replaced multi-record management */}
-
       {/* ── Confirmation dialogs ──────────────────────────────────────────── */}
       <ConfirmationDialog
         open={bankDeleteId !== null}

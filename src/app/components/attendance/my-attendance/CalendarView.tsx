@@ -40,66 +40,28 @@ export function CalendarView({
     end: endDate,
   });
 
-  const getDayBackground = (
-    record?: DailyAttendance,
-    isFuture?: boolean
-  ) => {
-    // NO COLORS FOR FUTURE DATES
-    if (!record || isFuture)
-      return "bg-[#F8FAFC] dark:bg-[#0F172A] border-black/10 dark:border-white/10";
-
-    // PRESENT -> GREEN
-    if (record.status === "Present")
-      return "bg-green-100 dark:bg-green-950/40 border-green-300 dark:border-green-800";
-
-    // ABSENT -> RED
-    if (record.status === "Absent")
-      return "bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-800";
-
-    // HALF DAY -> ORANGE
-    if (record.status === "Half Day")
-      return "bg-orange-100 dark:bg-orange-950/40 border-orange-300 dark:border-orange-800";
-
-    // HOLIDAY -> BLUE
-    if (record.status === "Holiday")
-      return "bg-blue-100 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800";
-
-    // WEEK OFF -> GRAY
-    if (record.status === "Week Off")
-      return "bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700";
-
-    return "bg-[#F8FAFC] dark:bg-[#0F172A] border-black/10 dark:border-white/10";
-  };
-
-  const getStatusDot = (
-    record?: DailyAttendance,
-    isFuture?: boolean
-  ) => {
-    if (!record || isFuture) return "";
-
-    if (record.status === "Present")
-      return "bg-green-500";
-
-    if (record.status === "Absent")
-      return "bg-red-500";
-
-    if (record.status === "Half Day")
-      return "bg-orange-500";
-
-    if (record.status === "Holiday")
-      return "bg-blue-500";
-
-    if (record.status === "Week Off")
-      return "bg-gray-400";
-
-    return "bg-slate-400";
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case "Present":
+        return "#10B981";
+      case "Absent":
+        return "#EF4444";
+      case "Half Day":
+        return "#F97316";
+      case "Holiday":
+        return "#3B82F6";
+      case "Week Off":
+        return "#9CA3AF";
+      default:
+        return "#9CA3AF";
+    }
   };
 
   return (
-    <div className="w-full rounded-[28px] overflow-hidden border border-white/10 bg-white/60 dark:bg-[#111827]/70 backdrop-blur-2xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)] transition-all duration-300">
+    <div className="w-full rounded-[24px] overflow-hidden border border-[rgba(15,23,42,0.06)] dark:border-[rgba(255,255,255,0.06)] bg-white/72 dark:bg-[#0F172A]/72 backdrop-blur-md shadow-sm transition-all duration-300">
 
       {/* Week Header */}
-      <div className="grid grid-cols-7 border-b border-black/10 dark:border-white/10 px-4 py-3">
+      <div className="grid grid-cols-7 border-b border-[rgba(15,23,42,0.06)] dark:border-[rgba(255,255,255,0.06)] px-4 py-3">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <div
             key={day}
@@ -110,46 +72,8 @@ export function CalendarView({
         ))}
       </div>
 
-      {/* Legends
-      <div className="flex items-center gap-4 px-4 py-3 border-b border-black/10 dark:border-white/10 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-xs text-slate-600 dark:text-slate-300">
-            Present
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-red-500" />
-          <span className="text-xs text-slate-600 dark:text-slate-300">
-            Absent
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-orange-500" />
-          <span className="text-xs text-slate-600 dark:text-slate-300">
-            Half Day
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-blue-500" />
-          <span className="text-xs text-slate-600 dark:text-slate-300">
-            Holiday
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-gray-400" />
-          <span className="text-xs text-slate-600 dark:text-slate-300">
-            Week Off
-          </span>
-        </div>
-      </div> */}
-
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2 p-2 bg-black/5 dark:bg-white/5">
+      <div className="grid grid-cols-7 gap-1.5 p-1.5 bg-black/[0.02] dark:bg-white/[0.02]">
         {calendarDays.map((day) => {
           const dateStr = format(day, "yyyy-MM-dd");
 
@@ -180,182 +104,149 @@ export function CalendarView({
             <motion.button
               key={dateStr}
               type="button"
-              disabled={!record || isFuture}
+              disabled={!isCurrentMonth}
               initial={{ opacity: 0 }}
               animate={{
                 opacity: isMatchingSearch ? 1 : 0.35,
               }}
               whileHover={{
-                scale: isCurrentMonth ? 1.015 : 1,
+                scale: isCurrentMonth ? 1.025 : 1,
+                y: isCurrentMonth ? -1.5 : 0,
               }}
               transition={{
-                duration: 0.22,
+                duration: 0.2,
                 ease: "easeOut",
               }}
               onClick={() => {
-                if (!record || isFuture) return;
-
                 setSelectedDate(dateStr);
 
-                if (isRestrictedStatus) return;
+                if (isFuture) {
+                  onSwipeDetails?.({
+                    id: `future-${dateStr}`,
+                    employeeId: "",
+                    employeeName: "",
+                    department: "",
+                    designation: "",
+                    team: "",
+                    date: dateStr,
+                    status: "Present",
+                    workMode: "WFO",
+                    shiftName: "General Shift",
+                    firstIn: "",
+                    lastOut: "",
+                    workHours: 0,
+                    lateMins: 0,
+                    earlyExitMins: 0,
+                    lop: 0,
+                    otMins: 0,
+                    exception: false,
+                    approvalPending: false,
+                    geoViolation: false,
+                    locked: false,
+                    isLate: false,
+                    isAbsent: false,
+                    isHalfDay: false,
+                  });
+                  return;
+                }
 
+                if (!record) return;
                 onSwipeDetails?.(record);
               }}
               className={`
                 relative
-                h-[165px]
+                h-[94px]
+                w-full
                 overflow-hidden
                 rounded-2xl
                 border
-                p-3
+                p-2.5
+                flex
+                flex-col
+                justify-between
                 text-left
                 transition-all
                 duration-300
 
-                ${getDayBackground(record, isFuture)}
+                ${
+                  isTodayDate
+                    ? "bg-[#6366F1]/8 dark:bg-[#6366F1]/15 border-[#6366F1]/40 dark:border-[#6366F1]/50 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                    : isFuture || !record
+                    ? "bg-white/40 dark:bg-[#0F172A]/40 border-[rgba(15,23,42,0.04)] dark:border-[rgba(255,255,255,0.04)]"
+                    : record.status === "Present"
+                    ? "bg-[#10B981]/5 dark:bg-[#10B981]/10 border-[#10B981]/10 dark:border-[#10B981]/20"
+                    : record.status === "Absent"
+                    ? "bg-[#EF4444]/5 dark:bg-[#EF4444]/10 border-[#EF4444]/10 dark:border-[#EF4444]/20"
+                    : record.status === "Half Day"
+                    ? "bg-[#F97316]/5 dark:bg-[#F97316]/10 border-[#F97316]/10 dark:border-[#F97316]/20"
+                    : record.status === "Holiday"
+                    ? "bg-[#3B82F6]/5 dark:bg-[#3B82F6]/10 border-[#3B82F6]/10 dark:border-[#3B82F6]/20"
+                    : record.status === "Week Off"
+                    ? "bg-[#9CA3AF]/5 dark:bg-[#9CA3AF]/10 border-[#9CA3AF]/10 dark:border-[#9CA3AF]/20"
+                    : "bg-white/72 dark:bg-[#0F172A]/72 border-[rgba(15,23,42,0.06)] dark:border-[rgba(255,255,255,0.06)]"
+                }
 
                 ${
                   !isCurrentMonth
-                    ? "opacity-30"
+                    ? "opacity-25"
                     : ""
                 }
 
                 ${
                   isSelected
-                    ? "ring-2 ring-indigo-500 z-10"
+                    ? "ring-2 ring-[#6366F1]/50 z-10"
                     : ""
                 }
               `}
             >
-              {/* Today Highlight */}
+              {/* Today Highlight Subtle Glow Overlay */}
               {isTodayDate && (
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/12 to-violet-500/12 dark:from-indigo-500/20 dark:to-violet-500/20 pointer-events-none rounded-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#6366F1]/10 to-violet-500/10 dark:from-[#6366F1]/15 dark:to-violet-500/15 pointer-events-none rounded-2xl" />
               )}
 
-              {/* Top */}
-              <div className="relative z-10 flex items-start justify-between">
-                {!isFuture && record && (
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${getStatusDot(
-                      record,
-                      isFuture
-                    )}`}
-                  />
-                )}
-
+              {/* Top Row: Date & Status Dot */}
+              <div className="relative z-10 flex items-center justify-between w-full">
                 <div
                   className={`
                     flex items-center justify-center
-                    w-8 h-8
+                    w-6 h-6
                     rounded-full
-                    text-sm
-                    font-semibold
+                    text-xs
+                    font-bold
                     transition-all
 
                     ${
                       isTodayDate
-                        ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                        : "text-slate-700 dark:text-slate-200"
+                        ? "bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/30"
+                        : "text-[#0F172A] dark:text-[#F8FAFC]"
                     }
                   `}
                 >
                   {format(day, "d")}
                 </div>
+
+                {!isFuture && record && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: getStatusColor(record.status) }}
+                  />
+                )}
               </div>
 
-              {/* Body */}
-              {isCurrentMonth && (
-                <div className="relative z-10 mt-4 flex flex-col gap-3">
+              {/* Bottom Row: Status Text & Regularization Indicator */}
+              <div className="relative z-10 flex items-center justify-between w-full mt-auto">
+                <span
+                  className="text-[11px] font-bold tracking-wide uppercase"
+                  style={{ color: isFuture ? "#9CA3AF" : getStatusColor(record?.status) }}
+                >
+                  {isFuture ? "09:00 - 18:00" : record ? record.status : ""}
+                </span>
 
-                  {/* Future Dates */}
-                  {isFuture ? (
-                    <>
-                      {/* Roster */}
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-slate-400">
-                          Roster
-                        </p>
-
-                        <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-white">
-                          General Shift
-                        </p>
-                      </div>
-
-                      {/* Roster Timing */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wide text-slate-400">
-                            Start
-                          </p>
-
-                          <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-                            09:00
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wide text-slate-400">
-                            End
-                          </p>
-
-                          <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-                            18:00
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Shift */}
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-slate-400">
-                          Shift
-                        </p>
-
-                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                          09:00 - 18:00
-                        </p>
-                      </div>
-                    </>
-                  ) : record ? (
-                    <>
-                      {/* ONLY STATUS FOR WEEK OFF / HOLIDAY / ABSENT */}
-                      {isRestrictedStatus ? (
-                        <div className="mt-6">
-                          <p className="text-[10px] uppercase tracking-wide text-slate-400">
-                            Status
-                          </p>
-
-                          <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-white">
-                            {record.status}
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Footer */}
-                          <div className="mt-auto flex items-center justify-between pt-2">
-                            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              {record.workHours > 0
-                                ? `${record.workHours.toFixed(
-                                    1
-                                  )}h`
-                                : "--"}
-                            </div>
-
-                            {(record.isLate ||
-                              record.earlyExitMins > 0 ||
-                              record.approvalPending) && (
-                              <div className="flex items-center gap-1">
-                                {record.approvalPending && (
-                                  <span className="w-2 h-2 rounded-full bg-blue-500" />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </>
-                  ) : null}
-                </div>
-              )}
+                {/* Regularization pending indicator: ONLY small yellow dot */}
+                {!isFuture && record?.approvalPending && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" title="Regularization Pending" />
+                )}
+              </div>
             </motion.button>
           );
         })}

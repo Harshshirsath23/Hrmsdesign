@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   Users, UserCheck, CalendarOff, ClipboardCheck,
   Cake, CalendarDays, CheckSquare, ChevronRight,
-  UserPlus, ShieldCheck, Hourglass,
+  UserPlus, ShieldCheck, Hourglass, TrendingUp,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -12,31 +12,32 @@ import {
 import { employees } from "../../components/employees/mockData";
 import { leaveRequests, attendanceRecords } from "../../components/employees/mockAdminData";
 
-/* ── Palette (monochrome) ──────────────────────────────────── */
-const P = {
-  darkest: "#496091", // charcoal
-  dark: "#374151",
-  mid: "#6366F1",
-  muted: "#8B5CF6",
-  light: "#C4B5FD",
-  lighter: "#8677cc",
-  lightest: "#FAFAFF"
+/* Enterprise chart palette */
+const CHART = {
+  primary: "#6366F1",
+  secondary: "#8B5CF6",
+  accent: "#A855F7",
+  success: "#10B981",
+  warning: "#F59E0B",
+  danger: "#EF4444",
+  info: "#3B82F6",
+  muted: "#94A3B8",
 };
 
 /* ── Derived stats ─────────────────────────────────────────── */
 const totalEmployees = employees.length;
-const todayRecords   = attendanceRecords.filter((r) => r.date === "2026-05-05");
-const presentToday   = todayRecords.filter((r) => r.status === "Present").length;
-const onLeaveToday   = todayRecords.filter((r) => r.status === "On Leave").length;
-const halfDayToday   = todayRecords.filter((r) => r.status === "Half Day").length;
-const notLoggedIn    = todayRecords.filter((r) => r.status === "Absent").length;
-const pendingCount   = leaveRequests.filter((l) => l.status === "Pending").length;
+const todayRecords = attendanceRecords.filter((r) => r.date === "2026-05-05");
+const presentToday = todayRecords.filter((r) => r.status === "Present").length;
+const onLeaveToday = todayRecords.filter((r) => r.status === "On Leave").length;
+const halfDayToday = todayRecords.filter((r) => r.status === "Half Day").length;
+const notLoggedIn = todayRecords.filter((r) => r.status === "Absent").length;
+const pendingCount = leaveRequests.filter((l) => l.status === "Pending").length;
 
 const donutData = [
-  { name: "Present",       value: presentToday, color: P.darkest },
-  { name: "On Leave",      value: onLeaveToday, color: P.mid     },
-  { name: "Not Logged In", value: notLoggedIn,  color: P.lighter },
-  { name: "Half Day",      value: halfDayToday, color: P.muted   },
+  { name: "Present", value: presentToday, color: CHART.success },
+  { name: "On Leave", value: onLeaveToday, color: CHART.secondary },
+  { name: "Not Logged In", value: notLoggedIn, color: CHART.muted },
+  { name: "Half Day", value: halfDayToday, color: CHART.info },
 ];
 
 const deptData = Object.entries(
@@ -50,13 +51,13 @@ const deptData = Object.entries(
 }));
 
 const BAR_COLORS = [
-  P.darkest,
-  P.dark,
-  P.mid,
-  P.muted,
-  P.light,
-  P.lighter,
-  "#DEE2E6"
+  CHART.primary,
+  CHART.secondary,
+  CHART.accent,
+  CHART.info,
+  CHART.primary,
+  CHART.secondary,
+  CHART.accent,
 ];
 
 const EVENTS = {
@@ -184,14 +185,33 @@ const LIFECYCLE = [
 ];
 
 type EventTab = "all" | "meetings" | "birthdays" | "holidays";
+type KpiTone = "purple" | "green" | "orange" | "red" | "gray";
 
+const KPI_ICON_TONES: Record<KpiTone, { background: string; boxShadow: string }> = {
+  purple: {
+    background: "linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)",
+    boxShadow: "0 10px 20px rgba(124, 58, 237, 0.28)",
+  },
+  orange: {
+    background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
+    boxShadow: "0 10px 20px rgba(249, 115, 22, 0.28)",
+  },
+  red: {
+    background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+    boxShadow: "0 10px 20px rgba(239, 68, 68, 0.28)",
+  },
+  gray: {
+    background: "linear-gradient(135deg, #6B7280 0%, #4B5563 100%)",
+    boxShadow: "0 10px 20px rgba(75, 85, 99, 0.24)",
+  },
+  green: {
+    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+    boxShadow: "0 10px 20px rgba(16, 185, 129, 0.28)",
+  },
+};
 /* ── Sub-components ────────────────────────────────────────── */
 function SectionLabel({ label }: { label: string }) {
-  return (
-    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-4">
-      {label}
-    </p>
-  );
+  return <p className="dashboard-section-label">{label}</p>;
 }
 
 function KpiCard({
@@ -199,16 +219,27 @@ function KpiCard({
   label,
   value,
   sub,
+  tone,
 }: {
   icon: React.ElementType;
   label: string;
   value: number | string;
   sub: string;
+  tone: KpiTone;
 }) {
+  const iconTone = KPI_ICON_TONES[tone];
+
   return (
     <div className="flat-card flat-card-hover bg-card p-5 flex items-start gap-4">
-      <div className="w-11 h-11 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-        <Icon className="w-5 h-5 text-foreground" />
+      <div
+        className="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 text-white [&_svg]:stroke-white"
+        style={{
+          background: iconTone.background,
+          boxShadow: iconTone.boxShadow,
+          color: "#FFFFFF",
+        }}
+      >
+        <Icon className="w-5 h-5" />
       </div>
 
       <div>
@@ -241,10 +272,10 @@ function DonutCenter({
     <g>
       <text
         x={cx}
-        y={cy - 4}
+        y={cy - 3}
         textAnchor="middle"
         style={{
-          fontSize: "22px",
+          fontSize: "18px",
           fontWeight: 700,
           fill: "var(--foreground)",
         }}
@@ -254,10 +285,10 @@ function DonutCenter({
 
       <text
         x={cx}
-        y={cy + 14}
+        y={cy + 11}
         textAnchor="middle"
         style={{
-          fontSize: "11px",
+          fontSize: "9px",
           fill: "var(--muted-foreground)",
           fontWeight: 500,
         }}
@@ -278,18 +309,16 @@ function DonutStat({
   color: string;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3 bg-background border border-border rounded-lg">
+    <div className="dashboard-stat-chip">
       <div
-        className="w-2 h-2 rounded-full flex-shrink-0"
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
         style={{ background: color }}
       />
-
-      <div>
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider leading-none mb-1">
+      <div className="min-w-0">
+        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider leading-none mb-0.5">
           {label}
         </p>
-
-        <p className="text-lg font-bold text-foreground leading-none">
+        <p className="text-sm font-bold text-foreground leading-none">
           {value}
         </p>
       </div>
@@ -297,43 +326,58 @@ function DonutStat({
   );
 }
 
-const BarTooltip = ({ active, payload, label }: any) => {
+function WidgetHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  tone,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle: string;
+  tone: KpiTone;
+}) {
+  const iconTone = KPI_ICON_TONES[tone];
+  return (
+    <div className="dashboard-widget-header">
+      <div
+        className="dashboard-widget-icon"
+        style={{
+          background: iconTone.background,
+          boxShadow: iconTone.boxShadow,
+        }}
+      >
+        <Icon className="w-4 h-4" />
+      </div>
+      <div className="min-w-0">
+        <h2 className="dashboard-widget-title">{title}</h2>
+        <p className="dashboard-widget-subtitle">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+const BarTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-foreground text-primary-foreground text-xs px-3 py-2 rounded-lg shadow-lg">
-      <p className="text-muted mb-0.5">{label}</p>
-      <p className="font-semibold">{payload[0].value} employees</p>
+    <div className="rounded-md border border-border bg-card px-2.5 py-1.5 text-[11px] shadow-md">
+      <p className="text-muted-foreground mb-0.5">{label}</p>
+      <p className="font-semibold text-foreground">{payload[0].value} employees</p>
     </div>
   );
 };
 
-const tagStyle = (
-  type: "today" | "soon" | "later"
-): string => {
-  if (type === "today")
-    return "bg-foreground text-primary-foreground";
-
-  if (type === "soon")
-    return "bg-secondary text-foreground border border-border";
-
-  return "bg-background text-muted-foreground border border-border";
+const tagStyle = (type: "today" | "soon" | "later"): string => {
+  if (type === "today") return "dashboard-badge-today";
+  if (type === "soon") return "dashboard-badge-soon";
+  return "dashboard-badge-later";
 };
 
 const categoryIcon = (cat: string) => {
-  if (cat === "meeting")
-    return (
-      <CheckSquare className="w-3.5 h-3.5 text-foreground" />
-    );
-
-  if (cat === "birthday")
-    return (
-      <Cake className="w-3.5 h-3.5 text-muted-foreground" />
-    );
-
-  return (
-    <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-  );
+  if (cat === "meeting") return <CheckSquare className="w-3 h-3 text-primary" />;
+  if (cat === "birthday") return <Cake className="w-3 h-3 text-accent" />;
+  return <CalendarDays className="w-3 h-3 text-muted-foreground" />;
 };
 
 /* ── Main Page ─────────────────────────────────────────────── */
@@ -345,43 +389,42 @@ export function DashboardPage() {
     eventTab === "all"
       ? ALL_EVENTS
       : eventTab === "meetings"
-      ? EVENTS.meetings.map((e) => ({
+        ? EVENTS.meetings.map((e) => ({
           ...e,
           category: "meeting",
         }))
-      : eventTab === "birthdays"
-      ? EVENTS.birthdays.map((e) => ({
-          ...e,
-          category: "birthday",
-        }))
-      : EVENTS.holidays.map((e) => ({
-          ...e,
-          category: "holiday",
-        }));
+        : eventTab === "birthdays"
+          ? EVENTS.birthdays.map((e) => ({
+            ...e,
+            category: "birthday",
+          }))
+          : EVENTS.holidays.map((e) => ({
+            ...e,
+            category: "holiday",
+          }));
 
   const tabs: {
     id: EventTab;
     label: string;
   }[] = [
-    { id: "all", label: "All" },
-    { id: "meetings", label: "Meetings" },
-    { id: "birthdays", label: "Birthdays" },
-    { id: "holidays", label: "Holidays" },
-  ];
+      { id: "all", label: "All" },
+      { id: "meetings", label: "Meetings" },
+      { id: "birthdays", label: "Birthdays" },
+      { id: "holidays", label: "Holidays" },
+    ];
 
   return (
-    <div className="p-6 space-y-8">
-
-      {/* ── KPI Cards ──────────────────────────────────── */}
+    <div className="admin-dashboard">
+      {/* TOP — KPI row (unchanged cards) */}
       <section>
         <SectionLabel label="Overview" />
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           <KpiCard
             icon={Users}
             label="Total Employees"
             value={totalEmployees}
             sub="Across all departments"
+            tone="purple"
           />
 
           <KpiCard
@@ -389,6 +432,7 @@ export function DashboardPage() {
             label="Present Today"
             value={presentToday}
             sub="Checked in today"
+            tone="green"
           />
 
           <KpiCard
@@ -396,6 +440,7 @@ export function DashboardPage() {
             label="On Leave Today"
             value={onLeaveToday}
             sub="Approved absences"
+            tone="orange"
           />
 
           <KpiCard
@@ -403,149 +448,85 @@ export function DashboardPage() {
             label="Pending Approvals"
             value={pendingCount}
             sub="Awaiting your action"
+            tone="red"
           />
         </div>
       </section>
 
-      {/* ── Charts ─────────────────────────────────────── */}
+      {/* MIDDLE — Analytics */}
       <section>
         <SectionLabel label="Analytics" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          {/* Attendance donut */}
-          <div className="flat-card bg-card p-6">
-            <h2 className="text-base font-semibold text-foreground mb-1">
-              Attendance Summary
-            </h2>
-
-            <p className="text-xs text-muted-foreground mb-6">
-              Today's workforce status breakdown
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="dashboard-widget">
+            <WidgetHeader
+              icon={CheckSquare}
+              title="Attendance Summary"
+              subtitle="Today's workforce status breakdown"
+              tone="green"
+            />
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="flex-shrink-0">
-                <ResponsiveContainer width={180} height={180}>
+                <ResponsiveContainer width={148} height={148}>
                   <PieChart>
                     <Pie
                       data={donutData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={58}
-                      outerRadius={78}
-                      paddingAngle={3}
+                      innerRadius={46}
+                      outerRadius={62}
+                      paddingAngle={2}
                       dataKey="value"
                       strokeWidth={0}
-                      cornerRadius={3}
+                      cornerRadius={2}
                     >
                       {donutData.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-
-                    <DonutCenter
-                      cx={90}
-                      cy={90}
-                      total={todayRecords.length}
-                    />
+                    <DonutCenter cx={74} cy={74} total={todayRecords.length} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-
-              <div className="grid grid-cols-2 gap-3 flex-1 w-full">
-                <DonutStat
-                  label="Present"
-                  value={presentToday}
-                  color={P.darkest}
-                />
-
-                <DonutStat
-                  label="On Leave"
-                  value={onLeaveToday}
-                  color={P.mid}
-                />
-
-                <DonutStat
-                  label="Not Logged In"
-                  value={notLoggedIn}
-                  color={P.lighter}
-                />
-
-                <DonutStat
-                  label="Half Day"
-                  value={halfDayToday}
-                  color={P.muted}
-                />
+              <div className="grid grid-cols-2 gap-2 flex-1 w-full">
+                <DonutStat label="Present" value={presentToday} color={CHART.success} />
+                <DonutStat label="On Leave" value={onLeaveToday} color={CHART.secondary} />
+                <DonutStat label="Not Logged In" value={notLoggedIn} color={CHART.muted} />
+                <DonutStat label="Half Day" value={halfDayToday} color={CHART.info} />
               </div>
             </div>
           </div>
 
-          {/* Dept bar chart */}
-          <div className="flat-card bg-card p-6">
-            <h2 className="text-base font-semibold text-foreground mb-1">
-              Employees by Department
-            </h2>
-
-            <p className="text-xs text-muted-foreground mb-6">
-              Headcount across teams
-            </p>
-
-            <ResponsiveContainer width="100%" height={190}>
+          <div className="dashboard-widget">
+            <WidgetHeader
+              icon={TrendingUp}
+              title="Employees by Department"
+              subtitle="Headcount across teams"
+              tone="purple"
+            />
+            <ResponsiveContainer width="100%" height={152}>
               <BarChart
                 data={deptData}
-                barSize={24}
-                margin={{
-                  top: 4,
-                  right: 4,
-                  left: -22,
-                  bottom: 0,
-                }}
+                barSize={18}
+                margin={{ top: 2, right: 4, left: -24, bottom: 0 }}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="var(--border)"
-                  vertical={false}
-                />
-
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis
                   dataKey="dept"
-                  tick={{
-                    fontSize: 10,
-                    fill: "var(--muted-foreground)",
-                  }}
+                  tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
                   axisLine={false}
                   tickLine={false}
                 />
-
                 <YAxis
-                  tick={{
-                    fontSize: 10,
-                    fill: "var(--muted-foreground)",
-                  }}
+                  tick={{ fontSize: 9, fill: "var(--muted-foreground)" }}
                   axisLine={false}
                   tickLine={false}
                   allowDecimals={false}
+                  width={28}
                 />
-
-                <Tooltip
-                  content={<BarTooltip />}
-                  cursor={{ fill: "var(--secondary)" }}
-                />
-
-                <Bar
-                  dataKey="count"
-                  radius={[4, 4, 0, 0]}
-                >
+                <Tooltip content={<BarTooltip />} cursor={{ fill: "var(--secondary)" }} />
+                <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                   {deptData.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={
-                        BAR_COLORS[
-                          i % BAR_COLORS.length
-                        ]
-                      }
-                    />
+                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -554,66 +535,46 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Reminders & Alerts ─────────────────────────── */}
+      {/* BOTTOM — Events & lifecycle */}
       <section>
         <SectionLabel label="Reminders & Alerts" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          {/* Events feed */}
-          <div className="flat-card bg-card p-6 flex flex-col">
-            <h2 className="text-base font-semibold text-foreground mb-1">
-              Events & Reminders
-            </h2>
-
-            <p className="text-xs text-muted-foreground mb-5">
-              Tasks, birthdays & holidays
-            </p>
-
-            {/* Tab strip */}
-            <div className="flex gap-1 p-1 bg-secondary rounded-lg mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="dashboard-widget flex flex-col min-h-0">
+            <WidgetHeader
+              icon={CalendarDays}
+              title="Events & Reminders"
+              subtitle="Tasks, birthdays & holidays"
+              tone="purple"
+            />
+            <div className="dashboard-tab-strip">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setEventTab(tab.id)}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${
-                    eventTab === tab.id
-                      ? "bg-card text-foreground shadow-sm border border-border"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`dashboard-tab-btn ${eventTab === tab.id ? "is-active" : ""}`}
                 >
                   {tab.label}
                 </button>
               ))}
             </div>
-
-            {/* ✅ FIXED */}
-            <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
+            <div className="space-y-1.5 max-h-[280px] overflow-y-auto flex-1 min-h-0">
               {displayEvents.map((ev) => (
-                <div
-                  key={ev.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border
-                    hover:bg-secondary transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-md bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-                      {categoryIcon((ev as any).category)}
+                <div key={ev.id} className="dashboard-event-row">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-md bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                      {categoryIcon((ev as { category: string }).category)}
                     </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {ev.title}
-                      </p>
-
-                      <p className="text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium text-foreground truncate">{ev.title}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
                         {ev.desc} · {ev.time}
                       </p>
                     </div>
                   </div>
-
                   <span
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${tagStyle(
-                      (ev as any).tagType
+                    className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide ${tagStyle(
+                      (ev as { tagType: "today" | "soon" | "later" }).tagType
                     )}`}
                   >
                     {ev.tag}
@@ -623,68 +584,58 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Lifecycle alerts */}
-          <div className="flat-card bg-card p-6 flex flex-col">
-            <h2 className="text-base font-semibold text-foreground mb-1">
-              Lifecycle Alerts
-            </h2>
-
-            <p className="text-xs text-muted-foreground mb-5">
-              Employee milestones requiring attention
-            </p>
-
-            <div className="space-y-4">
-              {LIFECYCLE.map((alert) => {
+          <div className="dashboard-widget flex flex-col">
+            <WidgetHeader
+              icon={Hourglass}
+              title="Lifecycle Alerts"
+              subtitle="Employee milestones requiring attention"
+              tone="orange"
+            />
+            <div className="space-y-2">
+              {LIFECYCLE.map((alert, idx) => {
                 const Icon = alert.icon;
+                const tones: KpiTone[] = ["purple", "green", "orange"];
+                const tone = tones[idx % tones.length];
+                const iconTone = KPI_ICON_TONES[tone];
 
                 return (
-                  <div
-                    key={alert.id}
-                    className="p-4 rounded-lg border border-border bg-background hover:bg-secondary transition-colors"
-                  >
-                    <div className="flex items-start gap-4">
-
-                      <div className="w-10 h-10 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-5 h-5 text-foreground" />
+                  <div key={alert.id} className="dashboard-lifecycle-card">
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="dashboard-widget-icon w-8 h-8"
+                        style={{
+                          background: iconTone.background,
+                          boxShadow: iconTone.boxShadow,
+                        }}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
                       </div>
-
                       <div className="flex-1 min-w-0">
-
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <p className="text-sm font-semibold text-foreground">
-                            {alert.title}
-                          </p>
-
-                          <span className="w-5 h-5 rounded-md bg-foreground text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p className="text-[12px] font-semibold text-foreground">{alert.title}</p>
+                          <span className="min-w-[18px] h-[18px] px-1 rounded bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center flex-shrink-0">
                             {alert.count}
                           </span>
                         </div>
-
-                        <p className="text-xs text-muted-foreground mb-3">
-                          {alert.desc}
-                        </p>
-
-                        <div className="flex flex-wrap gap-1.5 mb-3">
+                        <p className="text-[10px] text-muted-foreground mb-2">{alert.desc}</p>
+                        <div className="flex flex-wrap gap-1 mb-2">
                           {alert.employees.map((name) => (
                             <span
                               key={name}
-                              className="text-xs font-medium text-foreground bg-secondary border border-border px-2 py-0.5 rounded-md"
+                              className="text-[10px] font-medium text-foreground bg-secondary border border-border px-1.5 py-0.5 rounded"
                             >
                               {name}
                             </span>
                           ))}
                         </div>
-
                         <button
-                          onClick={() =>
-                            navigate("/admin/employees")
-                          }
-                          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                          type="button"
+                          onClick={() => navigate("/admin/employees")}
+                          className="flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:opacity-80 transition-opacity"
                         >
                           Take Action
-                          <ChevronRight className="w-3.5 h-3.5" />
+                          <ChevronRight className="w-3 h-3" />
                         </button>
-
                       </div>
                     </div>
                   </div>
@@ -692,7 +643,6 @@ export function DashboardPage() {
               })}
             </div>
           </div>
-
         </div>
       </section>
     </div>

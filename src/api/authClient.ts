@@ -1,91 +1,83 @@
+/**
+ * Shared auth helpers for HRMS API clients (JWT + tenant headers).
+ */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const ACCESS_TOKEN_KEY = 'hrms_access_token';
+const REFRESH_TOKEN_KEY = 'hrms_refresh_token';
+const COMPANY_ID_KEY = 'hrms_company_id';
+const TENANT_SCHEMA_KEY = 'hrms_tenant_schema';
 
-const LOGIN_PATH = `${BASE_URL}/api/employees/login/`;
-const REFRESH_PATH = `${BASE_URL}/api/employees/refresh/`;
+export function getAccessToken(): string | null {
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
 
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
 
-export function getTenantSchema(): string {
+export function setAccessToken(token: string): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, token);
+}
+
+export function setRefreshToken(token: string): void {
+  localStorage.setItem(REFRESH_TOKEN_KEY, token);
+}
+
+export function setCompanyId(companyId: string): void {
+  localStorage.setItem(COMPANY_ID_KEY, companyId);
+}
+
+export function getCompanyId(): string | null {
   return (
-    localStorage.getItem('hrms_tenant_schema') ||
-    (import.meta.env.VITE_TENANT_SCHEMA as string | undefined) ||
-    'acme'
+    localStorage.getItem(COMPANY_ID_KEY) ||
+    (import.meta.env.VITE_COMPANY_ID as string | undefined) ||
+    null
   );
 }
 
-export function setTenantSchema(schema: string) {
-  localStorage.setItem('hrms_tenant_schema', schema);
+export function getTenantSchema(): string {
+  return (
+    localStorage.getItem(TENANT_SCHEMA_KEY) ||
+    (import.meta.env.VITE_TENANT_SCHEMA as string | undefined) ||
+    'public'
+  );
 }
 
-/** Clear all auth-related browser storage (login session). */
-export function clearAuthStorage() {
-  localStorage.removeItem('hrms_user');
-  localStorage.removeItem('hrms_access_token');
-  localStorage.removeItem('hrms_refresh_token');
-  localStorage.removeItem('hrms_company_id');
+export function setTenantSchema(schema: string): void {
+  localStorage.setItem(TENANT_SCHEMA_KEY, schema);
 }
 
-export interface LoginResponse {
-  access: string;
-  refresh: string;
-}
-
-export interface LoginResult {
-  success: boolean;
-  message?: string;
-  data?: LoginResponse & { companyId?: string; employeeId?: string };
-}
-
-export async function loginWithBackend(
-  email: string,
-  password: string,
-): Promise<LoginResult> {
-  const response = await fetch(LOGIN_PATH, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Tenant-Schema': getTenantSchema(),
-    },
-    credentials: 'include',
-    body: JSON.stringify({ email, password }),
-  });
-
-  const payload = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const msg =
-      payload.detail ||
-      payload.message ||
-      (Array.isArray(payload.non_field_errors) ? payload.non_field_errors[0] : undefined) ||
-      'Invalid email or password.';
-    return { success: false, message: String(msg) };
-  }
-
-  if (!payload.access) {
-    return { success: false, message: 'Login succeeded but no access token was returned.' };
-  }
-
-  return { success: true, data: payload };
+/** Persist tokens from login response (`access` / `refresh`). */
+export function persistAuthTokens(payload: {
+  access?: string;
+  refresh?: string;
+  company_id?: string;
+  tenant_schema?: string;
+}): void {
+  if (payload.access) setAccessToken(payload.access);
+  if (payload.refresh) setRefreshToken(payload.refresh);
+  if (payload.company_id) setCompanyId(payload.company_id);
+  if (payload.tenant_schema) setTenantSchema(payload.tenant_schema);
 }
 
 export async function refreshAccessToken(refresh: string): Promise<string | null> {
-  const response = await fetch(REFRESH_PATH, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Tenant-Schema': getTenantSchema(),
-    },
-    credentials: 'include',
-    body: JSON.stringify({ refresh }),
-  });
-  if (!response.ok) return null;
-  const payload = await response.json();
-  const access = payload.access ?? null;
-  if (access) {
-    localStorage.setItem('hrms_access_token', access);
-    if (payload.refresh) {
-      localStorage.setItem('hrms_refresh_token', payload.refresh);
-    }
+  try {
+    const res = await fetch('/api/employees/login/refresh/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { access?: string };
+    return data.access ?? null;
+  } catch {
+    return null;
   }
-  return access;
+}
+
+export function clearAuthStorage(): void {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(COMPANY_ID_KEY);
 }

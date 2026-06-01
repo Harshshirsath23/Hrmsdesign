@@ -3,10 +3,10 @@ import { UserCheck, UserMinus, UserX, Clock } from 'lucide-react';
 import { cn } from '@utils/utils';
 
 const ATTENDANCE_DATA = [
-  { name: 'Logged In', value: 145, color: '#10B981' }, // emerald-500
-  { name: 'On Leave', value: 12, color: '#F59E0B' },   // amber-500
-  { name: 'Not Logged In', value: 8, color: '#EF4444' },// rose-500
-  { name: 'Half Day', value: 3, color: '#3B82F6' },    // blue-500
+  { name: 'Logged In', value: 145, color: '#10B981' }, // success (green)
+  { name: 'On Leave', value: 12, color: '#F59E0B' },   // warning (amber)
+  { name: 'Not Logged In', value: 8, color: '#3B5BDB' },// brand (blue)
+  { name: 'Half Day', value: 3, color: '#3B82F6' },    // info (sky blue)
 ];
 
 const TOTAL_EMPLOYEES = ATTENDANCE_DATA.reduce((acc, curr) => acc + curr.value, 0);

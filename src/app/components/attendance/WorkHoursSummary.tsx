@@ -25,13 +25,13 @@ export function WorkHoursSummary({ data }: WorkHoursSummaryProps) {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-card border border-border p-3 rounded-xl shadow-xl space-y-1.5">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{label}</p>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getBarColor(payload[0].value) }} />
-            <p className="text-sm font-bold text-foreground">{payload[0].value} Hours Worked</p>
+        <div className="bg-card border border-border p-2 rounded-lg shadow-xl space-y-1">
+          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{label}</p>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getBarColor(payload[0].value) }} />
+            <p className="text-xs font-bold text-foreground">{payload[0].value} Hours Worked</p>
           </div>
-          <p className="text-[10px] font-bold text-muted-foreground">{payload[0].payload.employees} Employees Counted</p>
+          <p className="text-[9px] font-bold text-muted-foreground">{payload[0].payload.employees} Employees Counted</p>
         </div>
       );
     }
@@ -40,71 +40,71 @@ export function WorkHoursSummary({ data }: WorkHoursSummaryProps) {
 
   return (
     <Card className="shadow-sm border-border h-full">
-      <CardHeader className="pb-2 border-b border-border/50">
+      <CardHeader className="pb-2 border-b border-border/50 p-4">
         <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-base font-black text-foreground flex items-center gap-2">
+          <div className="space-y-0.5">
+            <CardTitle className="text-sm font-black text-foreground flex items-center gap-1.5">
               Monthly Work Hours Trend
               <TooltipProvider>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                    <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs">Average number of hours worked per employee each day.</p>
+                    <p className="text-[10px]">Average number of hours worked per employee each day.</p>
                   </TooltipContent>
                 </UITooltip>
               </TooltipProvider>
             </CardTitle>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Target: 8 Hours Per Day</p>
+            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Target: 8 Hours Per Day</p>
           </div>
-          <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-tighter">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-amber-500" /> <span className="text-slate-500">Below</span>
+          <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-tighter">
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> <span className="text-slate-500">Below</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" /> <span className="text-slate-500">Target</span>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> <span className="text-slate-500">Target</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-sky-500" /> <span className="text-slate-500">Above</span>
+            <div className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-sky-500" /> <span className="text-slate-500">Above</span>
             </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-4 p-4">
         {/* Summary Chips */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-4 gap-3 mb-4">
           {[
             { label: "Avg Work Hours", value: `${avgHours.toFixed(1)}h`, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
             { label: "Highest Day", value: `${highestDay.toFixed(1)}h`, icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
             { label: "Lowest Day", value: `${lowestDay.toFixed(1)}h`, icon: TrendingDown, color: "text-amber-500", bg: "bg-amber-500/10" },
             { label: "Achievement", value: `${targetAchievement.toFixed(0)}%`, icon: Target, color: "text-purple-500", bg: "bg-purple-500/10" },
           ].map((chip) => (
-            <div key={chip.label} className="flex flex-col p-3 rounded-2xl bg-secondary/20 border border-border/50">
-              <div className="flex items-center gap-2 mb-1">
-                <chip.icon className={cn("w-3.5 h-3.5", chip.color)} />
-                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{chip.label}</span>
+            <div key={chip.label} className="flex flex-col p-2 rounded-xl bg-secondary/20 border border-border/50">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <chip.icon className={cn("w-3 h-3", chip.color)} />
+                <span className="text-[9px] font-black text-muted-foreground uppercase tracking-wider">{chip.label}</span>
               </div>
-              <span className="text-lg font-black text-foreground">{chip.value}</span>
+              <span className="text-base font-black text-foreground">{chip.value}</span>
             </div>
           ))}
         </div>
 
-        <div className="h-[300px] w-full">
+        <div className="h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <BarChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
               <XAxis 
                 dataKey="day" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)', fontWeight: 700 }}
+                tick={{ fontSize: 9, fill: 'var(--muted-foreground)', fontWeight: 700 }}
                 interval={Math.floor(data.length / 10)}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 10, fill: 'var(--muted-foreground)', fontWeight: 700 }}
+                tick={{ fontSize: 9, fill: 'var(--muted-foreground)', fontWeight: 700 }}
                 domain={[0, 12]}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--secondary)', opacity: 0.4 }} />
@@ -117,14 +117,14 @@ export function WorkHoursSummary({ data }: WorkHoursSummaryProps) {
                   position: 'right', 
                   value: 'TARGET', 
                   fill: '#10b981', 
-                  fontSize: 10, 
+                  fontSize: 9, 
                   fontWeight: 900 
                 }} 
               />
               <Bar 
                 dataKey="hours" 
-                radius={[6, 6, 0, 0]}
-                barSize={data.length > 20 ? 12 : 24}
+                radius={[4, 4, 0, 0]}
+                barSize={data.length > 20 ? 10 : 20}
               >
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={getBarColor(entry.hours)} />

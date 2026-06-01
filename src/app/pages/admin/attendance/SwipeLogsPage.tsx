@@ -27,9 +27,14 @@ import {
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { KebabMenu } from "../../../components/ui/KebabMenu";
-import { MOCK_DEVICES, MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
-import { useSwipeLogs, useSwipeLogsLive, useSwipeLogMutations } from "../../../modules/attendance/hooks";
-import { subDays } from "date-fns";
+import { 
+  MOCK_SWIPE_LOGS, 
+  MOCK_DEPARTMENTS, 
+  MOCK_DESIGNATIONS, 
+  MOCK_TEAMS, 
+  MOCK_DEVICES,
+  MOCK_EMPLOYEES
+} from "../../../modules/attendance/mockData";
 import { cn } from "../../../components/ui/utils";
 import { SwipeLogsFilterBar } from "../../../components/attendance/swipe/SwipeLogsFilterBar";
 import { SwipeLogsAnalytics } from "../../../components/attendance/swipe/SwipeLogsAnalytics";
@@ -47,7 +52,8 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 
 export function SwipeLogsPage() {
-  const [devices] = useState<DeviceHealth[]>(MOCK_DEVICES);
+  const [logs, setLogs] = useState<SwipeLog[]>(MOCK_SWIPE_LOGS);
+  const [devices, setDevices] = useState<DeviceHealth[]>(MOCK_DEVICES);
   const [filters, setFilters] = useState({
     search: "",
     department: "all",
@@ -57,33 +63,20 @@ export function SwipeLogsPage() {
     device: "all",
     type: "all",
     date: new Date(),
-    fromDate: subDays(new Date(), 7),
-    toDate: new Date(),
   });
 
+  // Sorting & Pagination States
   const [sortField, setSortField] = useState<string>("swipeTime");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+
+  // UI & Modal States
   const [selectedSwipe, setSelectedSwipe] = useState<SwipeLog | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isLiveEnabled, setIsLiveEnabled] = useState(true);
-
-  const listParams = useMemo(() => ({
-    from_date: format(filters.fromDate ?? filters.date, "yyyy-MM-dd"),
-    to_date: format(filters.toDate ?? filters.date, "yyyy-MM-dd"),
-    punch_type: filters.type !== "all" ? filters.type : undefined,
-    page: currentPage,
-    limit: pageSize,
-  }), [filters, currentPage, pageSize]);
-
-  const logsQuery = useSwipeLogs(listParams);
-  useSwipeLogsLive(isLiveEnabled);
-  const { create: createSwipe } = useSwipeLogMutations();
-
-  const logs = logsQuery.data?.results ?? [];
-  const isLoading = logsQuery.isLoading;
   
   const [showManualEntryModal, setShowManualEntryModal] = useState(false);
   const [showManageDevicesModal, setShowManageDevicesModal] = useState(false);
@@ -99,16 +92,28 @@ export function SwipeLogsPage() {
     reason: ""
   });
 
+  // Loaders simulation
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [filters.date, filters.department, filters.device, filters.type]);
+
+  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    logsQuery.refetch().finally(() => {
+    setIsLoading(true);
+    setTimeout(() => {
       setIsRefreshing(false);
-      toast.success("Swipe logs refreshed");
-    });
+      setIsLoading(false);
+      toast.success("Swipe logs synced with biometric servers");
+    }, 1000);
   };
 
   // EXPORT FUNCTIONALITY (CSV)
@@ -248,47 +253,119 @@ export function SwipeLogsPage() {
     }
   };
 
+  // Real-Time auto sync hook
+  useEffect(() => {
+    if (!isLiveEnabled) return;
+    
+    const interval = setInterval(() => {
+      const deviceTypes = ["Biometric Device", "Mobile App", "Web Login", "QR Attendance", "RFID Card"];
+      const verificationMethods = ["Face", "Fingerprint", "Mobile GPS", "QR Scan", "Card Tap"];
+      const statuses = ["Approved", "Pending", "Rejected", "Missing Punch", "Duplicate Swipe", "Late Entry", "Early Exit"];
+      const branches = ["Mumbai HQ", "Pune Office", "Bangalore Tech Park", "Delhi Regional"];
+      const doors = ["Main Entrance", "Server Room", "Cafeteria", "South Wing Exit"];
+      
+      const emp = MOCK_EMPLOYEES[Math.floor(Math.random() * MOCK_EMPLOYEES.length)];
+      const today = new Date();
+      const dateStr = format(today, "yyyy-MM-dd");
+      const timeStr = format(today, "HH:mm:ss");
+      
+      const deviceType = deviceTypes[Math.floor(Math.random() * deviceTypes.length)];
+      const workMode = deviceType === "Mobile App" ? "WFH" : (deviceType === "Web Login" ? (Math.random() > 0.5 ? "WFH" : "WFO") : "WFO");
+
+      const newLog: SwipeLog = {
+        id: `SWIPE-LIVE-${Date.now()}`,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        employeeCode: emp.id,
+        department: emp.dept,
+        designation: emp.desig,
+        avatar: `${emp.id}`,
+        swipeDate: dateStr,
+        swipeTime: timeStr,
+        type: Math.random() > 0.5 ? "IN" : "OUT",
+        shiftName: "General Shift",
+        shiftTiming: "09:00 - 18:00",
+        deviceName: "BioMax-X990",
+        deviceId: `DEV-${Math.floor(Math.random() * 1000)}`,
+        deviceType: deviceType as any,
+        accessCardId: `CRD-${Math.floor(Math.random() * 10000)}`,
+        branch: branches[Math.floor(Math.random() * branches.length)],
+        doorName: doors[Math.floor(Math.random() * doors.length)],
+        ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
+        gpsCoordinates: "19.0760° N, 72.8777° E",
+        receivedOn: `${dateStr} ${timeStr}`,
+        syncTime: `${dateStr} ${timeStr}`,
+        status: statuses[Math.floor(Math.random() * statuses.length)] as any,
+        verificationMethod: verificationMethods[Math.floor(Math.random() * verificationMethods.length)] as any,
+        spoofDetection: Math.random() > 0.9 ? "Suspicious" : "Safe",
+        faceMatchScore: Math.random() > 0.8 ? 98.5 : undefined,
+        workMode: workMode as any,
+      };
+
+      setLogs((prev) => [newLog, ...prev]);
+      toast.info(`New swipe log synced for ${emp.name}`, { duration: 2000 });
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, [isLiveEnabled]);
+
+  // MANUAL ENTRY FUNCTIONALITY
   const handleAddManualEntry = () => {
-    const employee = MOCK_EMPLOYEES.find((e) => e.id === manualEntry.employeeId);
+    const employee = MOCK_EMPLOYEES.find(e => e.id === manualEntry.employeeId);
     if (!employee) {
       toast.error("Please select a valid employee");
       return;
     }
 
-    const punchTime = `${manualEntry.date}T${manualEntry.time}`;
-    createSwipe.mutate(
-      {
-        employee_id: employee.id,
-        punch_type: manualEntry.type,
-        punch_source: "MANUAL",
-        punch_time: punchTime,
-        reason: manualEntry.reason,
-      },
-      {
-        onSuccess: () => {
-          setShowManualEntryModal(false);
-          toast.success(`Manual ${manualEntry.type} log added for ${employee.name}`);
-          logsQuery.refetch();
-        },
-        onError: (err) => toast.error((err as Error).message),
-      },
-    );
+    const newLog: SwipeLog = {
+      id: `MANUAL-${Date.now()}`,
+      employeeId: employee.id,
+      employeeName: employee.name,
+      employeeCode: employee.id,
+      department: employee.dept,
+      designation: employee.desig,
+      avatar: `${employee.id}`,
+      swipeDate: manualEntry.date,
+      swipeTime: manualEntry.time,
+      type: manualEntry.type as "IN" | "OUT",
+      shiftName: "General Shift",
+      shiftTiming: "09:00 - 18:00",
+      deviceName: "Admin Portal",
+      deviceId: "WEB-ADMIN",
+      deviceType: "Web Login",
+      accessCardId: "N/A",
+      branch: "Mumbai HQ",
+      doorName: "Manual Override",
+      ipAddress: "127.0.0.1",
+      gpsCoordinates: "Manual Entry",
+      receivedOn: new Date().toISOString(),
+      syncTime: new Date().toISOString(),
+      status: "Approved",
+      verificationMethod: "QR Scan",
+      spoofDetection: "Safe",
+      workMode: "WFO",
+    };
+
+    setLogs([newLog, ...logs]);
+    setShowManualEntryModal(false);
+    toast.success(`Manual ${manualEntry.type} log added for ${employee.name}`);
   };
 
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      const matchesSearch =
-        !filters.search ||
+    const filterDateStr = format(filters.date, "yyyy-MM-dd");
+    return logs.filter(log => {
+      const matchesSearch = !filters.search || 
         log.employeeName.toLowerCase().includes(filters.search.toLowerCase()) ||
         log.employeeCode.toLowerCase().includes(filters.search.toLowerCase()) ||
         log.deviceId.toLowerCase().includes(filters.search.toLowerCase()) ||
         log.deviceName.toLowerCase().includes(filters.search.toLowerCase());
-
+      
       const matchesDept = filters.department === "all" || log.department === filters.department;
       const matchesType = filters.type === "all" || log.type === filters.type;
       const matchesDevice = filters.device === "all" || log.deviceType === filters.device;
+      const matchesDate = log.swipeDate === filterDateStr;
 
-      return matchesSearch && matchesDept && matchesType && matchesDevice;
+      return matchesSearch && matchesDept && matchesType && matchesDevice && matchesDate;
     });
   }, [filters, logs]);
 
@@ -346,49 +423,54 @@ export function SwipeLogsPage() {
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950/50 relative overflow-hidden print:bg-white print:p-0">
       {/* Top Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-4 shadow-sm sticky top-0 z-50 print:hidden">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              <Home className="w-3 h-3" />
-              <ChevronRight className="w-3 h-3" />
-              <span>Attendance</span>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-emerald-500">Swipe Logs</span>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              Attendance Intelligence
-              <div 
-                className={cn(
-                  "px-2 py-0.5 rounded text-[10px] border font-bold uppercase flex items-center gap-1.5 cursor-pointer transition-all",
-                  isLiveEnabled 
-                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20" 
-                    : "bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-800"
-                )}
-                onClick={() => setIsLiveEnabled(!isLiveEnabled)}
-              >
-                <div className={cn("w-1.5 h-1.5 rounded-full", isLiveEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} />
-                {isLiveEnabled ? "Live Sync Active" : "Auto-Sync Paused"}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm sticky top-0 z-50 print:hidden">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                <Home className="w-2.5 h-2.5" />
+                <ChevronRight className="w-2.5 h-2.5" />
+                <span>Attendance</span>
+                <ChevronRight className="w-2.5 h-2.5" />
+                <span className="text-emerald-500">Swipe Logs</span>
               </div>
-            </h2>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                Attendance Intelligence
+                <div 
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[9px] border font-bold uppercase flex items-center gap-1 cursor-pointer transition-all",
+                    isLiveEnabled 
+                      ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20" 
+                      : "bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-800"
+                  )}
+                  onClick={() => setIsLiveEnabled(!isLiveEnabled)}
+                >
+                  <div className={cn("w-1.5 h-1.5 rounded-full", isLiveEnabled ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} />
+                  {isLiveEnabled ? "Live" : "Paused"}
+                </div>
+              </h2>
+            </div>
+
+            {/* Inline Filter Bar */}
+            <div className="print:hidden">
+              <SwipeLogsFilterBar filters={filters} setFilters={setFilters} />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 transition-all"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 transition-all"
               onClick={() => setShowBulkActionsModal(true)}
             >
-              <Zap className="w-3.5 h-3.5" /> BULK ACTIONS
+              <Zap className="w-3 h-3" /> BULK
             </Button>
-
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800">
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-blue-500" /> EXPORT REPORT <ChevronDown className="w-3 h-3 opacity-50" />
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800">
+                  <FileSpreadsheet className="w-3 h-3 text-blue-500" /> EXPORT <ChevronDown className="w-2.5 h-2.5 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -405,19 +487,19 @@ export function SwipeLogsPage() {
             </DropdownMenu>
 
             <Button 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-all"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-all"
               onClick={() => setShowManualEntryModal(true)}
             >
-              <Plus className="w-3.5 h-3.5" /> MANUAL ENTRY
+              <Plus className="w-3 h-3" /> MANUAL
             </Button>
             
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-9 w-9 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 w-8 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={handleRefresh}
             >
-              <RefreshCw className={cn("w-4 h-4 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
+              <RefreshCw className={cn("w-3.5 h-3.5 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
             <KebabMenu 
               items={[
@@ -434,12 +516,7 @@ export function SwipeLogsPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-        {/* Sticky Filter Bar */}
-        <div className="print:hidden">
-          <SwipeLogsFilterBar filters={filters} setFilters={setFilters} />
-        </div>
-
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto w-full">
+        <div className="p-4 space-y-4 max-w-[1600px] mx-auto w-full">
           {/* Analytics Section */}
           <div className="print:hidden">
             <SwipeLogsAnalytics data={analyticsData} />

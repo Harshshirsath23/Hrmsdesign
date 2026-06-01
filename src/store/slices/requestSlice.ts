@@ -97,30 +97,6 @@ export const createRequest = createAsyncThunk(
   },
 );
 
-import { updateAdminEmployee } from './adminSlice';
-import { saveEssProfileWithAdminSync } from './employeeSlice';
-import { ensureProfile } from '../../app/modules/ess/storage';
-import { mergeAdminEmployeeIntoEssProfile } from '../../app/modules/ess/adminEssSync';
-
-function setNestedValue(obj: any, path: string, value: any): any {
-  const parts = path.split(".");
-  let current = obj;
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (i === parts.length - 1) {
-      current[part] = value;
-    } else {
-      const nextPart = parts[i + 1];
-      const isNextNumber = !isNaN(parseInt(nextPart, 10));
-      if (current[part] === undefined || current[part] === null) {
-        current[part] = isNextNumber ? [] : {};
-      }
-      current = current[part];
-    }
-  }
-  return obj;
-}
-
 export const reviewRequest = createAsyncThunk(
   'requests/review',
   async (
@@ -132,6 +108,7 @@ export const reviewRequest = createAsyncThunk(
       adminRemark,
       employeeId,
       section,
+      finalData,
     }: {
       requestId: string;
       status: RequestStatus;
@@ -140,8 +117,9 @@ export const reviewRequest = createAsyncThunk(
       adminRemark?: string;
       employeeId: string;
       section: SectionKey;
+      finalData?: any;
     },
-    { dispatch, getState },
+    { dispatch },
   ) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -165,32 +143,33 @@ export const reviewRequest = createAsyncThunk(
 
     writeRequests(reqs);
 
-    if (status === 'approved') {
-      const state = getState() as any;
-      const employee = state.admin.employees.find((e: any) => e.id === employeeId);
-      if (employee) {
-        // Deep clone employee
-        const updatedEmployee = JSON.parse(JSON.stringify(employee));
-        // Apply each change path
-        reqs[index].changes.forEach((change) => {
-          setNestedValue(updatedEmployee, change.fieldName, change.newValue);
-        });
-
-        // Update admin store
-        dispatch(updateAdminEmployee(updatedEmployee));
-
-        // Sync with ESS profile
-        const profile = ensureProfile(employeeId);
-        const mergedEss = mergeAdminEmployeeIntoEssProfile(updatedEmployee, profile);
-        dispatch(saveEssProfileWithAdminSync({ employeeId, profile: mergedEss }));
+    if (status === 'approved' && finalData) {
+      // Trigger profile update (bypass lock because this is an admin approval path)
+      try {
+        dispatch(updateEmployeeData({ employeeId, section, data: finalData, bypassLock: true } as any));
+        // Append audit log
+        try {
+          const raw = localStorage.getItem('hrms_profile_change_audit') || '[]';
+          const audits = JSON.parse(raw) as any[];
+          audits.push({ id: Date.now().toString(), requestId, employeeId, section, reviewer, reviewedAt: new Date().toISOString(), changes: finalData });
+          localStorage.setItem('hrms_profile_change_audit', JSON.stringify(audits));
+        } catch (e) {
+          console.error('Failed to write audit log', e);
+        }
+        dispatch(
+          addNotification({
+            type: 'success',
+            message: 'Profile update request approved.',
+          }),
+        );
+      } catch (e) {
+        dispatch(
+          addNotification({
+            type: 'error',
+            message: 'Failed to apply approved changes.',
+          }),
+        );
       }
-
-      dispatch(
-        addNotification({
-          type: 'success',
-          message: 'Profile update request approved.',
-        }),
-      );
     } else if (status === 'rejected') {
       dispatch(
         addNotification({

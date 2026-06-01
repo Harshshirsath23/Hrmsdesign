@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 
 import { cn } from "../../../../../components/ui/utils";
-import { Button } from "../../../../../components/ui/button";
 
 import type {
   AdminLeaveRequestRow,
@@ -140,23 +139,9 @@ export function AdminLeaveRequestDrawer({
     };
   }, [row]);
 
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSave = async (e?: React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
-    }
-    setIsSaving(true);
-    try {
-      console.log("Updated Form", form);
-      // Simulate API update
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to save changes:", error);
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = () => {
+    console.log("Updated Form", form);
+    // integrate API/store update here
   };
 
   const handleQuickAction = (
@@ -286,7 +271,7 @@ export function AdminLeaveRequestDrawer({
             <>
               {/* OVERVIEW */}
               {tab === "overview" && (
-                <form className="space-y-4" onSubmit={handleSave}>
+                <div className="space-y-4">
                   <div className="flat-card bg-card p-5">
                     <SectionTitle
                       icon={CalendarDays}
@@ -431,19 +416,20 @@ export function AdminLeaveRequestDrawer({
                     </div>
 
                     <div className="mt-5 flex justify-end gap-2">
-                      <Button
+                      <button
                         type="button"
-                        variant="outline"
                         onClick={() => onOpenChange(false)}
+                        className="px-4 py-2 rounded-lg border border-border text-sm font-semibold"
                       >
                         Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={isSaving}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        className="px-4 py-2 rounded-lg bg-foreground text-primary-foreground text-sm font-semibold"
                       >
-                        {isSaving ? "Saving..." : "Save Changes"}
-                      </Button>
+                        Save Changes
+                      </button>
                     </div>
                   </div>
 
@@ -478,7 +464,7 @@ export function AdminLeaveRequestDrawer({
                       </button>
                     </div>
                   </div>
-                </form>
+                </div>
               )}
 
               {/* TIMELINE */}

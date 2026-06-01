@@ -1,20 +1,15 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { 
-  FileText, 
-  ShieldCheck, 
   Layers, 
   UserCog, 
-  Filter,
-  AlertCircle
+  Filter
 } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 
 const TABS = [
-  { label: "Policies & Forms", path: "/admin/employees/setup/policies", icon: ShieldCheck },
   { label: "Employee Segment", path: "/admin/employees/setup/segment", icon: Layers },
   { label: "Employee Roles", path: "/admin/employees/setup/roles", icon: UserCog },
   { label: "Employee Filter", path: "/admin/employees/setup/filter", icon: Filter },
-  { label: "Fines / Damages", path: "/admin/employees/setup/fines-damages", icon: AlertCircle },
 ];
 
 export function EmployeeSetupLayout() {

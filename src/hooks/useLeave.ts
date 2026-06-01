@@ -43,6 +43,7 @@ const DEMO_LEAVE_TYPES: LeaveTypeRef[] = [
   },
 ];
 
+
 const DEMO_BALANCES: LeaveBalanceAPI[] = [
   {
     id: "lb-1",
@@ -104,9 +105,11 @@ export function writeStore<T>(key: string, data: T[]) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
+
 
 export interface LeaveTypeRef {
   leave_type_id: string;
@@ -115,6 +118,7 @@ export interface LeaveTypeRef {
   color_code: string;
   is_paid: boolean;
 }
+
 
 export interface LeaveBalanceAPI {
   id: string;
@@ -132,6 +136,7 @@ export interface LeaveBalanceAPI {
   available: number;
   total_allocated: number;
 }
+
 
 export interface LeaveApplicationAPI {
   id: string;
@@ -155,6 +160,7 @@ export interface LeaveApplicationAPI {
   applied_on: string;
   approved_at: string | null;
 }
+
 
 export interface HolidayAPI {
   id: string;
@@ -263,6 +269,7 @@ async function fetchMyBalances(): Promise<LeaveBalanceAPI[]> {
   return readStore(LEAVE_BAL_KEY, DEMO_BALANCES);
 }
 
+
 async function fetchMyApplications(): Promise<LeaveApplicationAPI[]> {
   try {
     const res = await api.get("/leave/ess/applications");
@@ -287,6 +294,7 @@ async function fetchMyApplications(): Promise<LeaveApplicationAPI[]> {
 
   return readStore(LEAVE_APP_KEY, DEMO_APPLICATIONS);
 }
+
 
 async function fetchUpcomingHolidays(): Promise<HolidayAPI[]> {
   try {
@@ -318,6 +326,7 @@ async function fetchUpcomingHolidays(): Promise<HolidayAPI[]> {
     },
   ];
 }
+
 
 async function fetchLeaveTypes(): Promise<LeaveTypeRef[]> {
   try {
@@ -459,6 +468,7 @@ export function useMyLeaveApplications() {
   });
 }
 
+
 export function useUpcomingHolidays() {
   return useQuery({
     queryKey: ["holidays-upcoming"],
@@ -466,6 +476,7 @@ export function useUpcomingHolidays() {
     staleTime: 10 * 60_000,
   });
 }
+
 
 export function useLeaveTypes() {
   return useQuery({

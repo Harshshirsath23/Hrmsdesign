@@ -5,24 +5,13 @@ import { AnalyticsPanel } from "../../../components/attendance/AnalyticsPanel";
 import { WhosInToday } from "../../../components/attendance/WhosInToday";
 import { TotalLeaveTakenChart } from "../../../components/attendance/TotalLeaveTakenChart";
 import { TodayAttendanceOverview } from "../../../components/attendance/TodayAttendanceOverview";
-import { format, eachMonthOfInterval, startOfYear, endOfYear } from "date-fns";
+import { MOCK_ATTENDANCE } from "../../../modules/attendance/mockData";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { AlertCircle, Loader2 } from "lucide-react";
-import {
-  useDashboardFilters,
-  useDashboardLive,
-  useDashboardSummary,
-  useDashboardTrend,
-  useDashboardWhosIn,
-} from "../../../modules/attendance/hooks";
-import {
-  mapDashboardSummaryToMetrics,
-  mapTrendToChartData,
-  mapWhosInToTodayStats,
-} from "../../../modules/attendance/mappers";
 
 export function AttendanceDashboard() {
+  // Global Filters
   const [globalFilters, setGlobalFilters] = useState({
     month: String(new Date().getMonth() + 1),
     year: String(new Date().getFullYear()),
@@ -32,6 +21,7 @@ export function AttendanceDashboard() {
     search: "",
   });
 
+  // Whos In Today Filters
   const [whosInFilters, setWhosInFilters] = useState({
     date: new Date(),
     department: "all",
@@ -40,180 +30,183 @@ export function AttendanceDashboard() {
     search: "",
   });
 
-  const month = Number(globalFilters.month);
-  const year = Number(globalFilters.year);
+  // 1. Filtered data for the Work Hours & Analytics (Monthly)
+  const filteredMonthlyData = useMemo(() => {
+    return MOCK_ATTENDANCE.filter(record => {
+      const recordDate = new Date(record.date);
+      const matchesMonth = (recordDate.getMonth() + 1) === Number(globalFilters.month);
+      const matchesYear = recordDate.getFullYear() === Number(globalFilters.year);
+      const matchesDept = globalFilters.department === "all" || record.department === globalFilters.department;
+      const matchesTeam = globalFilters.team === "all" || record.team === globalFilters.team;
+      const matchesDesig = globalFilters.designation === "all" || record.designation === globalFilters.designation;
+      const matchesSearch = !globalFilters.search || 
+        record.employeeName.toLowerCase().includes(globalFilters.search.toLowerCase()) ||
+        record.employeeId.toLowerCase().includes(globalFilters.search.toLowerCase());
 
-  const filtersQuery = useDashboardFilters();
-  const summaryQuery = useDashboardSummary(month, year);
-  const trendQuery = useDashboardTrend(month, year);
-  const whosInQuery = useDashboardWhosIn();
-  useDashboardLive(true);
+      return matchesMonth && matchesYear && matchesDept && matchesTeam && matchesDesig && matchesSearch;
+    });
+  }, [globalFilters]);
 
-  const filterOptions = useMemo(() => {
-    const data = filtersQuery.data;
-    if (!data) return undefined;
-    return {
-      departments: data.departments.map((d) => ({ value: d.id ?? d.name, label: d.name })),
-      designations: data.designations.map((d) => ({ value: d.id ?? d.name, label: d.name })),
-      teams: data.teams.map((t) => ({ value: t.id ?? t.name, label: t.name })),
-    };
-  }, [filtersQuery.data]);
+  // 2. Filtered data for "Who's In Today" (Specific Date)
+  const filteredDailyData = useMemo(() => {
+    return MOCK_ATTENDANCE.filter(record => {
+      const isDay = isSameDay(new Date(record.date), whosInFilters.date);
+      const matchesDept = whosInFilters.department === "all" || record.department === whosInFilters.department;
+      const matchesTeam = whosInFilters.team === "all" || record.team === whosInFilters.team;
+      const matchesSearch = !whosInFilters.search || 
+        record.employeeName.toLowerCase().includes(whosInFilters.search.toLowerCase()) ||
+        record.employeeId.toLowerCase().includes(whosInFilters.search.toLowerCase());
+      
+      return isDay && matchesDept && matchesTeam && matchesSearch;
+    });
+  }, [whosInFilters]);
 
+  // 3. Calculate Work Hours Chart Data (Daily for selected month)
   const chartData = useMemo(() => {
-    if (!trendQuery.data?.trend_data) return [];
-    return mapTrendToChartData(trendQuery.data.trend_data);
-  }, [trendQuery.data]);
+    const startDate = startOfMonth(new Date(Number(globalFilters.year), Number(globalFilters.month) - 1));
+    const endDate = endOfMonth(startDate);
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-  const metrics = useMemo(() => {
-    if (!summaryQuery.data) {
+    return days.map(day => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      const dayRecords = filteredMonthlyData.filter(r => r.date === dateStr && r.status !== "Week Off" && r.status !== "Holiday");
+      
+      const avgHours = dayRecords.length > 0 
+        ? dayRecords.reduce((acc, curr) => acc + curr.workHours, 0) / dayRecords.length 
+        : 0;
+
       return {
-        avgWorkHours: 0,
-        totalAbsent: 0,
-        holidays: 0,
-        lateLogins: 0,
-        avgAttendance: 0,
-        totalEmployees: 0,
+        day: format(day, "dd MMM"),
+        hours: Number(avgHours.toFixed(1)),
+        employees: dayRecords.length
       };
-    }
-    return mapDashboardSummaryToMetrics(summaryQuery.data);
-  }, [summaryQuery.data]);
+    });
+  }, [filteredMonthlyData, globalFilters]);
 
-  const todayStats = useMemo(() => {
-    if (!whosInQuery.data) {
-      return {
-        overview: {
-          present: { count: 0, percentage: 0 },
-          onLeave: { count: 0, percentage: 0 },
-          absent: { count: 0, percentage: 0 },
-          late: { count: 0, percentage: 0 },
-          wfh: { count: 0, percentage: 0 },
-        },
-        whosIn: { onTime: 0, lateIn: 0, notYetIn: 0, onLeave: 0, outOfOffice: 0 },
-      };
-    }
-    return mapWhosInToTodayStats(whosInQuery.data);
-  }, [whosInQuery.data]);
-
+  // 4. Calculate Yearly Leave Data (Jan-Dec)
   const leaveYearlyData = useMemo(() => {
     const months = eachMonthOfInterval({
-      start: startOfYear(new Date(year, 0, 1)),
-      end: endOfYear(new Date(year, 0, 1)),
+      start: startOfYear(new Date(Number(globalFilters.year), 0, 1)),
+      end: endOfYear(new Date(Number(globalFilters.year), 0, 1))
     });
-    return months.map((m) => ({
-      month: format(m, "MMM"),
-      leaveDays: m.getMonth() + 1 === month ? (summaryQuery.data?.total_absent ?? 0) : 0,
-      approvedCount: 0,
-      employees: 0,
-    }));
-  }, [year, month, summaryQuery.data]);
 
+    return months.map(month => {
+      const monthIdx = month.getMonth() + 1;
+      // In real app, we'd fetch data for the whole year. 
+      // For mock, we'll simulate yearly distribution based on the single month's patterns but randomized
+      const monthLeaveRecords = filteredMonthlyData.filter(r => (new Date(r.date).getMonth() + 1) === monthIdx || Math.random() > 0.8);
+      
+      const leaveDays = Math.floor(Math.random() * 50) + 10;
+      const approvedCount = Math.floor(leaveDays * 0.9);
+      const employeesOnLeave = Math.floor(leaveDays / 2);
+
+      return {
+        month: format(month, "MMM"),
+        leaveDays,
+        approvedCount,
+        employees: employeesOnLeave
+      };
+    });
+  }, [filteredMonthlyData, globalFilters.year]);
+
+  // 5. Calculate Monthly Attendance Trend (%)
   const attendanceTrendData = useMemo(() => {
-    if (!trendQuery.data?.trend_data?.length) return [];
-    return trendQuery.data.trend_data.map((p) => ({
-      month: format(new Date(p.date), "dd"),
-      percentage: Number(p.work_hours) > 0 ? Math.min(100, (Number(p.work_hours) / 9) * 100) : 0,
-    }));
-  }, [trendQuery.data]);
+     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+     return months.map(m => ({
+       month: m,
+       percentage: 90 + Math.random() * 8
+     }));
+  }, []);
 
-  const isLoading = summaryQuery.isLoading || trendQuery.isLoading || whosInQuery.isLoading;
-  const error = summaryQuery.error ?? trendQuery.error ?? whosInQuery.error;
+  // 6. Calculate Metrics for Panel
+  const metrics = useMemo(() => {
+    const presentRecords = filteredMonthlyData.filter(r => r.status === "Present");
+    const absentRecords = filteredMonthlyData.filter(r => r.status === "Absent");
+    const lateRecords = filteredMonthlyData.filter(r => r.isLate);
+    
+    const totalEmployees = new Set(filteredMonthlyData.map(r => r.employeeId)).size;
+    const avgAttendance = filteredMonthlyData.length > 0 
+      ? (presentRecords.length / (presentRecords.length + absentRecords.length)) * 100 
+      : 0;
+
+    return {
+      avgWorkHours: presentRecords.length > 0 ? presentRecords.reduce((acc, curr) => acc + curr.workHours, 0) / presentRecords.length : 0,
+      totalAbsent: absentRecords.length,
+      holidays: filteredMonthlyData.filter(r => r.status === "Holiday").length,
+      lateLogins: lateRecords.length,
+      avgAttendance,
+      totalEmployees
+    };
+  }, [filteredMonthlyData]);
+
+  // 7. Today's Statistics
+  const todayStats = useMemo(() => {
+    const total = filteredDailyData.length || 1;
+    const presentCount = filteredDailyData.filter(r => r.status === "Present" || r.status === "Half Day").length;
+    const leaveCount = filteredDailyData.filter(r => r.status === "Leave").length;
+    const absentCount = filteredDailyData.filter(r => r.status === "Absent").length;
+    const lateCount = filteredDailyData.filter(r => r.isLate).length;
+    const wfhCount = filteredDailyData.filter(r => r.workMode === "WFH").length;
+    const oooCount = Math.floor(Math.random() * 5); // Simulating Out of Office
+
+    return {
+      overview: {
+        present: { count: presentCount, percentage: Math.round((presentCount / total) * 100) },
+        onLeave: { count: leaveCount, percentage: Math.round((leaveCount / total) * 100) },
+        absent: { count: absentCount, percentage: Math.round((absentCount / total) * 100) },
+        late: { count: lateCount, percentage: Math.round((lateCount / total) * 100) },
+        wfh: { count: wfhCount, percentage: Math.round((wfhCount / total) * 100) },
+      },
+      whosIn: {
+        onTime: Math.max(0, presentCount - lateCount),
+        lateIn: lateCount,
+        notYetIn: absentCount,
+        onLeave: leaveCount,
+        outOfOffice: oooCount
+      }
+    };
+  }, [filteredDailyData]);
 
   return (
-    <div className="p-8 space-y-8 bg-slate-50/50 dark:bg-slate-950 h-full">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-2xl font-black text-foreground tracking-tight">Attendance Dashboard</h2>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">Operational Insights & Patterns</p>
+    <div className="p-4 space-y-4 bg-slate-50/50 dark:bg-slate-950 h-full">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card border border-border p-3 rounded-xl shadow-sm">
+        <div className="flex flex-col gap-0.5 min-w-[200px]">
+          <h2 className="text-xl font-black text-foreground tracking-tight">Attendance Dashboard</h2>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Operational Insights & Patterns</p>
+        </div>
+
+        <div className="flex-1 overflow-x-auto no-scrollbar">
+          <AttendanceFilterBar 
+            filters={globalFilters} 
+            setFilters={setGlobalFilters} 
+          />
+        </div>
       </div>
 
-      <AttendanceFilterBar
-        filters={globalFilters}
-        setFilters={setGlobalFilters}
-        filterOptions={filterOptions}
-        filtersLoading={filtersQuery.isLoading}
-      />
-
-      {error && (
-        <div className="flex items-center gap-2 p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-sm">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          {(error as Error).message || "Failed to load dashboard data. Check authentication and company_id."}
+      {/* Row 1: Work Hours & Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <WorkHoursSummary data={chartData} />
         </div>
-      )}
-
-      {isLoading && (
-        <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm font-medium">Loading attendance dashboard…</span>
+        <div className="lg:col-span-1">
+          <AnalyticsPanel 
+            metrics={metrics} 
+            filters={globalFilters}
+            setFilters={setGlobalFilters}
+          />
         </div>
-      )}
+      </div>
 
-      {!isLoading && (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <WorkHoursSummary data={chartData} />
-            </div>
-            <div className="lg:col-span-1">
-              <AnalyticsPanel
-                metrics={metrics}
-                filters={globalFilters}
-                setFilters={setGlobalFilters}
-              />
-            </div>
-          </div>
+      {/* Row 2: Leave Trend + Today's Overview side-by-side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <TotalLeaveTakenChart data={leaveYearlyData} />
+        </div>
+        <div className="lg:col-span-1">
+          <TodayAttendanceOverview stats={todayStats.overview} />
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 gap-6">
-            <TotalLeaveTakenChart data={leaveYearlyData} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <WhosInToday
-                data={todayStats.whosIn}
-                filters={whosInFilters}
-                setFilters={setWhosInFilters}
-              />
-            </div>
-            <div className="lg:col-span-1 flex flex-col gap-6">
-              <TodayAttendanceOverview stats={todayStats.overview} />
-
-              <Card className="shadow-sm border-border">
-                <CardHeader className="pb-2 border-b border-border/50">
-                  <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-                    Monthly Attendance Trend (%)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="h-[120px] w-full">
-                    {attendanceTrendData.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-8">No trend data for this period</p>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={attendanceTrendData}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.3} />
-                          <XAxis dataKey="month" hide />
-                          <YAxis hide domain={[0, 100]} />
-                          <Tooltip
-                            contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '12px', fontSize: '10px' }}
-                            labelStyle={{ fontWeight: 900 }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="percentage"
-                            stroke="#10b981"
-                            strokeWidth={3}
-                            dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
-                            activeDot={{ r: 6 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

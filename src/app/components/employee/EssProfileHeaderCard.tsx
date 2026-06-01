@@ -133,10 +133,16 @@ export function EssProfileHeaderCard({ employeeId, profile }: Props) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
         <ProfileImageUploader
           value={draft.profilePhotoDataUrl}
-          readOnly={!editing}
+          readOnly={profile.profileLocked === true}
           nameHint={displayName}
-          onChange={(url) => setDraft((d) => ({ ...d, profilePhotoDataUrl: url }))}
-          onRemove={() => setDraft((d) => ({ ...d, profilePhotoDataUrl: "" }))}
+          onChange={(url) => {
+            if (!editing) startEdit();
+            setDraft((d) => ({ ...d, profilePhotoDataUrl: url }));
+          }}
+          onRemove={() => {
+            if (!editing) startEdit();
+            setDraft((d) => ({ ...d, profilePhotoDataUrl: "" }));
+          }}
         />
 
         <div className="min-w-0 flex-1 space-y-3">
@@ -198,7 +204,18 @@ export function EssProfileHeaderCard({ employeeId, profile }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {editing ? (
+              {profile.profileLocked ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    try { window.dispatchEvent(new CustomEvent('ess:request_change', { detail: { sectionId: 'profile' } })); } catch {}
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-bold hover:bg-secondary"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  Request Change
+                </button>
+              ) : editing ? (
                 <>
                   <button
                     type="button"

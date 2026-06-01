@@ -837,7 +837,7 @@ export function ApplicationsHistoryTable({
 <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border bg-card px-5 py-4">
 <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setEditLeave(null)}
                 disabled={updateMutation.isPending}
