@@ -33,7 +33,8 @@ export interface EducationDetail {
   specialization: string;
   institutionName: string;
   university: string;
-  yearOfPassing: string;
+  fromDate?: string;
+  toDate?: string;
   percentageCgpa: string;
   grade: string;
 }

@@ -257,48 +257,48 @@ export function ApplyLeaveFormEnterprise({
         </FormSection>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From date</p>
+          <div className="rounded-lg border border-border bg-background p-3">
+            <p className="text-xs uppercase tracking-wider font-medium text-muted-foreground mb-2">From date</p>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="mt-3 w-full rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+              className="form-control w-full"
               required
             />
           </div>
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To date</p>
+          <div className="rounded-lg border border-border bg-background p-3">
+            <p className="text-xs uppercase tracking-wider font-medium text-muted-foreground mb-2">To date</p>
             <input
               type="date"
               value={toDate}
               min={fromDate || undefined}
               onChange={(e) => setToDate(e.target.value)}
-              className="mt-3 w-full rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+              className="form-control w-full"
               required
             />
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">From session</p>
+          <div className="rounded-lg border border-border bg-background p-3">
+            <p className="text-xs uppercase tracking-wider font-medium text-muted-foreground mb-2">From session</p>
             <select
               value={fromHalf}
               onChange={(e) => setFromHalf(e.target.value as "FULL" | "AM" | "PM")}
-              className="mt-3 w-full cursor-pointer appearance-none rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+              className="form-control form-control--select w-full"
             >
               <option value="FULL">Full day</option>
               <option value="AM">First half</option>
               <option value="PM">Second half</option>
             </select>
           </div>
-          <div className="rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">To session</p>
+          <div className="rounded-lg border border-border bg-background p-3">
+            <p className="text-xs uppercase tracking-wider font-medium text-muted-foreground mb-2">To session</p>
             <select
               value={toHalf}
               onChange={(e) => setToHalf(e.target.value as "FULL" | "AM" | "PM")}
-              className="mt-3 w-full cursor-pointer appearance-none rounded-2xl border border-border bg-card px-3 py-3 text-sm"
+              className="form-control form-control--select w-full"
             >
               <option value="FULL">Full day</option>
               <option value="AM">First half</option>
@@ -312,7 +312,7 @@ export function ApplyLeaveFormEnterprise({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
-            className="flat-input w-full resize-none rounded-2xl border border-border bg-background px-3 py-3 text-sm"
+            className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50"
             placeholder="Enter your reason"
             required
           />
