@@ -350,6 +350,12 @@ export interface Employee {
   medicalInfo?: {
     relationship?: string;
     conditions?: string;
+    hasDisease?: boolean;
+    diseaseDetails?: string;
+    hasSurgery?: boolean;
+    surgeryDetails?: string;
+    hasAllergies?: boolean;
+    allergyDetails?: string;
     allergies?: string;
     bloodGroup?: string;
     doctorName?: string;

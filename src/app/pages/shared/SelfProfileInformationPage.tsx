@@ -33,6 +33,7 @@ import { ensureProfile } from "../../modules/ess/storage";
 import { ContentSection } from "../../components/employees/ContentSection";
 import { SidebarSection } from "../../components/employees/SidebarMenu";
 import { Employee } from "../../components/employees/mockData";
+import { EssEmployeeProfile } from "../../components/employees/sections/EssEmployeeProfile";
 import { useAuth } from "../../context/AuthContext";
 import {
   getChangeRequests,
@@ -1554,6 +1555,8 @@ export function SelfProfileInformationPage() {
                 This section is managed by your administrator and cannot be updated via My Request.
               </p>
             </div>
+          ) : activeSection === "profile" ? (
+            <EssEmployeeProfile employee={employee} />
           ) : (
             <ContentSection
               employee={employee}
