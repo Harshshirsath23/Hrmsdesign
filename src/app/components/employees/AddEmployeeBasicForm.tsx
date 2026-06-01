@@ -16,6 +16,7 @@ import {
   HelpCircle, Trash2, LayoutDashboard, FileCheck, GraduationCap, Mail, Phone, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmployeeFormProvider } from './employee-details/EmployeeFormContext';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -91,11 +92,11 @@ const formSchema = z.object({
   deviceId: z.string().optional(),
 
   // PAYROLL & STATUTORY
-  uanNumber: z.string().optional(),
-  esicNumber: z.string().optional(),
-  disabilityStatus: z.boolean(),
-  costCenterId: z.string().optional(),
-  gradeId: z.string().optional(),
+  // uanNumber: z.string().optional(),
+  // esicNumber: z.string().optional(),
+  // disabilityStatus: z.boolean(),
+  // costCenterId: z.string().optional(),
+  // gradeId: z.string().optional(),
 
   // MISC
   allowEmployeeToFillInfo: z.boolean(),
@@ -179,6 +180,7 @@ function SectionHeader({ title, icon: Icon, description }: { title: string; icon
       {description && <p className="text-sm text-muted-foreground ml-11">{description}</p>}
       <div className="h-px w-full bg-gradient-to-r from-border via-border/50 to-transparent mt-2" />
     </div>
+    </EmployeeFormProvider>
   );
 }
 
@@ -303,6 +305,8 @@ export default function AddEmployeeBasicForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [finalConfirmChecked, setFinalConfirmChecked] = useState(false);
+  const [finalSubmitted, setFinalSubmitted] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -346,6 +350,7 @@ export default function AddEmployeeBasicForm() {
   const sameAsCurrent = watch('sameAsCurrent');
 
   const onSubmit = async (data: FormData) => {
+    setFinalSubmitted(true);
     setIsSubmitting(true);
     try {
       console.log('Form Submitted:', data);
@@ -374,7 +379,7 @@ export default function AddEmployeeBasicForm() {
     { id: 'basic-info', label: 'Basic Information', icon: User },
     { id: 'job-details', label: 'Job Details', icon: Briefcase },
     { id: 'attendance-settings', label: 'Attendance Settings', icon: Clock },
-    { id: 'payroll-info', label: 'Payroll Information', icon: CreditCard },
+    // { id: 'payroll-info', label: 'Payroll Information', icon: CreditCard },
     { id: 'leave-config', label: 'Leave Configuration', icon: Calendar },
     { id: 'documents', label: 'Documents', icon: Upload },
     { id: 'education-details', label: 'Education Details', icon: GraduationCap },
@@ -410,6 +415,7 @@ export default function AddEmployeeBasicForm() {
   };
 
   return (
+    <EmployeeFormProvider value={{ finalSubmitted }}>
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] pb-32">
       {/* Top Header */}
       <div className="sticky top-0 z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-2xl border-b border-border/40 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-300">
@@ -441,15 +447,25 @@ export default function AddEmployeeBasicForm() {
               {isDrafting ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
               Save Draft
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              form="add-employee-form"
-              className="h-10 px-6 rounded-xl font-black text-xs uppercase tracking-widest bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : <ChevronRight size={16} className="mr-2" />}
-              Complete Registration
-            </Button>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input type="checkbox" className="w-4 h-4" checked={finalConfirmChecked} onChange={(e) => setFinalConfirmChecked(e.target.checked)} disabled={finalSubmitted} />
+                <span>I understand I cannot directly edit after final submission.</span>
+              </label>
+
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !finalConfirmChecked || finalSubmitted}
+                form="add-employee-form"
+                onClick={() => {
+                  if (finalConfirmChecked && !finalSubmitted) setFinalSubmitted(true);
+                }}
+                className="h-10 px-6 rounded-xl font-black text-xs uppercase tracking-widest bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : <ChevronRight size={16} className="mr-2" />}
+                {finalSubmitted ? 'Submitted' : 'Final Submit'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -540,13 +556,11 @@ export default function AddEmployeeBasicForm() {
                 </FormField>
 
                 <FormField label="Employee ID" required hint="Admin editable only" error={errors.employeeId?.message}>
-                  <div className="relative group">
-                    <Input
-                      {...form.register('employeeId')}
-                      className="h-11 bg-slate-50/50 dark:bg-gray-800/50 border-border/50 focus:border-primary/50 rounded-xl px-4 text-sm font-bold tracking-tight transition-all"
-                    />
-                    <Shield size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
-                  </div>
+                  <Input
+                    {...form.register('employeeId')}
+                    rightIcon={<Shield size={14} />}
+                    className="h-11 bg-slate-50/50 dark:bg-gray-800/50 border-border/50 focus:border-primary/50 rounded-xl text-sm font-bold tracking-tight transition-all"
+                  />
                 </FormField>
 
                 <div className="sm:col-span-2 py-4">
@@ -564,10 +578,12 @@ export default function AddEmployeeBasicForm() {
                 </div>
 
                 <FormField label="Date of Birth" required error={errors.dateOfBirth?.message}>
-                  <div className="relative">
-                    <Input type="date" {...form.register('dateOfBirth')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
-                  </div>
+                  <Input
+                    type="date"
+                    {...form.register('dateOfBirth')}
+                    rightIcon={<Calendar size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
 
                 <FormField label="Gender" required error={errors.gender?.message}>
@@ -611,25 +627,30 @@ export default function AddEmployeeBasicForm() {
                 </FormField>
 
                 <FormField label="Personal Email" required error={errors.personalEmail?.message}>
-                  <div className="relative">
-                    <Input type="email" placeholder="personal@email.com" {...form.register('personalEmail')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
-                  </div>
+                  <Input
+                    type="email"
+                    placeholder="personal@email.com"
+                    {...form.register('personalEmail')}
+                    leftIcon={<Mail size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
 
                 <FormField label="Personal Mobile" required error={errors.personalMobileNumber?.message}>
-                  <div className="relative">
-                    <Input placeholder="+91 00000 00000" {...form.register('personalMobileNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
-                  </div>
+                  <Input
+                    placeholder="+91 00000 00000"
+                    {...form.register('personalMobileNumber')}
+                    leftIcon={<Phone size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
 
                 <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800">
                   <FormField label="Emergency Contact Name" required error={errors.emergencyContactName?.message}>
-                    <Input placeholder="Full Name" {...form.register('emergencyContactName')} className="h-10 bg-white dark:bg-gray-800 rounded-lg px-3 text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
+                      <Input placeholder="Full Name" {...form.register('emergencyContactName')} leftIcon={<User size={14} />} className="h-10 bg-white dark:bg-gray-800 rounded-lg text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
                   </FormField>
                   <FormField label="Emergency Number" required error={errors.emergencyContactNumber?.message}>
-                    <Input placeholder="+91..." {...form.register('emergencyContactNumber')} className="h-10 bg-white dark:bg-gray-800 rounded-lg px-3 text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
+                      <Input placeholder="+91..." {...form.register('emergencyContactNumber')} leftIcon={<Phone size={14} />} className="h-10 bg-white dark:bg-gray-800 rounded-lg text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
                   </FormField>
                 </div>
 
@@ -657,13 +678,13 @@ export default function AddEmployeeBasicForm() {
 
                 <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
                   <FormField label="Father's Name">
-                    <Input {...form.register('fathersName')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm border-border/40" />
+                    <Input {...form.register('fathersName')} leftIcon={<User size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm border-border/40" />
                   </FormField>
                   <FormField label="Mother's Name">
-                    <Input {...form.register('mothersName')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm border-border/40" />
+                    <Input {...form.register('mothersName')} leftIcon={<User size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm border-border/40" />
                   </FormField>
                   <FormField label="Spouse Name">
-                    <Input {...form.register('spouseName')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm border-border/40" />
+                    <Input {...form.register('spouseName')} leftIcon={<User size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm border-border/40" />
                   </FormField>
                 </div>
               </div>
@@ -709,10 +730,12 @@ export default function AddEmployeeBasicForm() {
                   />
                 </FormField>
                 <FormField label="Date of Joining" required error={errors.dateOfJoining?.message}>
-                  <div className="relative">
-                    <Input type="date" {...form.register('dateOfJoining')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
-                  </div>
+                  <Input
+                    type="date"
+                    {...form.register('dateOfJoining')}
+                    rightIcon={<Calendar size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
                 <div className="flex items-end gap-3">
                   <FormField label="Probation Period" className="flex-1">
@@ -728,16 +751,21 @@ export default function AddEmployeeBasicForm() {
                   </div>
                 </div>
                 <FormField label="Official Email" required error={errors.officialEmail?.message}>
-                  <div className="relative">
-                    <Input type="email" placeholder="official@company.com" {...form.register('officialEmail')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" />
-                  </div>
+                  <Input
+                    type="email"
+                    placeholder="official@company.com"
+                    {...form.register('officialEmail')}
+                    leftIcon={<Building2 size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
                 <FormField label="Official Mobile" required error={errors.officialMobileNumber?.message}>
-                  <div className="relative">
-                    <Input placeholder="+91 00000 00000" {...form.register('officialMobileNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" />
-                  </div>
+                  <Input
+                    placeholder="+91 00000 00000"
+                    {...form.register('officialMobileNumber')}
+                    leftIcon={<Phone size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
               </div>
             </FormSection>
@@ -765,7 +793,7 @@ export default function AddEmployeeBasicForm() {
               </div>
             </FormSection>
 
-            {/* 4. PAYROLL INFORMATION */}
+            {/* 4. PAYROLL INFORMATION
             <FormSection id="payroll-info">
               <SectionHeader title="Payroll & Statutory" icon={CreditCard} description="Taxation, statutory compliance and salary structure" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -793,7 +821,7 @@ export default function AddEmployeeBasicForm() {
                   />
                 </div>
               </div>
-            </FormSection>
+            </FormSection> */}
 
             {/* 5. LEAVE CONFIGURATION */}
             <FormSection id="leave-config">
@@ -810,13 +838,18 @@ export default function AddEmployeeBasicForm() {
               <SectionHeader title="Documents" icon={Upload} description="Upload identification and employment documents" />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <FormField label="Aadhaar Number" required error={errors.aadhaarNumber?.message}>
-                  <Input placeholder="0000 0000 0000" {...form.register('aadhaarNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-mono tracking-widest border-border/40 transition-all" />
+                  <Input
+                    placeholder="0000 0000 0000"
+                    {...form.register('aadhaarNumber')}
+                    leftIcon={<Shield size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-mono tracking-widest border-border/40 transition-all"
+                  />
                 </FormField>
                 <FormField label="PAN Number" required error={errors.panNumber?.message}>
-                  <Input placeholder="ABCDE1234F" {...form.register('panNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-mono tracking-widest uppercase border-border/40 transition-all" />
+                  <Input placeholder="ABCDE1234F" {...form.register('panNumber')} leftIcon={<FileText size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-mono tracking-widest uppercase border-border/40 transition-all" />
                 </FormField>
                 <FormField label="Passport Number">
-                  <Input {...form.register('passportNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-mono border-border/40" />
+                  <Input {...form.register('passportNumber')} leftIcon={<FileText size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-mono border-border/40" />
                 </FormField>
               </div>
               <div className="mt-8 p-12 text-center border-2 border-dashed border-border rounded-[2rem] bg-slate-50/50">

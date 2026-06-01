@@ -73,14 +73,14 @@ const DEMO: Record<
     password: "Password@123",
   },
   manager: {
-    email: "manager@hrms.com",
-    password: "Manager@123",
+    email: "hr.manager@company.com",
+    password: "Password@123",
   },
   employee: {
     email: "amit.patel@acme.com",
     password: "Password@123",
   },
-};
+};  
 
 export function LoginPage() {
   const navigate = useNavigate();

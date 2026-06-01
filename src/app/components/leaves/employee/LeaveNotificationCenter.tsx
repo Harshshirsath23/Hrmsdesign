@@ -6,20 +6,21 @@ import { employeeLeaveStatusLabel } from "./EmployeeLeaveStatusBadge";
 import { formatLeaveShortDate } from "./leaveDateUtils";
 
 type Notif = {
-  id: string;
+  id:       string;
   category: "leave" | "holiday" | "system";
-  title: string;
-  body: string;
-  time: string;
-  sortAt: number;
-  unread?: boolean;
+  title:    string;
+  body:     string;
+  time:     string;
+  sortAt:   number;
+  unread?:  boolean;
 };
 
 function timeLabel(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
+  const d    = new Date(iso);
+  const now  = new Date();
   const diff = now.getTime() - d.getTime();
-  if (diff < 86_400_000) return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  if (diff < 86_400_000)
+    return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 }
 
@@ -28,35 +29,45 @@ export function LeaveNotificationCenter({
   holidays,
 }: {
   applications: LeaveApplicationAPI[];
-  holidays: HolidayAPI[];
+  holidays:     HolidayAPI[];
 }) {
   const items = useMemo(() => {
-    const list: Notif[] = [];
+    const list:  Notif[] = [];
     const today = new Date().toISOString().slice(0, 10);
 
     for (const h of holidays) {
       if (h.date >= today) {
         list.push({
-          id: `h-${h.id}`,
+          id:       `h-${h.id}`,
           category: "holiday",
-          title: `Upcoming: ${h.name}`,
-          body: `${formatLeaveShortDate(h.date)} · ${h.holiday_type}${h.is_optional ? " · Optional" : ""}`,
-          time: timeLabel(`${h.date}T09:00:00`),
-          sortAt: new Date(`${h.date}T09:00:00`).getTime(),
-          unread: false,
+          title:    `Upcoming: ${h.name}`,
+          body:     `${formatLeaveShortDate(h.date)} · ${h.holiday_type}${h.is_optional ? " · Optional" : ""}`,
+          time:     timeLabel(`${h.date}T09:00:00`),
+          sortAt:   new Date(`${h.date}T09:00:00`).getTime(),
+          unread:   false,
         });
       }
     }
 
     for (const a of applications) {
+      // leave_type_detail?.name is preferred; fall back to leave_type_name (serializer field)
+      const typeName = a.leave_type_detail?.name ?? a.leave_type_name ?? "Leave";
+
+      // leave_status is the canonical field; status is the optional detail-serializer alias
+      const statusLabel = employeeLeaveStatusLabel(a.leave_status);
+
+      // applied_at is the raw backend field; applied_on is the normalised alias
+      const appliedIso = a.applied_at ?? (a.applied_on ? `${a.applied_on}T12:00:00Z` : new Date().toISOString());
+
       list.push({
-        id: `a-${a.id}`,
+        id:       `a-${a.id}`,
         category: "leave",
-        title: `${a.leave_type_detail?.name ?? "Leave"} · ${employeeLeaveStatusLabel(a.status)}`,
-        body: `${formatLeaveShortDate(a.from_date)} — ${formatLeaveShortDate(a.to_date)} · ${a.total_days}d`,
-        time: timeLabel(`${a.applied_on}T12:00:00`),
-        sortAt: new Date(`${a.applied_on}T12:00:00`).getTime(),
-        unread: a.status === "SUBMITTED" || a.status === "DRAFT",
+        title:    `${typeName} · ${statusLabel}`,
+        body:     `${formatLeaveShortDate(a.from_date)} — ${formatLeaveShortDate(a.to_date)} · ${a.total_days}d`,
+        time:     timeLabel(appliedIso),
+        sortAt:   new Date(appliedIso).getTime(),
+        // Unread when in a pending/draft state
+        unread:   a.leave_status === "SUBMITTED" || a.leave_status === "DRAFT" || a.leave_status === "PENDING",
       });
     }
 
@@ -84,7 +95,9 @@ export function LeaveNotificationCenter({
 
       <div className="divide-y divide-border">
         {items.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-muted-foreground">No notifications yet.</div>
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            No notifications yet.
+          </div>
         ) : (
           items.map((n) => (
             <div
@@ -106,7 +119,9 @@ export function LeaveNotificationCenter({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium text-foreground">{n.title}</p>
-                  {n.unread && <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-label="Unread" />}
+                  {n.unread && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-label="Unread" />
+                  )}
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">

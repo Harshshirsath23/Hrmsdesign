@@ -1,18 +1,64 @@
+import { useEffect, useState } from "react";
 import { 
   X, LogIn, LogOut, MapPin
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { DailyAttendance } from "../../../modules/attendance/types";
 import { format, parseISO, isAfter } from "date-fns";
+import type { PunchDetailsResponse } from "../../../../api/employeeAttendanceClient";
 
 interface SwipeDetailsDrawerProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   record: DailyAttendance | null;
+  onFetchPunchDetails?: (date: string) => Promise<PunchDetailsResponse>;
 }
 
-export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetailsDrawerProps) {
+function formatPunchTime(value: string | null | undefined): string {
+  if (!value) return "--:--";
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return value;
+  let hours = Number(match[1]);
+  const mins = match[2];
+  const suffix = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  return `${String(hours).padStart(2, '0')}:${mins} ${suffix}`;
+}
+
+export function SwipeDetailsDrawer({ isOpen, onOpenChange, record, onFetchPunchDetails }: SwipeDetailsDrawerProps) {
+  const [details, setDetails] = useState<PunchDetailsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !record || !onFetchPunchDetails) {
+      setDetails(null);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    onFetchPunchDetails(record.date)
+      .then((data) => {
+        if (active) setDetails(data);
+      })
+      .catch(() => {
+        if (active) setDetails(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOpen, record, onFetchPunchDetails]);
+
   if (!record) return null;
+
+  const punchInTime = details?.punch_in?.time ? formatPunchTime(details.punch_in.time) : record.firstIn || "--:--";
+  const punchOutTime = details?.punch_out?.time ? formatPunchTime(details.punch_out.time) : record.lastOut || "--:--";
+  const punchInLocation = details?.punch_in?.location || "Main Entrance";
+  const punchOutLocation = details?.punch_out?.location || "Main Gate Exit";
+  const workHours = details?.work_hours ?? record.workHours;
+  const shiftLabel = details?.shift || record.shiftName || "General Shift";
 
   const isFutureDate = record.id?.startsWith("future-") || isAfter(parseISO(record.date), new Date());
 
@@ -154,7 +200,7 @@ export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetail
                       <div>
                         <div className="flex items-baseline gap-2">
                           <span className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                            {record.firstIn || "--:--"}
+                            {loading ? "…" : punchInTime}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">
                             Punch In
@@ -162,7 +208,7 @@ export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetail
                         </div>
                         <div className="flex items-center gap-1 mt-0.5 text-slate-400">
                           <MapPin size={10} />
-                          <span className="text-[10px] font-medium">Main Entrance</span>
+                          <span className="text-[10px] font-medium">{punchInLocation}</span>
                         </div>
                       </div>
                     </div>
@@ -175,7 +221,7 @@ export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetail
                       <div>
                         <div className="flex items-baseline gap-2">
                           <span className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                            {record.lastOut || "--:--"}
+                            {loading ? "…" : punchOutTime}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">
                             Punch Out
@@ -183,7 +229,7 @@ export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetail
                         </div>
                         <div className="flex items-center gap-1 mt-0.5 text-slate-400">
                           <MapPin size={10} />
-                          <span className="text-[10px] font-medium">Main Gate Exit</span>
+                          <span className="text-[10px] font-medium">{punchOutLocation}</span>
                         </div>
                       </div>
                     </div>
@@ -194,13 +240,13 @@ export function SwipeDetailsDrawer({ isOpen, onOpenChange, record }: SwipeDetail
                     <div className="p-4 rounded-2xl bg-slate-500/5 dark:bg-white/5 border border-slate-200/40 dark:border-white/5">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Work Hours</span>
                       <p className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC] mt-1">
-                        {record.workHours > 0 ? `${record.workHours.toFixed(1)}h` : "--"}
+                        {workHours > 0 ? `${workHours.toFixed(1)}h` : "--"}
                       </p>
                     </div>
                     <div className="p-4 rounded-2xl bg-slate-500/5 dark:bg-white/5 border border-slate-200/40 dark:border-white/5">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Shift Timing</span>
                       <p className="text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] mt-2">
-                        {record.shiftName ? record.shiftName.split(" (")[0] : "09:00 - 18:00"}
+                        {shiftLabel.split(" (")[0]}
                       </p>
                     </div>
                   </div>

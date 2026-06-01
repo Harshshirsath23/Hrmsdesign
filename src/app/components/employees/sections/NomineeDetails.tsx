@@ -9,6 +9,7 @@ import {
   EmptyStateCard,
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
+import { validateEmail, validateMobile } from "../employee-details/employeeValidation";
 
 interface Props {
   employee: Employee;
@@ -26,15 +27,29 @@ const RELATIONSHIP_OPTIONS = [
   { value: "Other", label: "Other" },
 ];
 
+const NOMINEE_TYPES = [
+  { value: 'EPF', label: 'EPF' },
+  { value: 'EPS', label: 'EPS' },
+  { value: 'Gratuity', label: 'Gratuity' },
+  { value: 'Custom', label: 'Custom' },
+];
+
 function emptyNominee(): NomineeEntry {
   return {
     id: `nom-${Date.now()}`,
     nomineeName: "",
+    nomineeEmail: "",
     relationship: "",
     dateOfBirth: "",
     contactNumber: "",
     address: "",
-    sharePercentage: "",
+    nomineeType: 'EPF',
+    epfPercentage: "",
+    epsPercentage: "",
+    gratuityPercentage: "",
+    customPercentage: "",
+    isMinor: false,
+    guardian: {},
     idProofFileName: "",
     idProofDataUrl: "",
   };
@@ -45,32 +60,54 @@ function validateNominees(nominees: NomineeEntry[]): {
   formError: string | null;
 } {
   const rowErrors: Record<number, Record<string, string>> = {};
-  let totalShare = 0;
+  const totals: Record<string, number> = { EPF: 0, EPS: 0, Gratuity: 0, Custom: 0 };
 
   nominees.forEach((n, idx) => {
     const row: Record<string, string> = {};
-    if (!n.nomineeName.trim()) row.nomineeName = "Nominee name is required";
-    if (!n.relationship.trim()) row.relationship = "Relationship is required";
-    if (!n.sharePercentage.trim()) {
-      row.sharePercentage = "Share percentage is required";
+    if (!n.nomineeName || !n.nomineeName.trim()) row.nomineeName = "Nominee name is required";
+    if (!n.relationship || !n.relationship.trim()) row.relationship = "Relationship is required";
+    if (n.nomineeEmail && validateEmail(n.nomineeEmail)) row.nomineeEmail = validateEmail(n.nomineeEmail) || undefined as any;
+    const mErr = validateMobile(n.contactNumber || "");
+    if (mErr) row.contactNumber = mErr;
+
+    // Percentage checks per chosen nomineeType
+    const type = n.nomineeType || 'EPF';
+    const parsePct = (v?: string) => {
+      if (!v) return 0;
+      const num = Number(v);
+      return Number.isNaN(num) ? NaN : num;
+    };
+
+    const pctFields = {
+      EPF: parsePct(n.epfPercentage),
+      EPS: parsePct(n.epsPercentage),
+      Gratuity: parsePct(n.gratuityPercentage),
+      Custom: parsePct(n.customPercentage),
+    } as Record<string, number>;
+
+    const chosenPct = pctFields[type];
+    if (Number.isNaN(chosenPct) || chosenPct < 0 || chosenPct > 100) {
+      row[`${type}Percentage`] = "Enter a value between 0 and 100";
     } else {
-      const share = Number(n.sharePercentage);
-      if (Number.isNaN(share) || share < 0 || share > 100) {
-        row.sharePercentage = "Enter a value between 0 and 100";
-      } else {
-        totalShare += share;
-      }
+      totals[type] += chosenPct;
     }
-    if (n.contactNumber.trim() && !/^\+?[\d\s-]{10,}$/.test(n.contactNumber.trim())) {
-      row.contactNumber = "Enter a valid contact number";
+
+    // Minor nominee guardian validation
+    if (n.isMinor) {
+      const g = n.guardian || {};
+      if (!g.guardianName || !g.guardianName.trim()) row.guardianName = "Guardian name required for minor";
+      if (!g.relationshipWithMinor || !g.relationshipWithMinor.trim()) row.guardianRelationship = "Relationship with minor required";
+      const gMobileErr = validateMobile(g.contactNumber || "");
+      if (gMobileErr) row.guardianContactNumber = gMobileErr;
+      if (!g.address || !g.address.trim()) row.guardianAddress = "Guardian address required";
     }
+
     if (Object.keys(row).length) rowErrors[idx] = row;
   });
 
-  const formError =
-    nominees.length > 0 && Math.round(totalShare) !== 100
-      ? `Total share must equal 100% (currently ${totalShare}%)`
-      : null;
+  // Form-level validation: ensure no type exceeds 100
+  const overType = Object.entries(totals).find(([k, v]) => v > 100);
+  const formError = overType ? `${overType[0]} allocation exceeds 100% (currently ${overType[1]}%)` : null;
 
   return { rowErrors, formError };
 }
@@ -134,6 +171,18 @@ export function NomineeDetails({ employee, showAddButton = true }: Props) {
 
   const displayNominees = isEditing ? nominees : baseline;
 
+  const computeTotals = (rows: NomineeEntry[]) => {
+    const totals: Record<string, number> = { EPF: 0, EPS: 0, Gratuity: 0, Custom: 0 };
+    rows.forEach((r) => {
+      const add = (v?: string) => (v ? Number(v) || 0 : 0);
+      totals.EPF += add(r.epfPercentage);
+      totals.EPS += add(r.epsPercentage);
+      totals.Gratuity += add(r.gratuityPercentage);
+      totals.Custom += add(r.customPercentage);
+    });
+    return totals;
+  };
+
   return (
     <div className="space-y-5 pb-24">
       <div>
@@ -170,79 +219,251 @@ export function NomineeDetails({ employee, showAddButton = true }: Props) {
           <EmptyStateCard icon={Users} title="No nominees on file" description="Nominee details will appear here once added." />
         ) : (
           <div className="space-y-6">
-            {displayNominees.map((n, idx) => (
-              <div key={n.id} className="rounded-2xl border border-border bg-secondary/10 p-6 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <ProfileInfoField
-                    label="Nominee Name"
-                    value={n.nomineeName}
-                    editing={isEditing}
-                    error={rowErrors[idx]?.nomineeName}
-                    onChange={(v) => updateNominee(idx, { nomineeName: v })}
-                  />
-                  <ProfileInfoField
-                    label="Relationship"
-                    value={n.relationship}
-                    editing={isEditing}
-                    options={relationOptions.length ? relationOptions : RELATIONSHIP_OPTIONS}
-                    error={rowErrors[idx]?.relationship}
-                    onChange={(v) => updateNominee(idx, { relationship: v })}
-                  />
-                  <ProfileInfoField
-                    label="Date Of Birth"
-                    value={n.dateOfBirth}
-                    editing={isEditing}
-                    type="date"
-                    onChange={(v) => updateNominee(idx, { dateOfBirth: v })}
-                  />
-                  <ProfileInfoField
-                    label="Contact Number"
-                    value={n.contactNumber}
-                    editing={isEditing}
-                    type="tel"
-                    error={rowErrors[idx]?.contactNumber}
-                    onChange={(v) => updateNominee(idx, { contactNumber: v })}
-                  />
-                  <div className="sm:col-span-2">
+            {displayNominees.map((n, idx) => {
+              const totals = computeTotals(nominees);
+              const remainingFor = (type: string) => Math.max(
+                0,
+                100 - (totals[type] - (type === 'EPF' ? Number(n.epfPercentage || 0) : type === 'EPS' ? Number(n.epsPercentage || 0) : type === 'Gratuity' ? Number(n.gratuityPercentage || 0) : Number(n.customPercentage || 0)))
+              );
+
+              const handlePctChange = (field: 'epfPercentage' | 'epsPercentage' | 'gratuityPercentage' | 'customPercentage', value: string) => {
+                const num = Number(value);
+                if (value.trim() === "") {
+                  updateNominee(idx, { [field]: value } as any);
+                  setRowErrors((prev) => {
+                    const next = { ...prev };
+                    if (next[idx]) delete next[idx][field];
+                    return next;
+                  });
+                  return;
+                }
+                if (Number.isNaN(num) || num < 0) {
+                  setRowErrors((prev) => ({ ...prev, [idx]: { ...(prev[idx] || {}), [field]: 'Enter a valid number' } }));
+                  return;
+                }
+                const type = field === 'epfPercentage' ? 'EPF' : field === 'epsPercentage' ? 'EPS' : field === 'gratuityPercentage' ? 'Gratuity' : 'Custom';
+                const remaining = remainingFor(type);
+                if (num > remaining) {
+                  // Cap the value to remaining and show a validation note
+                  const capped = remaining;
+                  updateNominee(idx, { [field]: String(capped) } as any);
+                  setRowErrors((prev) => ({ ...prev, [idx]: { ...(prev[idx] || {}), [field]: `Value capped to available ${remaining}%` } }));
+                  return;
+                }
+                // valid
+                updateNominee(idx, { [field]: String(num) } as any);
+                setRowErrors((prev) => {
+                  const next = { ...prev };
+                  if (next[idx]) delete next[idx][field];
+                  return next;
+                });
+              };
+
+              return (
+                <div key={n.id} className="rounded-2xl border border-border bg-secondary/10 p-6 space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <ProfileInfoField
-                      label="Address"
-                      value={n.address}
+                      label="Nominee Name"
+                      value={n.nomineeName}
                       editing={isEditing}
-                      type="textarea"
-                      onChange={(v) => updateNominee(idx, { address: v })}
+                      error={rowErrors[idx]?.nomineeName}
+                      onChange={(v) => updateNominee(idx, { nomineeName: v })}
                     />
-                  </div>
-                  <ProfileInfoField
-                    label="Share Percentage (%)"
-                    value={n.sharePercentage}
-                    editing={isEditing}
-                    type="number"
-                    error={rowErrors[idx]?.sharePercentage}
-                    onChange={(v) => updateNominee(idx, { sharePercentage: v })}
-                  />
-                  <div className="sm:col-span-2">
-                    <UploadField
-                      label="ID Proof Upload"
-                      fileName={n.idProofFileName}
-                      dataUrl={n.idProofDataUrl}
+
+                    <ProfileInfoField
+                      label="Nominee Email"
+                      value={n.nomineeEmail || ''}
                       editing={isEditing}
-                      onFileChange={(name, data) =>
-                        updateNominee(idx, { idProofFileName: name, idProofDataUrl: data })
-                      }
+                      type="email"
+                      error={rowErrors[idx]?.nomineeEmail}
+                      onChange={(v) => updateNominee(idx, { nomineeEmail: v })}
                     />
+
+                    <ProfileInfoField
+                      label="Relationship"
+                      value={n.relationship}
+                      editing={isEditing}
+                      options={relationOptions.length ? relationOptions : RELATIONSHIP_OPTIONS}
+                      error={rowErrors[idx]?.relationship}
+                      onChange={(v) => updateNominee(idx, { relationship: v })}
+                    />
+
+                    <ProfileInfoField
+                      label="Date Of Birth"
+                      value={n.dateOfBirth}
+                      editing={isEditing}
+                      type="date"
+                      onChange={(v) => updateNominee(idx, { dateOfBirth: v })}
+                    />
+
+                    <ProfileInfoField
+                      label="Contact Number"
+                      value={n.contactNumber}
+                      editing={isEditing}
+                      type="tel"
+                      error={rowErrors[idx]?.contactNumber}
+                      onChange={(v) => updateNominee(idx, { contactNumber: v })}
+                    />
+
+                    <div className="sm:col-span-2">
+                      <ProfileInfoField
+                        label="Address"
+                        value={n.address}
+                        editing={isEditing}
+                        type="textarea"
+                        onChange={(v) => updateNominee(idx, { address: v })}
+                      />
+                    </div>
+
+                    <ProfileInfoField
+                      label="Nominee Type"
+                      value={n.nomineeType || 'EPF'}
+                      editing={isEditing}
+                      options={NOMINEE_TYPES.map(t => {
+                        const currentPct = t.value === 'EPF' ? Number(n.epfPercentage || 0) : t.value === 'EPS' ? Number(n.epsPercentage || 0) : t.value === 'Gratuity' ? Number(n.gratuityPercentage || 0) : Number(n.customPercentage || 0);
+                        return { value: t.value, label: t.label, disabled: totals[t.value] >= 100 && currentPct <= 0 };
+                      })}
+                      onChange={(v) => {
+                        const rem = remainingFor(v);
+                        const currentPct = v === 'EPF' ? Number(n.epfPercentage || 0) : v === 'EPS' ? Number(n.epsPercentage || 0) : v === 'Gratuity' ? Number(n.gratuityPercentage || 0) : Number(n.customPercentage || 0);
+                        if (rem <= 0 && currentPct <= 0) {
+                          setRowErrors((prev) => ({ ...prev, [idx]: { ...(prev[idx] || {}), nomineeType: 'No allocation available for selected type' } }));
+                          return;
+                        }
+                        updateNominee(idx, { nomineeType: v });
+                      }}
+                    />
+
+                    {/* Percentage inputs: show only the field relevant to nomineeType */}
+                    { (n.nomineeType || 'EPF') === 'EPF' && (
+                      <ProfileInfoField
+                        label="EPF (%)"
+                        value={n.epfPercentage || ''}
+                        editing={isEditing}
+                        type="number"
+                        error={rowErrors[idx]?.EPFPercentage || rowErrors[idx]?.epfPercentage}
+                        onChange={(v) => handlePctChange('epfPercentage', v)}
+                      />
+                    )}
+                    { (n.nomineeType || 'EPF') === 'EPS' && (
+                      <ProfileInfoField
+                        label="EPS (%)"
+                        value={n.epsPercentage || ''}
+                        editing={isEditing}
+                        type="number"
+                        error={rowErrors[idx]?.EPSPercentage || rowErrors[idx]?.epsPercentage}
+                        onChange={(v) => handlePctChange('epsPercentage', v)}
+                      />
+                    )}
+                    { (n.nomineeType || 'EPF') === 'Gratuity' && (
+                      <ProfileInfoField
+                        label="Gratuity (%)"
+                        value={n.gratuityPercentage || ''}
+                        editing={isEditing}
+                        type="number"
+                        error={rowErrors[idx]?.GratuityPercentage || rowErrors[idx]?.gratuityPercentage}
+                        onChange={(v) => handlePctChange('gratuityPercentage', v)}
+                      />
+                    )}
+                    { (n.nomineeType || 'EPF') === 'Custom' && (
+                      <ProfileInfoField
+                        label="Custom (%)"
+                        value={n.customPercentage || ''}
+                        editing={isEditing}
+                        type="number"
+                        error={rowErrors[idx]?.CustomPercentage || rowErrors[idx]?.customPercentage}
+                        onChange={(v) => handlePctChange('customPercentage', v)}
+                      />
+                    )}
+
+                    <div className="sm:col-span-2">
+                      <UploadField
+                        label="ID Proof Upload"
+                        fileName={n.idProofFileName}
+                        dataUrl={n.idProofDataUrl}
+                        editing={isEditing}
+                        onFileChange={(name, data) =>
+                          updateNominee(idx, { idProofFileName: name, idProofDataUrl: data })
+                        }
+                      />
+                    </div>
                   </div>
+
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={!!n.isMinor} onChange={(e) => updateNominee(idx, { isMinor: !!e.target.checked })} />
+                      <span className="text-sm font-medium">Is Minor Nominee?</span>
+                    </label>
+                  </div>
+
+                  {n.isMinor ? (
+                    <div className="pt-4 border-t border-border space-y-4">
+                      <h4 className="text-sm font-bold">Guardian Details</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <ProfileInfoField
+                          label="Guardian Name"
+                          value={n.guardian?.guardianName || ''}
+                          editing={isEditing}
+                          error={rowErrors[idx]?.guardianName}
+                          onChange={(v) => updateNominee(idx, { guardian: { ...(n.guardian || {}), guardianName: v } })}
+                        />
+                        <ProfileInfoField
+                          label="Relationship With Minor"
+                          value={n.guardian?.relationshipWithMinor || ''}
+                          editing={isEditing}
+                          error={rowErrors[idx]?.guardianRelationship}
+                          onChange={(v) => updateNominee(idx, { guardian: { ...(n.guardian || {}), relationshipWithMinor: v } })}
+                        />
+                        <ProfileInfoField
+                          label="Contact Number"
+                          value={n.guardian?.contactNumber || ''}
+                          editing={isEditing}
+                          type="tel"
+                          error={rowErrors[idx]?.guardianContactNumber}
+                          onChange={(v) => updateNominee(idx, { guardian: { ...(n.guardian || {}), contactNumber: v } })}
+                        />
+                        <ProfileInfoField
+                          label="Guardian DOB"
+                          value={n.guardian?.dateOfBirth || ''}
+                          editing={isEditing}
+                          type="date"
+                          onChange={(v) => updateNominee(idx, { guardian: { ...(n.guardian || {}), dateOfBirth: v } })}
+                        />
+                        <div className="sm:col-span-2">
+                          <ProfileInfoField
+                            label="Guardian Address"
+                            value={n.guardian?.address || ''}
+                            editing={isEditing}
+                            type="textarea"
+                            error={rowErrors[idx]?.guardianAddress}
+                            onChange={(v) => updateNominee(idx, { guardian: { ...(n.guardian || {}), address: v } })}
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <UploadField
+                            label="Guardian ID Proof Upload"
+                            fileName={n.guardian?.idProofFileName}
+                            dataUrl={n.guardian?.idProofDataUrl}
+                            editing={isEditing}
+                            onFileChange={(name, data) => updateNominee(idx, { guardian: { ...(n.guardian || {}), idProofFileName: name, idProofDataUrl: data } })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {isEditing && displayNominees.length > 1 ? (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-destructive hover:underline"
+                      onClick={() => setNominees((rows) => rows.filter((_, i) => i !== idx))}
+                    >
+                      Remove nominee
+                    </button>
+                  ) : null}
                 </div>
-                {isEditing && displayNominees.length > 1 ? (
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-destructive hover:underline"
-                    onClick={() => setNominees((rows) => rows.filter((_, i) => i !== idx))}
-                  >
-                    Remove nominee
-                  </button>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </EditableSectionCard>

@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import React, {
   createContext,
   useContext,
@@ -35,7 +37,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
  
 const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
+  (import.meta.env["VITE_API_BASE_URL"] as string | undefined)?.replace(/\/$/, "") ||
   "http://acme.localhost:8000";
  
 const AUTH_API_URL = `${API_BASE_URL}/api/employee`;
@@ -83,6 +85,13 @@ function initialsFromName(name: string): string {
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("") || "U";
 }
+
+interface LoginResponse {
+  access?: string;
+  refresh?: string;
+  detail?: string;
+  message?: string;
+}
  
 export function AuthProvider({
   children,
@@ -109,7 +118,7 @@ export function AuthProvider({
         body: JSON.stringify({ email, password, role }),
       });
  
-      let data: any = {};
+      let data: LoginResponse = {};
       try {
         data = await response.json();
       } catch {
@@ -126,6 +135,13 @@ export function AuthProvider({
         };
       }
  
+      if (!data.access || !data.refresh) {
+        return {
+          success: false,
+          message: data.detail || data.message || "Login response did not include tokens",
+        };
+      }
+
       localStorage.setItem("hrms_access_token", data.access);
       localStorage.setItem("hrms_refresh_token", data.refresh);
       setToken(data.access);
@@ -133,6 +149,7 @@ export function AuthProvider({
       const claims = decodeJwtPayload(data.access);
       const employeeCode = stringClaim(claims, "employee_code");
       const employeeId = stringClaim(claims, "employee_id");
+      const companyId = stringClaim(claims, "company_id");
       const userId = Number(stringClaim(claims, "user_id"));
       const displayName = employeeCode ?? email.split("@")[0];
  
@@ -148,7 +165,8 @@ export function AuthProvider({
  
       setUser(userData);
       localStorage.setItem("hrms_user", JSON.stringify(userData));
- 
+      if (companyId) localStorage.setItem("hrms_company_id", companyId);
+
       return { success: true };
     } catch (error) {
       console.error(error);

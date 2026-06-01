@@ -153,14 +153,14 @@ type Touched = Partial<Record<keyof FormState, boolean>>;
 // ═══════════════════════════════════════════════════════════
 
 const SECTIONS = [
-  { id: "s-basic", n: 1, label: "Basic Information", Icon: User },
-  { id: "s-job", n: 2, label: "Job Details", Icon: Briefcase },
-  { id: "s-attendance", n: 3, label: "Attendance Settings", Icon: Clock },
-  { id: "s-payroll", n: 4, label: "Payroll Information", Icon: CreditCard },
-  { id: "s-leave", n: 5, label: "Leave Configuration", Icon: Calendar },
-  { id: "s-background", n: 6, label: "Background Check", Icon: Shield },
-  { id: "s-assets", n: 7, label: "Asset Management", Icon: Monitor },
-  { id: "s-account", n: 8, label: "Account Access", Icon: Shield },
+  { id: "s-basic", label: "Basic Information", Icon: User },
+  { id: "s-job", label: "Job Details", Icon: Briefcase },
+  { id: "s-attendance", label: "Attendance Settings", Icon: Clock },
+  // { id: "s-payroll", label: "Payroll Information", Icon: CreditCard },
+  { id: "s-leave", label: "Leave Configuration", Icon: Calendar },
+  { id: "s-background", label: "Background Check", Icon: Shield },
+  { id: "s-assets", label: "Asset Management", Icon: Monitor },
+  { id: "s-account", label: "Account Access", Icon: Shield },
 ];
 
 const DEPTS = [
@@ -335,23 +335,23 @@ function FF({
 }) {
   return (
     <div className={span2 ? "sm:col-span-2" : ""}>
-      <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">
+      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
         {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
+        {required && <span className="text-destructive ml-1">*</span>}
       </label>
       {children}
       {error ? (
-        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-red-500 font-medium">
-          <AlertCircle size={11} strokeWidth={2.5} />
-          {error}
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-destructive font-medium">
+          <AlertCircle size={14} strokeWidth={2} />
+          <span>{error}</span>
         </div>
       ) : ok ? (
-        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-green-600 font-medium">
-          <CheckCircle size={11} strokeWidth={2.5} />
-          Looks good
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-success font-medium">
+          <CheckCircle size={14} strokeWidth={2} />
+          <span>Verified</span>
         </div>
       ) : hint ? (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">{hint}</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );
@@ -372,19 +372,17 @@ function Inp({
   return (
     <div className="relative">
       {icon && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none flex items-center">
+        <div className="form-control-icon-left">
           {icon}
-        </span>
+        </div>
       )}
       <input
         className={[
-          "flat-input h-9 px-3 text-sm",
+          "form-control",
           wfull ? "w-full" : "",
-          icon ? "pl-9" : "",
-          err
-            ? "!border-red-400 focus:!border-red-500 focus:!shadow-[0_0_0_3px_rgba(220,53,69,0.08)]"
-            : "",
-          success && !err ? "!border-green-500 pr-9" : "",
+          icon ? "form-control--icon-left" : "",
+          err ? "form-control--error" : "",
+          success && !err ? "form-control--success border-success" : "",
           p.readOnly ? "opacity-60 cursor-not-allowed" : "",
         ]
           .filter(Boolean)
@@ -392,10 +390,12 @@ function Inp({
         {...p}
       />
       {success && !err && (
-        <CheckCircle
-          size={14}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none"
-        />
+        <div className="form-control-icon-right">
+          <CheckCircle
+            size={16}
+            className="text-success"
+          />
+        </div>
       )}
     </div>
   );
@@ -417,9 +417,10 @@ function Sel({
     <div className="relative">
       <select
         className={[
-          "flat-input w-full h-9 px-3 pr-9 text-sm appearance-none cursor-pointer",
-          err ? "!border-red-400" : "",
-          success && !err ? "!border-green-500" : "",
+          "form-control form-control--select",
+          "w-full",
+          err ? "form-control--error" : "",
+          success && !err ? "form-control--success" : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -432,10 +433,11 @@ function Sel({
           </option>
         ))}
       </select>
-      <ChevronDown
-        size={13}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-      />
+      {success && !err && (
+        <div className="form-control-icon-right">
+          <CheckCircle size={16} className="text-success" />
+        </div>
+      )}
     </div>
   );
 }
@@ -519,7 +521,7 @@ function PhoneInp({
   err?: boolean;
 }) {
   return (
-    <div className={`flex h-9 flat-input overflow-hidden p-0 ${err ? "!border-red-400" : ""}`}>
+    <div className={`flex h-10 form-control overflow-hidden p-0 border border-border rounded-lg bg-card ${err ? "form-control--error border-destructive" : ""}`}>
       <select
         value={cc}
         onChange={(e) => onCC(e.target.value)}
@@ -536,7 +538,7 @@ function PhoneInp({
         value={ph}
         onChange={(e) => onPh(e.target.value)}
         placeholder="Phone number"
-        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground"
+        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground border-0"
       />
     </div>
   );
@@ -553,21 +555,21 @@ function MaskInp({
 }) {
   const [show, setShow] = useState(false);
   return (
-    <div className="flex h-9 flat-input overflow-hidden p-0">
+    <div className="flex h-10 form-control overflow-hidden p-0 border border-border rounded-lg bg-card">
       <input
         type={show ? "text" : "password"}
         value={val}
         onChange={(e) => onChange(e.target.value)}
         placeholder={ph}
-        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground font-mono"
+        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground font-mono border-0"
       />
       <button
         type="button"
         onClick={() => setShow(!show)}
         tabIndex={-1}
-        className="px-3 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        className="w-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
       >
-        {show ? <EyeOff size={14} /> : <Eye size={14} />}
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
     </div>
   );
@@ -611,13 +613,13 @@ function SearchSel({
           setTimeout(() => inputRef.current?.focus(), 50);
           setQ("");
         }}
-        className="flat-input w-full h-9 px-3 text-sm flex items-center justify-between gap-2 text-left"
+        className="form-control w-full flex items-center justify-between gap-2 text-left px-3"
       >
         <span className={selected ? "text-foreground truncate" : "text-muted-foreground"}>
           {selected?.l ?? ph}
         </span>
         <ChevronDown
-          size={13}
+          size={16}
           className={`text-muted-foreground shrink-0 transition-transform duration-150 ${
             open ? "rotate-180" : ""
           }`}
@@ -892,9 +894,6 @@ function SC({
           <Icon size={16} className="text-primary-foreground" />
         </div>
         <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.14em]">
-            Section {String(n).padStart(2, "0")}
-          </p>
           <h2 className="text-[15px] font-semibold text-foreground mt-0.5 leading-snug">{title}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
         </div>
@@ -1007,7 +1006,7 @@ function SectionNav({ active, onSelect }: { active: string; onSelect: (id: strin
           Form Sections
         </p>
         <nav className="flex flex-col gap-0.5">
-          {SECTIONS.map(({ id, n, label, Icon }) => {
+          {SECTIONS.map(({ id, label, Icon }) => {
             const isActive = active === id;
             return (
               <a
@@ -1025,11 +1024,11 @@ function SectionNav({ active, onSelect }: { active: string; onSelect: (id: strin
                 }`}
               >
                 <span
-                  className={`w-[18px] h-[18px] rounded flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                    isActive ? "bg-white/20 text-primary-foreground" : ""
+                  className={`w-[24px] h-[24px] rounded flex items-center justify-center text-[12px] font-medium shrink-0 ${
+                    isActive ? "bg-white/10 text-primary-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  {n}
+                  <Icon size={14} />
                 </span>
                 <span className="truncate">{label}</span>
               </a>
@@ -1956,7 +1955,7 @@ export function AddEmployeePage() {
             {/* ─────────────────────────────────────────────
                 SECTION 4 · PAYROLL INFORMATION
             ───────────────────────────────────────────── */}
-            <SC
+            {/* <SC
               id="s-payroll"
               n={4}
               title="Payroll Information"
@@ -2029,7 +2028,7 @@ export function AddEmployeePage() {
                   className="font-mono tracking-wider"
                 />
               </FF>
-            </SC>
+            </SC> */}
 
             {/* ─────────────────────────────────────────────
                 SECTION 5 · LEAVE CONFIGURATION
@@ -2049,28 +2048,7 @@ export function AddEmployeePage() {
                   placeholder="Select policy"
                 />
               </FF>
-
-              <FF label="Annual Leave Balance" hint="Days credited per year">
-                <Inp
-                  type="number"
-                  value={form.annualLeave}
-                  onChange={(e) => set("annualLeave", e.target.value)}
-                  placeholder="24"
-                  min={0}
-                  max={365}
-                />
-              </FF>
-
-              <FF label="Sick Leave Balance" hint="Days credited per year">
-                <Inp
-                  type="number"
-                  value={form.sickLeave}
-                  onChange={(e) => set("sickLeave", e.target.value)}
-                  placeholder="12"
-                  min={0}
-                  max={365}
-                />
-              </FF>
+              
             </SC>
 
 
