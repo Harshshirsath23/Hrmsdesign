@@ -8,10 +8,11 @@ import { RegularizationTab } from "./RegularizationTab";
 import { SwipeDetailsDrawer } from "./SwipeDetailsDrawer";
 import { AttendanceCharts } from "./AttendanceCharts";
 import { Legend } from "./Legend";
-import { calculateMetrics } from "./utils";
+import { calculateMetrics, AttendanceMetrics } from "./utils";
 import { DailyAttendance } from "../../../modules/attendance/types";
 import { attendanceDataset } from "../../../modules/attendance/store";
 import { motion, AnimatePresence } from "motion/react";
+import type { PunchDetailsResponse, RegularizationBulkPayload } from "../../../../api/employeeAttendanceClient";
 
 interface MyAttendanceModuleProps {
   employeeId: string;
@@ -21,9 +22,12 @@ interface MyAttendanceModuleProps {
   showTitle?: boolean;
   /** When set, uses API-backed records instead of the local mock dataset. */
   externalRecords?: DailyAttendance[];
+  externalMetrics?: AttendanceMetrics;
   externalLoading?: boolean;
   externalError?: string | null;
   onPeriodChange?: (date: Date) => void;
+  onFetchPunchDetails?: (date: string) => Promise<PunchDetailsResponse>;
+  onSubmitRegularization?: (payload: RegularizationBulkPayload) => Promise<void>;
 }
 
 export function MyAttendanceModule({
@@ -33,9 +37,12 @@ export function MyAttendanceModule({
   readOnly = false,
   showTitle = true,
   externalRecords,
+  externalMetrics,
   externalLoading = false,
   externalError = null,
   onPeriodChange,
+  onFetchPunchDetails,
+  onSubmitRegularization,
 }: MyAttendanceModuleProps) {
   const [view, setView] = useState<"calendar" | "list" | "regularization">("calendar");
   const [currentDate, setCurrentDate] = useState(() =>
@@ -79,7 +86,10 @@ export function MyAttendanceModule({
     return records;
   }, [employeeId, currentDate, searchTerm, view, usesExternalData, externalRecords]);
 
-  const metrics = useMemo(() => calculateMetrics(employeeRecords), [employeeRecords]);
+  const metrics = useMemo(
+    () => externalMetrics ?? calculateMetrics(employeeRecords),
+    [externalMetrics, employeeRecords],
+  );
 
   const handleRegularize = (date: string) => {
     setSelectedDateForRegularize(date);
@@ -177,9 +187,10 @@ export function MyAttendanceModule({
                 />
               ) : (
                 <RegularizationTab
-                  records={attendanceDataset.records.filter(r => r.employeeId === employeeId)}
+                  records={usesExternalData ? employeeRecords : attendanceDataset.records.filter(r => r.employeeId === employeeId)}
                   initialDate={selectedDateForRegularize}
                   readOnly={readOnly}
+                  onSubmitRegularization={onSubmitRegularization}
                 />
               )}
             </motion.div>
@@ -227,6 +238,7 @@ export function MyAttendanceModule({
         isOpen={isSwipeOpen}
         onOpenChange={setIsSwipeOpen}
         record={selectedRecord}
+        onFetchPunchDetails={onFetchPunchDetails}
       />
     </div>
   );

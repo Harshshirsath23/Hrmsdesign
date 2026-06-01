@@ -15,6 +15,14 @@ export interface AttendanceMetrics {
   lastOutAvg: string;
   bestStreak: number;
   currentStreak: number;
+  deltas?: {
+    avgWorkHours: string;
+    avgActualWork: string;
+    presentDays: string;
+    absentDays: string;
+    leaveTaken: string;
+    lateIn: string;
+  };
 }
 
 /**
