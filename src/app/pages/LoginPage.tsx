@@ -80,7 +80,7 @@ const DEMO: Record<
     email: "amit.patel@acme.com",
     password: "Password@123",
   },
-};
+};  
 
 export function LoginPage() {
   const navigate = useNavigate();

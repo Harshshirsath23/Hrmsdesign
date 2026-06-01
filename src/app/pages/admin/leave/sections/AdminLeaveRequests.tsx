@@ -22,8 +22,7 @@ import {
 import { cn } from "../../../../components/ui/utils";
 
 import { AdminLeaveRequestDrawer } from "./components/AdminLeaveRequestDrawer";
-
-import { ADMIN_LEAVE_REQUESTS } from "../../../../modules/adminLeave/mock";
+import { useAdminLeaveRequestsStore } from "../../../../modules/adminLeave/store";
 
 import {
   AdvancedFilterDrawer,
@@ -168,29 +167,27 @@ export function AdminLeaveRequests() {
 
   const pageSize = 10;
 
+  const { activeRows } = useAdminLeaveRequestsStore();
+
   const departmentOptions = useMemo(() => {
     const all = Array.from(
       new Set(
-        ADMIN_LEAVE_REQUESTS.map(
-          (r) => r.employee.department,
-        ),
+        activeRows.map((r) => r.employee.department),
       ),
     ).sort();
 
     return ["ALL", ...all];
-  }, []);
+  }, [activeRows]);
 
   const employeeOptions = useMemo(() => {
     const all = Array.from(
       new Set(
-        ADMIN_LEAVE_REQUESTS.map(
-          (r) => r.employee.employee_name,
-        ),
+        activeRows.map((r) => r.employee.employee_name),
       ),
     ).sort();
 
     return ["ALL", ...all];
-  }, []);
+  }, [activeRows]);
 
   const locationOptions = useMemo(
     () => ["ALL"],
@@ -214,7 +211,7 @@ export function AdminLeaveRequests() {
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
 
-    return ADMIN_LEAVE_REQUESTS.filter((r) => {
+    return activeRows.filter((r) => {
       const matchQuery =
         !q ||
         r.employee.employee_name
