@@ -6,8 +6,8 @@ import {
   EditableFormCard,
   EditableSectionCard,
   ProfileInfoField,
-  UploadField,
   EmptyStateCard,
+  UploadField,
   ConfirmationDialog,
   validateDateOrder,
 } from "../employee-details";

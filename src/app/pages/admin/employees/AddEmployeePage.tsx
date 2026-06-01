@@ -141,14 +141,14 @@ type Touched = Partial<Record<keyof FormState, boolean>>;
 // ═══════════════════════════════════════════════════════════
 
 const SECTIONS = [
-  { id: "s-basic", n: 1, label: "Basic Information", Icon: User },
-  { id: "s-job", n: 2, label: "Job Details", Icon: Briefcase },
-  { id: "s-attendance", n: 3, label: "Attendance Settings", Icon: Clock },
-  { id: "s-payroll", n: 4, label: "Payroll Information", Icon: CreditCard },
-  { id: "s-leave", n: 5, label: "Leave Configuration", Icon: Calendar },
-  { id: "s-background", n: 6, label: "Background Check", Icon: Shield },
-  { id: "s-assets", n: 7, label: "Asset Management", Icon: Monitor },
-  { id: "s-account", n: 8, label: "Account Access", Icon: Shield },
+  { id: "s-basic", label: "Basic Information", Icon: User },
+  { id: "s-job", label: "Job Details", Icon: Briefcase },
+  { id: "s-attendance", label: "Attendance Settings", Icon: Clock },
+  // { id: "s-payroll", label: "Payroll Information", Icon: CreditCard },
+  { id: "s-leave", label: "Leave Configuration", Icon: Calendar },
+  { id: "s-background", label: "Background Check", Icon: Shield },
+  { id: "s-assets", label: "Asset Management", Icon: Monitor },
+  { id: "s-account", label: "Account Access", Icon: Shield },
 ];
 
 const DEPTS = [
@@ -879,9 +879,6 @@ function SC({
           <Icon size={16} className="text-primary-foreground" />
         </div>
         <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.14em]">
-            Section {String(n).padStart(2, "0")}
-          </p>
           <h2 className="text-[15px] font-semibold text-foreground mt-0.5 leading-snug">{title}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
         </div>
@@ -994,7 +991,7 @@ function SectionNav({ active, onSelect }: { active: string; onSelect: (id: strin
           Form Sections
         </p>
         <nav className="flex flex-col gap-0.5">
-          {SECTIONS.map(({ id, n, label, Icon }) => {
+          {SECTIONS.map(({ id, label, Icon }) => {
             const isActive = active === id;
             return (
               <a
@@ -1012,11 +1009,11 @@ function SectionNav({ active, onSelect }: { active: string; onSelect: (id: strin
                 }`}
               >
                 <span
-                  className={`w-[18px] h-[18px] rounded flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                    isActive ? "bg-white/20 text-primary-foreground" : ""
+                  className={`w-[24px] h-[24px] rounded flex items-center justify-center text-[12px] font-medium shrink-0 ${
+                    isActive ? "bg-white/10 text-primary-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  {n}
+                  <Icon size={14} />
                 </span>
                 <span className="truncate">{label}</span>
               </a>
@@ -1881,7 +1878,7 @@ export function AddEmployeePage() {
             {/* ─────────────────────────────────────────────
                 SECTION 4 · PAYROLL INFORMATION
             ───────────────────────────────────────────── */}
-            <SC
+            {/* <SC
               id="s-payroll"
               n={4}
               title="Payroll Information"
@@ -1948,7 +1945,7 @@ export function AddEmployeePage() {
                   className="font-mono tracking-wider"
                 />
               </FF>
-            </SC>
+            </SC> */}
 
             {/* ─────────────────────────────────────────────
                 SECTION 5 · LEAVE CONFIGURATION
@@ -1968,28 +1965,7 @@ export function AddEmployeePage() {
                   opts={LEAVE_POLICIES}
                 />
               </FF>
-
-              <FF label="Annual Leave Balance" hint="Days credited per year">
-                <Inp
-                  type="number"
-                  value={form.annualLeave}
-                  onChange={(e) => set("annualLeave", e.target.value)}
-                  placeholder="24"
-                  min={0}
-                  max={365}
-                />
-              </FF>
-
-              <FF label="Sick Leave Balance" hint="Days credited per year">
-                <Inp
-                  type="number"
-                  value={form.sickLeave}
-                  onChange={(e) => set("sickLeave", e.target.value)}
-                  placeholder="12"
-                  min={0}
-                  max={365}
-                />
-              </FF>
+              
             </SC>
 
 

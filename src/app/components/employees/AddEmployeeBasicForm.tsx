@@ -16,6 +16,7 @@ import {
   HelpCircle, Trash2, LayoutDashboard, FileCheck, GraduationCap, Mail, Phone, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmployeeFormProvider } from './employee-details/EmployeeFormContext';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -91,11 +92,11 @@ const formSchema = z.object({
   deviceId: z.string().optional(),
 
   // PAYROLL & STATUTORY
-  uanNumber: z.string().optional(),
-  esicNumber: z.string().optional(),
-  disabilityStatus: z.boolean(),
-  costCenterId: z.string().optional(),
-  gradeId: z.string().optional(),
+  // uanNumber: z.string().optional(),
+  // esicNumber: z.string().optional(),
+  // disabilityStatus: z.boolean(),
+  // costCenterId: z.string().optional(),
+  // gradeId: z.string().optional(),
 
   // MISC
   allowEmployeeToFillInfo: z.boolean(),
@@ -179,6 +180,7 @@ function SectionHeader({ title, icon: Icon, description }: { title: string; icon
       {description && <p className="text-sm text-muted-foreground ml-11">{description}</p>}
       <div className="h-px w-full bg-gradient-to-r from-border via-border/50 to-transparent mt-2" />
     </div>
+    </EmployeeFormProvider>
   );
 }
 
@@ -303,6 +305,8 @@ export default function AddEmployeeBasicForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [finalConfirmChecked, setFinalConfirmChecked] = useState(false);
+  const [finalSubmitted, setFinalSubmitted] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -346,6 +350,7 @@ export default function AddEmployeeBasicForm() {
   const sameAsCurrent = watch('sameAsCurrent');
 
   const onSubmit = async (data: FormData) => {
+    setFinalSubmitted(true);
     setIsSubmitting(true);
     try {
       console.log('Form Submitted:', data);
@@ -374,7 +379,7 @@ export default function AddEmployeeBasicForm() {
     { id: 'basic-info', label: 'Basic Information', icon: User },
     { id: 'job-details', label: 'Job Details', icon: Briefcase },
     { id: 'attendance-settings', label: 'Attendance Settings', icon: Clock },
-    { id: 'payroll-info', label: 'Payroll Information', icon: CreditCard },
+    // { id: 'payroll-info', label: 'Payroll Information', icon: CreditCard },
     { id: 'leave-config', label: 'Leave Configuration', icon: Calendar },
     { id: 'documents', label: 'Documents', icon: Upload },
     { id: 'education-details', label: 'Education Details', icon: GraduationCap },
@@ -410,6 +415,7 @@ export default function AddEmployeeBasicForm() {
   };
 
   return (
+    <EmployeeFormProvider value={{ finalSubmitted }}>
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] pb-32">
       {/* Top Header */}
       <div className="sticky top-0 z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-2xl border-b border-border/40 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-300">
@@ -441,15 +447,25 @@ export default function AddEmployeeBasicForm() {
               {isDrafting ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
               Save Draft
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              form="add-employee-form"
-              className="h-10 px-6 rounded-xl font-black text-xs uppercase tracking-widest bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : <ChevronRight size={16} className="mr-2" />}
-              Complete Registration
-            </Button>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input type="checkbox" className="w-4 h-4" checked={finalConfirmChecked} onChange={(e) => setFinalConfirmChecked(e.target.checked)} disabled={finalSubmitted} />
+                <span>I understand I cannot directly edit after final submission.</span>
+              </label>
+
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !finalConfirmChecked || finalSubmitted}
+                form="add-employee-form"
+                onClick={() => {
+                  if (finalConfirmChecked && !finalSubmitted) setFinalSubmitted(true);
+                }}
+                className="h-10 px-6 rounded-xl font-black text-xs uppercase tracking-widest bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : <ChevronRight size={16} className="mr-2" />}
+                {finalSubmitted ? 'Submitted' : 'Final Submit'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -765,7 +781,7 @@ export default function AddEmployeeBasicForm() {
               </div>
             </FormSection>
 
-            {/* 4. PAYROLL INFORMATION */}
+            {/* 4. PAYROLL INFORMATION
             <FormSection id="payroll-info">
               <SectionHeader title="Payroll & Statutory" icon={CreditCard} description="Taxation, statutory compliance and salary structure" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -793,7 +809,7 @@ export default function AddEmployeeBasicForm() {
                   />
                 </div>
               </div>
-            </FormSection>
+            </FormSection> */}
 
             {/* 5. LEAVE CONFIGURATION */}
             <FormSection id="leave-config">

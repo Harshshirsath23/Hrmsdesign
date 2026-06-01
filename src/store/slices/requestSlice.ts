@@ -144,14 +144,32 @@ export const reviewRequest = createAsyncThunk(
     writeRequests(reqs);
 
     if (status === 'approved' && finalData) {
-      // Trigger profile update
-      dispatch(updateEmployeeData({ employeeId, section, data: finalData }));
-      dispatch(
-        addNotification({
-          type: 'success',
-          message: 'Profile update request approved.',
-        }),
-      );
+      // Trigger profile update (bypass lock because this is an admin approval path)
+      try {
+        dispatch(updateEmployeeData({ employeeId, section, data: finalData, bypassLock: true } as any));
+        // Append audit log
+        try {
+          const raw = localStorage.getItem('hrms_profile_change_audit') || '[]';
+          const audits = JSON.parse(raw) as any[];
+          audits.push({ id: Date.now().toString(), requestId, employeeId, section, reviewer, reviewedAt: new Date().toISOString(), changes: finalData });
+          localStorage.setItem('hrms_profile_change_audit', JSON.stringify(audits));
+        } catch (e) {
+          console.error('Failed to write audit log', e);
+        }
+        dispatch(
+          addNotification({
+            type: 'success',
+            message: 'Profile update request approved.',
+          }),
+        );
+      } catch (e) {
+        dispatch(
+          addNotification({
+            type: 'error',
+            message: 'Failed to apply approved changes.',
+          }),
+        );
+      }
     } else if (status === 'rejected') {
       dispatch(
         addNotification({

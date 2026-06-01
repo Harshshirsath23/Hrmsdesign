@@ -30,9 +30,12 @@ export const fetchEmployeeData = createAsyncThunk(
 
 export const updateEmployeeData = createAsyncThunk(
   'employee/update',
-  async ({ employeeId, section, data }: { employeeId: string; section: string; data: any }) => {
+  async ({ employeeId, section, data, bypassLock }: { employeeId: string; section: string; data: any; bypassLock?: boolean }) => {
     await new Promise(resolve => setTimeout(resolve, 500));
     const profile = ensureProfile(employeeId);
+    if (profile.profileLocked && !bypassLock) {
+      throw new Error('Profile is locked for direct updates. Use request workflow.');
+    }
     const updatedProfile = { ...profile, [section]: data };
     const raw = localStorage.getItem('hrms_ess_profiles') || '{}';
     const profiles = JSON.parse(raw);
