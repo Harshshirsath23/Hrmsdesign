@@ -331,9 +331,9 @@ function ApplyLeaveForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-xl space-y-5 p-4">
       <div className="surface-card rounded-xl border border-surface-100 p-5 dark:border-white/5">
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-surface-900 dark:text-white">
+        {/* <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-surface-900 dark:text-white">
           <Plus className="h-4 w-4 text-brand-500" /> Apply for Leave
-        </h3>
+        </h3> */}
 
         {/* Leave Type */}
         <div className="mb-4">

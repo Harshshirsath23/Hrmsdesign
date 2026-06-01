@@ -18,18 +18,28 @@ export function EnterpriseBalanceGrid({ balances }: { balances: LeaveBalanceAPI[
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {balances.map((b) => {
+      {balances.map((b, idx) => {
         const code = b.leave_type_detail?.code ?? "—";
-        const name = b.leave_type_detail?.name ?? "Leave";
-        const total = Number(b.total_allocated) || 0;
-        const used = Number(b.used) || 0;
-        const available = Number(b.available) || 0;
-        const pending = Number(b.pending_approval) || 0;
-        const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+        const name = b.leave_type_detail?.name ?? b.leave_type ?? "Leave";
+
+        // ── Prefer normalised aliases populated by useLeave's normaliseBalance()
+        // ── Fall back to raw serializer fields so the component works even if
+        //    the normaliser hasn't run (e.g. admin serializer path).
+        const totalAllocated = Number(b.total_allocated ?? b.opening ?? 0);
+        const used           = Number(b.used  ?? b.taken   ?? 0);
+        const available      = Number(b.available ?? b.balance ?? 0);
+        const pending        = Number(b.pending_approval ?? b.pending_days ?? 0);
+        const isPaid         = b.leave_type_detail?.is_paid ?? true;
+
+        const pct = totalAllocated > 0 ? Math.min((used / totalAllocated) * 100, 100) : 0;
+
+        // Derive period dates: prefer normalised aliases, fall back to raw fields
+        const periodStart = b.period_start ?? b.leave_year_start ?? "";
+        const periodEnd   = b.period_end   ?? b.leave_year_end   ?? "";
 
         return (
           <div
-            key={b.id}
+            key={b.leave_type_id ?? b.id ?? idx}
             className={cn(
               "flat-card flat-card-hover bg-card overflow-hidden transition-all duration-200",
             )}
@@ -40,7 +50,7 @@ export function EnterpriseBalanceGrid({ balances }: { balances: LeaveBalanceAPI[
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{name}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {code} · {b.leave_type_detail?.is_paid ? "Paid" : "Unpaid"}
+                    {code} · {isPaid ? "Paid" : "Unpaid"}
                   </p>
                 </div>
               </div>
@@ -54,7 +64,7 @@ export function EnterpriseBalanceGrid({ balances }: { balances: LeaveBalanceAPI[
             <div className="space-y-3 px-4 py-3">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-base font-bold tabular-nums text-foreground">{total}</p>
+                  <p className="text-base font-bold tabular-nums text-foreground">{totalAllocated}</p>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Alloc</p>
                 </div>
                 <div>
@@ -80,9 +90,11 @@ export function EnterpriseBalanceGrid({ balances }: { balances: LeaveBalanceAPI[
                 </div>
               </div>
 
-              <p className="text-[11px] text-muted-foreground">
-                Period {formatLeaveShortDate(b.period_start)} — {formatLeaveShortDate(b.period_end)}
-              </p>
+              {periodStart && periodEnd && (
+                <p className="text-[11px] text-muted-foreground">
+                  Period {formatLeaveShortDate(periodStart)} — {formatLeaveShortDate(periodEnd)}
+                </p>
+              )}
             </div>
           </div>
         );
