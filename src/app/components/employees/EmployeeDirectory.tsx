@@ -25,7 +25,9 @@ interface DirectoryFilters {
   department: string;
   team: string;
   designation: string;
-  joiningDate: string;
+  statusFilter: string;
+  joiningFrom: string;
+  joiningTo: string;
 }
 
 function StatusBadge({ status }: { status: Employee["status"] }) {
@@ -119,7 +121,9 @@ export function EmployeeDirectory() {
     department:  searchParams.get("department")  || "",
     team:        searchParams.get("team")        || "",
     designation: searchParams.get("designation") || "",
-    joiningDate: searchParams.get("joiningDate") || "",
+    statusFilter: searchParams.get("status") || "active",
+    joiningFrom: searchParams.get("joiningFrom") || "",
+    joiningTo: searchParams.get("joiningTo") || "",
   });
   const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "card");
 
@@ -129,7 +133,9 @@ export function EmployeeDirectory() {
     if (filters.department)  params.department  = filters.department;
     if (filters.team)        params.team        = filters.team;
     if (filters.designation) params.designation = filters.designation;
-    if (filters.joiningDate) params.joiningDate = filters.joiningDate;
+    if (filters.statusFilter && filters.statusFilter !== 'active') params.status = filters.statusFilter;
+    if (filters.joiningFrom) params.joiningFrom = filters.joiningFrom;
+    if (filters.joiningTo) params.joiningTo = filters.joiningTo;
     if (viewMode !== "card") params.view        = viewMode;
     setSearchParams(params, { replace: true });
   }, [filters, viewMode]);
@@ -139,19 +145,42 @@ export function EmployeeDirectory() {
 
   const filtered = employees.filter((emp) => {
     const s = filters.search.toLowerCase();
-    return (
-      (!filters.search || emp.name.toLowerCase().includes(s) || emp.employeeId.toLowerCase().includes(s) || emp.email.toLowerCase().includes(s) || emp.designation.toLowerCase().includes(s)) &&
-      (!filters.department  || emp.department  === filters.department)  &&
-      (!filters.team        || emp.team        === filters.team)        &&
-      (!filters.designation || emp.designation === filters.designation) &&
-      (!filters.joiningDate || emp.joiningDate.startsWith(filters.joiningDate))
-    );
+
+    // Status filtering: default show Active only
+    if (filters.statusFilter === 'inactive_resigned') {
+      if (!(emp.status === 'Inactive' || (emp as any).status === 'Resigned')) return false;
+    } else {
+      if (emp.status !== 'Active') return false;
+    }
+
+    // Search and dropdown filters
+    if (filters.search && !(emp.name.toLowerCase().includes(s) || emp.employeeId.toLowerCase().includes(s) || emp.email.toLowerCase().includes(s) || emp.designation.toLowerCase().includes(s))) return false;
+    if (filters.department && emp.department !== filters.department) return false;
+    if (filters.team && emp.team !== filters.team) return false;
+    if (filters.designation && emp.designation !== filters.designation) return false;
+
+    // Joining date range filters
+    if (filters.joiningFrom) {
+      const from = new Date(filters.joiningFrom);
+      const jd = new Date(emp.joiningDate);
+      if (isNaN(from.getTime()) || jd < from) return false;
+    }
+    if (filters.joiningTo) {
+      const to = new Date(filters.joiningTo);
+      const jd = new Date(emp.joiningDate);
+      if (isNaN(to.getTime()) || jd > to) return false;
+    }
+
+    return true;
   });
 
   const clearFilters = () =>
-    setFilters({ search: "", department: "", team: "", designation: "", joiningDate: "" });
+    setFilters({ search: "", department: "", team: "", designation: "", statusFilter: 'active', joiningFrom: "", joiningTo: "" });
 
-  const hasActiveFilters = Object.values(filters).some(Boolean);
+  const hasActiveFilters = Boolean(
+    filters.search || filters.department || filters.team || filters.designation ||
+    filters.statusFilter !== 'active' || filters.joiningFrom || filters.joiningTo
+  );
 
   const openInformation = (emp: Employee) => {
     selectEmployee(emp.id);
@@ -199,17 +228,33 @@ export function EmployeeDirectory() {
                 options={designations} 
                 placeholder="All Designations" 
               />
+              <div className="relative">
+                <select
+                  value={filters.statusFilter}
+                  onChange={(e) => updateFilter('statusFilter', e.target.value)}
+                  className={`flat-input appearance-none pl-3 pr-8 py-2 text-sm cursor-pointer font-medium transition-all duration-150 min-w-[170px] ${filters.statusFilter !== 'active' ? 'bg-secondary border border-foreground/30 text-foreground shadow-sm' : 'hover:border-border/80 focus:border-foreground/50 focus:shadow-sm'}`}>
+                  <option value="active">Active Employees</option>
+                  <option value="inactive_resigned">Inactive/Resigned Employees</option>
+                </select>
+                <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none transition-colors ${filters.statusFilter !== 'active' ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground/70'}`} />
+              </div>
+              </div>
+
+            {/* Date range filters placed after status filter (DOM order), pushed to extreme right */}
+            <div className="ml-auto flex items-center gap-2">
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">From</div>
               <input
-                type="month"
-                value={filters.joiningDate}
-                onChange={(e) => updateFilter("joiningDate", e.target.value)}
-                className={`flat-input appearance-none px-3 py-2 text-sm cursor-pointer font-medium 
-                  min-w-[140px] transition-all duration-150 focus:outline-none
-                  ${filters.joiningDate 
-                    ? 'bg-secondary border border-foreground/30 text-foreground shadow-sm' 
-                    : 'hover:border-border/80 focus:border-foreground/50 focus:shadow-sm hover:bg-secondary/50'
-                  }`}
-                title="Filter by joining date"
+                type="date"
+                value={filters.joiningFrom}
+                onChange={(e) => updateFilter('joiningFrom', e.target.value)}
+                className="flat-input px-3 py-2 text-sm min-w-[140px]"
+              />
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">To</div>
+              <input
+                type="date"
+                value={filters.joiningTo}
+                onChange={(e) => updateFilter('joiningTo', e.target.value)}
+                className="flat-input px-3 py-2 text-sm min-w-[140px]"
               />
             </div>
 
@@ -246,6 +291,7 @@ export function EmployeeDirectory() {
                 <X className="w-3.5 h-3.5" /> Clear
               </button>
             )}
+            
           </div>
         </div>
       </div>

@@ -8,6 +8,8 @@ import {
   EditableSectionCard,
   ProfileInfoField,
   EmptyStateCard,
+  UploadField,
+  ConfirmationDialog,
 } from "../employee-details";
 
 interface Props {

@@ -26,6 +26,7 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => {
   const manager = emp ? emp.manager : "Vikram Nair";
 
   return {
+    profileLocked: false,
     employeeId,
     profile: {
       firstName,
