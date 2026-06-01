@@ -28,13 +28,14 @@ import {
 import { Button } from "../../../components/ui/button";
 import { KebabMenu } from "../../../components/ui/KebabMenu";
 import { 
-  MOCK_SWIPE_LOGS, 
   MOCK_DEPARTMENTS, 
   MOCK_DESIGNATIONS, 
   MOCK_TEAMS, 
   MOCK_DEVICES,
   MOCK_EMPLOYEES
 } from "../../../modules/attendance/mockData";
+import { useSwipeLogs } from "../../../modules/attendance/hooks";
+import { AlertCircle } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 import { SwipeLogsFilterBar } from "../../../components/attendance/swipe/SwipeLogsFilterBar";
 import { SwipeLogsAnalytics } from "../../../components/attendance/swipe/SwipeLogsAnalytics";
@@ -52,7 +53,6 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 
 export function SwipeLogsPage() {
-  const [logs, setLogs] = useState<SwipeLog[]>(MOCK_SWIPE_LOGS);
   const [devices, setDevices] = useState<DeviceHealth[]>(MOCK_DEVICES);
   const [filters, setFilters] = useState({
     search: "",
@@ -65,6 +65,10 @@ export function SwipeLogsPage() {
     date: new Date(),
   });
 
+  const { data: apiLogs = [], isLoading, isError, error, refetch } = useSwipeLogs(filters.date, filters.date);
+  const [localLogs, setLocalLogs] = useState<SwipeLog[]>([]);
+  const logs = useMemo(() => [...localLogs, ...apiLogs], [localLogs, apiLogs]);
+
   // Sorting & Pagination States
   const [sortField, setSortField] = useState<string>("swipeTime");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -74,7 +78,6 @@ export function SwipeLogsPage() {
   // UI & Modal States
   const [selectedSwipe, setSelectedSwipe] = useState<SwipeLog | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isLiveEnabled, setIsLiveEnabled] = useState(true);
   
@@ -92,28 +95,16 @@ export function SwipeLogsPage() {
     reason: ""
   });
 
-  // Loaders simulation
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [filters.date, filters.department, filters.device, filters.type]);
-
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      setIsLoading(false);
-      toast.success("Swipe logs synced with biometric servers");
-    }, 1000);
+    await refetch();
+    setIsRefreshing(false);
+    toast.success("Swipe logs refreshed");
   };
 
   // EXPORT FUNCTIONALITY (CSV)
@@ -302,7 +293,7 @@ export function SwipeLogsPage() {
         workMode: workMode as any,
       };
 
-      setLogs((prev) => [newLog, ...prev]);
+      setLocalLogs((prev) => [newLog, ...prev]);
       toast.info(`New swipe log synced for ${emp.name}`, { duration: 2000 });
     }, 7000);
 
@@ -346,7 +337,7 @@ export function SwipeLogsPage() {
       workMode: "WFO",
     };
 
-    setLogs([newLog, ...logs]);
+    setLocalLogs((prev) => [newLog, ...prev]);
     setShowManualEntryModal(false);
     toast.success(`Manual ${manualEntry.type} log added for ${employee.name}`);
   };
@@ -422,6 +413,12 @@ export function SwipeLogsPage() {
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950/50 relative overflow-hidden print:bg-white print:p-0">
+      {isError && (
+        <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error instanceof Error ? error.message : "Failed to load swipe logs."}
+        </div>
+      )}
       {/* Top Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-4 shadow-sm sticky top-0 z-50 print:hidden">
         <div className="flex items-start justify-between">

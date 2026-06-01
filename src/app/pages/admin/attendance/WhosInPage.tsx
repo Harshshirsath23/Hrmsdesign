@@ -6,8 +6,9 @@ import { EmployeeAttendanceCard } from "../../../components/attendance/whos-in/E
 import { Button } from "../../../components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
 import { Calendar } from "../../../components/ui/calendar";
-import { MOCK_ATTENDANCE } from "../../../modules/attendance/mockData";
-import { isSameDay, isBefore, isAfter, startOfDay, format, parseISO } from "date-fns";
+import { isSameDay, isBefore, isAfter, startOfDay, format } from "date-fns";
+import { useWhoIsInEmployees, useWhoIsInSummary } from "../../../modules/attendance/hooks";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { cn } from "../../../components/ui/utils";
 
@@ -25,14 +26,26 @@ export function WhosInPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [oooTab, setOooTab] = useState("all");
 
+  const { data: summaryStats, refetch: refetchSummary, isError: summaryError, error: summaryErr } =
+    useWhoIsInSummary(filters.date);
+  const { data: notYetIn = [], refetch: refetchNotIn, isLoading: loadingNotIn } =
+    useWhoIsInEmployees(filters.date, "NOT_IN", filters.search);
+  const { data: late = [], refetch: refetchLate, isLoading: loadingLate } =
+    useWhoIsInEmployees(filters.date, "LATE", filters.search);
+  const { data: onTime = [], refetch: refetchOnTime, isLoading: loadingOnTime } =
+    useWhoIsInEmployees(filters.date, "ON_TIME", filters.search);
+  const { data: ooo = [], refetch: refetchOoo, isLoading: loadingOoo } =
+    useWhoIsInEmployees(filters.date, "OUT_OF_OFFICE", filters.search);
+
   const isTodayValue = useMemo(() => isSameDay(filters.date, new Date()), [filters.date]);
   const isPast = useMemo(() => isBefore(startOfDay(filters.date), startOfDay(new Date())), [filters.date]);
   const isFuture = useMemo(() => isAfter(startOfDay(filters.date), startOfDay(new Date())), [filters.date]);
 
   // Simulation of real-time refresh
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 800);
+    await Promise.all([refetchSummary(), refetchNotIn(), refetchLate(), refetchOnTime(), refetchOoo()]);
+    setIsRefreshing(false);
   };
 
   useEffect(() => {
@@ -42,93 +55,60 @@ export function WhosInPage() {
     }
   }, [isTodayValue]);
 
-  // Comprehensive Filter Logic
-  const filteredData = useMemo(() => {
-    const selectedDateStr = format(filters.date, "yyyy-MM-dd");
-    
-    return MOCK_ATTENDANCE.filter(record => {
-      const isDay = record.date === selectedDateStr;
-      
-      const matchesShift = filters.shift === "all" || record.shiftName === filters.shift;
-      const matchesDept = filters.department === "all" || record.department === filters.department;
-      const matchesDesig = filters.designation === "all" || record.designation === filters.designation;
-      const matchesTeam = filters.team === "all" || record.team === filters.team;
-      const matchesWorkMode = filters.workMode === "all" || record.workMode === filters.workMode;
-      const matchesSearch = !filters.search || 
-        record.employeeName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        record.employeeId.toLowerCase().includes(filters.search.toLowerCase()) ||
-        record.email?.toLowerCase().includes(filters.search.toLowerCase());
-
-      return isDay && matchesShift && matchesDept && matchesDesig && matchesTeam && matchesWorkMode && matchesSearch;
-    });
-  }, [filters]);
-
-  // Section Data Calculation
   const sections = useMemo(() => {
     if (isFuture) {
-      return { 
-        primarySection: filteredData, 
-        late: [], 
-        onTime: [], 
-        ooo: filteredData.filter(r => r.status === "Week Off" || r.status === "Holiday") 
-      };
+      return { primarySection: [], late: [], onTime: [], ooo: [] };
     }
-
-    if (isPast) {
-      // Past categories: Present, Late, Absent, OOO
-      const present = filteredData.filter(r => r.status === "Present" && !r.isLate);
-      const late = filteredData.filter(r => r.isLate);
-      const absent = filteredData.filter(r => r.status === "Absent" && !r.leaveType);
-      const ooo = filteredData.filter(r => r.status === "Leave" || r.status === "Holiday" || r.status === "Week Off");
-      
-      return { primarySection: absent, late, onTime: present, ooo };
-    }
-
-    // Today categories
-    const notYetIn = filteredData.filter(r => r.status === "Absent" && !r.leaveType);
-    const late = filteredData.filter(r => r.isLate);
-    const onTime = filteredData.filter(r => r.status === "Present" && !r.isLate);
-    const ooo = filteredData.filter(r => r.status === "Leave" || r.status === "Holiday" || r.status === "Week Off");
-
-    return { primarySection: notYetIn, late, onTime, ooo };
-  }, [filteredData, isFuture, isPast]);
-
-  // Stats for Header
-  const stats = useMemo(() => {
-    const total = filteredData.length || 1;
-    
-    if (isFuture) {
-      return {
-        notYetIn: { count: filteredData.length, percentage: 100, label: "Scheduled Employees" },
-        lateArrivals: { count: 0, percentage: 0, label: "No Punches Yet" },
-        onTime: { count: 0, percentage: 0, label: "No Punches Yet" },
-        outOfOffice: { count: sections.ooo.length, percentage: Math.round((sections.ooo.length / total) * 100), label: "Scheduled Off" },
-      };
-    }
-
     return {
-      notYetIn: { 
-        count: sections.primarySection.length, 
-        percentage: Math.round((sections.primarySection.length / total) * 100),
-        label: isTodayValue ? "Employees Are Not Yet In" : "Employees Are Absent"
-      },
-      lateArrivals: { 
-        count: sections.late.length, 
-        percentage: Math.round((sections.late.length / total) * 100),
-        label: isPast ? "Late Arrivals" : "Late Arrivals Today"
-      },
-      onTime: { 
-        count: sections.onTime.length, 
-        percentage: Math.round((sections.onTime.length / total) * 100),
-        label: isPast ? "Present (On Time)" : "On Time Today"
-      },
-      outOfOffice: { 
-        count: sections.ooo.length, 
-        percentage: Math.round((sections.ooo.length / total) * 100),
-        label: "Out Of Office"
-      },
+      primarySection: notYetIn,
+      late,
+      onTime,
+      ooo,
     };
-  }, [sections, filteredData, isTodayValue, isFuture, isPast]);
+  }, [notYetIn, late, onTime, ooo, isFuture]);
+
+  const totalEmployees = Math.max(
+    1,
+    (summaryStats?.notYetIn ?? 0) +
+      (summaryStats?.lateIn ?? 0) +
+      (summaryStats?.onTime ?? 0) +
+      (summaryStats?.outOfOffice ?? 0),
+  );
+
+  const stats = useMemo(() => {
+    if (summaryStats) {
+      return {
+        notYetIn: {
+          count: summaryStats.notYetIn,
+          percentage: Math.round((summaryStats.notYetIn / totalEmployees) * 100),
+          label: isTodayValue ? "Employees Are Not Yet In" : "Employees Are Absent",
+        },
+        lateArrivals: {
+          count: summaryStats.lateIn,
+          percentage: Math.round((summaryStats.lateIn / totalEmployees) * 100),
+          label: isPast ? "Late Arrivals" : "Late Arrivals Today",
+        },
+        onTime: {
+          count: summaryStats.onTime,
+          percentage: Math.round((summaryStats.onTime / totalEmployees) * 100),
+          label: isPast ? "Present (On Time)" : "On Time Today",
+        },
+        outOfOffice: {
+          count: summaryStats.outOfOffice,
+          percentage: Math.round((summaryStats.outOfOffice / totalEmployees) * 100),
+          label: "Out Of Office",
+        },
+      };
+    }
+    return {
+      notYetIn: { count: notYetIn.length, percentage: 0, label: "Not Yet In" },
+      lateArrivals: { count: late.length, percentage: 0, label: "Late" },
+      onTime: { count: onTime.length, percentage: 0, label: "On Time" },
+      outOfOffice: { count: ooo.length, percentage: 0, label: "Out Of Office" },
+    };
+  }, [summaryStats, notYetIn.length, late.length, onTime.length, ooo.length, totalEmployees, isTodayValue, isPast]);
+
+  const apiLoading = loadingNotIn || loadingLate || loadingOnTime || loadingOoo;
 
   return (
     <div className="flex flex-col h-full bg-background/50 overflow-hidden">
@@ -237,6 +217,17 @@ export function WhosInPage() {
 
         {/* Main Content Area */}
         <div className="flex-1 p-6 space-y-8 overflow-y-auto no-scrollbar pb-24 bg-black/[0.01] dark:bg-white/[0.01]">
+          {summaryError && (
+            <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4" />
+              {summaryErr instanceof Error ? summaryErr.message : "Failed to load Who's In data."}
+            </div>
+          )}
+          {apiLoading && (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading employees…
+            </div>
+          )}
           <AttendanceAnalyticsHeader stats={stats} />
 
           {/* 2x2 Grid of Status Sections */}

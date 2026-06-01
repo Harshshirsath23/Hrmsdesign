@@ -14,7 +14,9 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import { MOCK_ROSTER, SHIFT_DEFINITIONS, MOCK_DEPARTMENTS, MOCK_DESIGNATIONS, MOCK_TEAMS, MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
+import { SHIFT_DEFINITIONS, MOCK_DEPARTMENTS, MOCK_DESIGNATIONS, MOCK_TEAMS, MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
+import { useRosterCalendar } from "../../../modules/attendance/hooks";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, addMonths, subMonths, isWithinInterval, parseISO } from "date-fns";
 import { RosterFilterBar } from "../../../components/attendance/roster/RosterFilterBar";
@@ -30,9 +32,16 @@ import { toast } from "sonner";
 import { RosterRecord, ShiftDefinition } from "../../../modules/attendance/types";
 
 export function ShiftRosterPage() {
-  // State for Roster Data
-  const [rosterData, setRosterData] = useState<RosterRecord[]>(MOCK_ROSTER);
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 4, 1)); // May 2026
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const month = selectedDate.getMonth() + 1;
+  const year = selectedDate.getFullYear();
+  const { data: rosterFromApi = [], isLoading: rosterLoading, isError: rosterError, error: rosterErr, refetch: refetchRoster } =
+    useRosterCalendar(month, year);
+  const [rosterData, setRosterData] = useState<RosterRecord[]>([]);
+
+  useEffect(() => {
+    if (rosterFromApi.length) setRosterData(rosterFromApi);
+  }, [rosterFromApi]);
   const [filters, setFilters] = useState({
     search: "",
     department: "all",
@@ -75,8 +84,9 @@ export function ShiftRosterPage() {
   const monthEnd = endOfMonth(selectedDate);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
+    await refetchRoster();
     setTimeout(() => {
       setIsRefreshing(false);
       toast.success("Roster data refreshed");
@@ -276,6 +286,17 @@ export function ShiftRosterPage() {
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-950/50 relative overflow-hidden">
+      {rosterError && (
+        <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {rosterErr instanceof Error ? rosterErr.message : "Failed to load shift roster."}
+        </div>
+      )}
+      {rosterLoading && (
+        <div className="mx-6 mt-4 flex items-center gap-2 text-slate-500 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading roster…
+        </div>
+      )}
       {/* Top Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-4 shadow-sm sticky top-0 z-40">
         <div className="flex items-start justify-between">

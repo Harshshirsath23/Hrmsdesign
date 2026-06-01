@@ -44,11 +44,12 @@ import { KebabMenu } from "../../../components/ui/KebabMenu";
 import { useEmployee } from "../../../context/EmployeeContext";
 import * as XLSX from "xlsx";
 import {
-  MOCK_MATRIX_DATA,
   MOCK_DEPARTMENTS,
   MOCK_DESIGNATIONS,
   MOCK_EMPLOYEES
 } from "../../../modules/attendance/mockData";
+import { useMatrixGrid } from "../../../modules/attendance/hooks";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 import { toast } from "sonner";
 import {
@@ -202,8 +203,16 @@ const PersonalAttendanceCalendar = ({ emp, month }: any) => {
 
 export function AttendanceMatrixPage() {
   const { selectEmployee } = useEmployee();
-  const [data, setData] = useState(MOCK_MATRIX_DATA || []);
-  const [selectedMonth, setSelectedMonth] = useState(new Date(2026, 4, 1)); // May 2026
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const matrixMonth = selectedMonth.getMonth() + 1;
+  const matrixYear = selectedMonth.getFullYear();
+  const { data: matrixRows = [], isLoading: matrixLoading, isError: matrixError, error: matrixErr, refetch: refetchMatrix } =
+    useMatrixGrid(matrixYear, matrixMonth);
+  const [data, setData] = useState<typeof matrixRows>([]);
+
+  useEffect(() => {
+    setData(matrixRows);
+  }, [matrixRows]);
 
   // Grid Configuration State
   const [gridConfig, setGridConfig] = useState({
@@ -376,6 +385,17 @@ export function AttendanceMatrixPage() {
 
   return (
     <div className="flex flex-col h-full bg-background relative overflow-hidden">
+      {matrixError && (
+        <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {matrixErr instanceof Error ? matrixErr.message : "Failed to load attendance matrix."}
+        </div>
+      )}
+      {matrixLoading && (
+        <div className="mx-6 mt-4 flex items-center gap-2 text-muted-foreground text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading matrix…
+        </div>
+      )}
       {/* Header Section */}
       <div className="bg-card border-b border-border px-6 py-4 space-y-4 shadow-sm z-[40] sticky top-0">
         <div className="flex items-start justify-between">
@@ -419,7 +439,7 @@ export function AttendanceMatrixPage() {
             >
               <Upload className="w-3.5 h-3.5 text-blue-500" /> IMPORT EXCEL
             </Button>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800); }}>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={async () => { setIsRefreshing(true); await refetchMatrix(); setIsRefreshing(false); }}>
               <RefreshCw className={cn("w-4 h-4 text-slate-400", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
             <KebabMenu
