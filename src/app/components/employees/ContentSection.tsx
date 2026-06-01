@@ -22,6 +22,7 @@ interface Props {
   disableBankEdit?: boolean;
   showAssetAccessActions?: boolean;
   showSalaryActions?: boolean;
+  isFinalSubmitted?: boolean;
 }
 
 export function ContentSection({
@@ -31,34 +32,35 @@ export function ContentSection({
   disableBankEdit = false,
   showAssetAccessActions = true,
   showSalaryActions = true,
+  isFinalSubmitted = false,
 }: Props) {
   switch (activeSection) {
     case "profile":
-      return <EmployeeProfile employee={employee} />;
+      return <EmployeeProfile employee={employee} isFinalSubmitted={isFinalSubmitted || !!employee.profileLocked} showAddButtons={showAddButtons} />;
     case "bank":
-      return <BankDetails employee={employee} disableEdit={disableBankEdit} />;
+      return <BankDetails employee={employee} disableEdit={disableBankEdit} showAddButton={showAddButtons} />;
     case "family":
       return <FamilyDetails employee={employee} showAddButton={showAddButtons} />;
     case "nominee":
       return <NomineeDetails employee={employee} showAddButton={showAddButtons} />;
     case "insurance":
-      return <InsuranceDetails employee={employee} />;
+      return <InsuranceDetails employee={employee} showAddButton={showAddButtons} />;
     case "assets":
       return <AssetManagement employee={employee} showActions={showAssetAccessActions} />;
     case "passport":
       return <PassportVisa employee={employee} showAddButton={showAddButtons} />;
     case "position":
-      return <PositionHistory employee={employee} />;
+      return <PositionHistory employee={employee} showAddButton={showAddButtons} />;
     case "work":
       return <WorkExperience employee={employee} showAddButton={showAddButtons} />;
     case "education":
       return <EducationDetails employee={employee} showAddButton={showAddButtons} />;
     case "background":
-      return <BackgroundCheck employee={employee} />;
+      return <BackgroundCheck employee={employee} showAddButton={showAddButtons} />;
     case "access":
       return <AccessCardDetails employee={employee} showActions={showAssetAccessActions} />;
     case "documents":
-      return <EmployeeDocumentsSection employee={employee} />;
+      return <EmployeeDocumentsSection employee={employee} showAddButton={showAddButtons} />;
     case "salary":
       return <SalarySummary employee={employee} showActions={showSalaryActions} />;
     default:

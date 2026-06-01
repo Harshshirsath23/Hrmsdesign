@@ -14,6 +14,12 @@ import { useDispatch } from "react-redux";
 import { addAdminEmployee } from "@/store/slices/adminSlice";
 import { Employee, normalizeLegacyEmployee } from "@/app/components/employees/mockData";
 import {
+  createEmployee,
+  saveDraft,
+  type AddEmployeePayload,
+  type AddEmployeeResponse,
+} from "@/api/addEmployeeApi";
+import {
   User,
   Briefcase,
   Clock,
@@ -48,6 +54,11 @@ import {
 } from "lucide-react";
 import { MasterSelect } from "@/app/components/ui/MasterSelect";
 import { SearchableSelect } from "@/app/components/ui/SearchableSelect";
+import {
+  MasterDropdown,
+  MasterMultiDropdown,
+  MasterSearchableDropdown,
+} from "@/app/components/ui/MasterDropdown";
 import { BulkImportTab } from "./BulkImportTab";
 
 // ═══════════════════════════════════════════════════════════
@@ -98,6 +109,7 @@ interface FormState {
   basicSalary: string;
   bankName: string;
   accountNumber: string;
+  accountType: string;
   ifscCode: string;
   taxId: string;
   leavePolicy: string;
@@ -265,6 +277,7 @@ const INIT: FormState = {
   basicSalary: "",
   bankName: "",
   accountNumber: "",
+  accountType: "",
   ifscCode: "",
   taxId: "",
   leavePolicy: "",
@@ -322,23 +335,23 @@ function FF({
 }) {
   return (
     <div className={span2 ? "sm:col-span-2" : ""}>
-      <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">
+      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
         {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
+        {required && <span className="text-destructive ml-1">*</span>}
       </label>
       {children}
       {error ? (
-        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-red-500 font-medium">
-          <AlertCircle size={11} strokeWidth={2.5} />
-          {error}
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-destructive font-medium">
+          <AlertCircle size={14} strokeWidth={2} />
+          <span>{error}</span>
         </div>
       ) : ok ? (
-        <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-green-600 font-medium">
-          <CheckCircle size={11} strokeWidth={2.5} />
-          Looks good
+        <div className="flex items-center gap-1 mt-1.5 text-xs text-success font-medium">
+          <CheckCircle size={14} strokeWidth={2} />
+          <span>Verified</span>
         </div>
       ) : hint ? (
-        <p className="mt-1.5 text-[11px] text-muted-foreground">{hint}</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );
@@ -359,30 +372,30 @@ function Inp({
   return (
     <div className="relative">
       {icon && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-muted-foreground pointer-events-none flex items-center">
+        <div className="form-control-icon-left">
           {icon}
-        </span>
+        </div>
       )}
       <input
         className={[
-          "flat-input h-9 px-3 text-sm dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400",
+          "form-control",
           wfull ? "w-full" : "",
-          icon ? "pl-12" : "",
-          err
-            ? "!border-red-400 dark:!border-red-500 focus:!border-red-500 focus:!shadow-[0_0_0_3px_rgba(220,53,69,0.08)] dark:focus:!shadow-[0_0_0_3px_rgba(220,53,69,0.15)]"
-            : "",
-          success && !err ? "!border-green-500 dark:!border-green-600 pr-9" : "",
-          p.readOnly ? "opacity-60 dark:opacity-50 cursor-not-allowed" : "",
+          icon ? "form-control--icon-left" : "",
+          err ? "form-control--error" : "",
+          success && !err ? "form-control--success border-success" : "",
+          p.readOnly ? "opacity-60 cursor-not-allowed" : "",
         ]
           .filter(Boolean)
           .join(" ")}
         {...p}
       />
       {success && !err && (
-        <CheckCircle
-          size={14}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 dark:text-green-400 pointer-events-none"
-        />
+        <div className="form-control-icon-right">
+          <CheckCircle
+            size={16}
+            className="text-success"
+          />
+        </div>
       )}
     </div>
   );
@@ -404,9 +417,10 @@ function Sel({
     <div className="relative">
       <select
         className={[
-          "flat-input w-full h-9 px-3 pr-9 text-sm appearance-none cursor-pointer",
-          err ? "!border-red-400" : "",
-          success && !err ? "!border-green-500" : "",
+          "form-control form-control--select",
+          "w-full",
+          err ? "form-control--error" : "",
+          success && !err ? "form-control--success" : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -419,10 +433,11 @@ function Sel({
           </option>
         ))}
       </select>
-      <ChevronDown
-        size={13}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-      />
+      {success && !err && (
+        <div className="form-control-icon-right">
+          <CheckCircle size={16} className="text-success" />
+        </div>
+      )}
     </div>
   );
 }
@@ -506,7 +521,7 @@ function PhoneInp({
   err?: boolean;
 }) {
   return (
-    <div className={`flex h-9 flat-input overflow-hidden p-0 ${err ? "!border-red-400" : ""}`}>
+    <div className={`flex h-10 form-control overflow-hidden p-0 border border-border rounded-lg bg-card ${err ? "form-control--error border-destructive" : ""}`}>
       <select
         value={cc}
         onChange={(e) => onCC(e.target.value)}
@@ -523,7 +538,7 @@ function PhoneInp({
         value={ph}
         onChange={(e) => onPh(e.target.value)}
         placeholder="Phone number"
-        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground"
+        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground border-0"
       />
     </div>
   );
@@ -540,21 +555,21 @@ function MaskInp({
 }) {
   const [show, setShow] = useState(false);
   return (
-    <div className="flex h-9 flat-input overflow-hidden p-0">
+    <div className="flex h-10 form-control overflow-hidden p-0 border border-border rounded-lg bg-card">
       <input
         type={show ? "text" : "password"}
         value={val}
         onChange={(e) => onChange(e.target.value)}
         placeholder={ph}
-        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground font-mono"
+        className="flex-1 px-3 text-sm bg-transparent focus:outline-none text-foreground placeholder:text-muted-foreground font-mono border-0"
       />
       <button
         type="button"
         onClick={() => setShow(!show)}
         tabIndex={-1}
-        className="px-3 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        className="w-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
       >
-        {show ? <EyeOff size={14} /> : <Eye size={14} />}
+        {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
     </div>
   );
@@ -598,13 +613,13 @@ function SearchSel({
           setTimeout(() => inputRef.current?.focus(), 50);
           setQ("");
         }}
-        className="flat-input w-full h-9 px-3 text-sm flex items-center justify-between gap-2 text-left"
+        className="form-control w-full flex items-center justify-between gap-2 text-left px-3"
       >
         <span className={selected ? "text-foreground truncate" : "text-muted-foreground"}>
           {selected?.l ?? ph}
         </span>
         <ChevronDown
-          size={13}
+          size={16}
           className={`text-muted-foreground shrink-0 transition-transform duration-150 ${
             open ? "rotate-180" : ""
           }`}
@@ -1194,7 +1209,6 @@ export function AddEmployeePage() {
         "employmentType",
         "joiningDate",
         "aadhaarNumber",
-        "reportingManager",
       ];
       if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1233,7 +1247,6 @@ export function AddEmployeePage() {
       "employmentType",
       "joiningDate",
       "aadhaarNumber",
-      "reportingManager",
     ];
     if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1265,46 +1278,126 @@ export function AddEmployeePage() {
     e.preventDefault();
     if (!validateAll()) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1800));
 
-    // Create the structured assets array if filled
-    const assets = form.assetId && form.assetName
-      ? [
-          {
-            id: `ast-${Date.now()}`,
-            assetName: form.assetName,
-            assetId: form.assetId,
-            assetCategory: form.assetCategory,
-            serialNumber: form.serialNumber,
-            assignedDate: form.assignDate,
-            returnDate: form.returnDate || undefined,
-            assetCondition: form.assetCondition,
-            status: form.assetStatus || "Assigned",
-            remarks: form.assetRemarks || undefined,
-          },
-        ]
-      : [];
+    const assets =
+      form.assetId && form.assetName
+        ? [
+            {
+              asset_name: form.assetName,
+              asset_id: form.assetId,
+              asset_category: form.assetCategory || undefined,
+              asset_condition: form.assetCondition || undefined,
+              serial_number: form.serialNumber || undefined,
+              asset_assign_date: form.assignDate,
+              asset_return_date: form.returnDate || undefined,
+              asset_status: form.assetStatus || "ASSIGNED",
+              asset_remarks: form.assetRemarks || undefined,
+            },
+          ]
+        : [];
 
-    // Create the employee object
-    const newEmp = normalizeLegacyEmployee({
-      ...form,
-      id: form.employeeId,
-      name: `${form.firstName} ${form.lastName}`,
-      phone: `${form.phoneCode} ${form.phone}`,
-      status: "Active", // Initial status
+    const masterValue = (value: string) =>
+      value && !value.includes("-demo-") ? value : null;
+
+    const payload: AddEmployeePayload = {
+      employee_code: form.employeeId,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      date_of_birth: form.dob,
+      joining_date: form.joiningDate,
+      official_email: form.email,
+      mobile_number: `${form.phoneCode}${form.phone}`,
+      emergency_contact_name: form.emergencyName,
+      emergency_contact_number: form.emergencyPhone,
+      gender: masterValue(form.gender),
+      salutation: masterValue(form.salutation),
+      marital_status: null,
+      blood_group: null,
+      personal_email: null,
+      date_of_confirmation: form.confirmationDate || null,
+      employee_status: "ACTIVE",
+      referred_by: masterValue(form.referredBy),
+      allow_employee_to_fill_information: form.allowSelfFill,
+      probation_period: form.probationPeriod ? parseInt(form.probationPeriod) : null,
+      father_name: form.fathersName || null,
+      spouse_name: form.spouseName || null,
+      employment_type: masterValue(form.employmentType),
+      department: masterValue(form.department),
+      designation: masterValue(form.designation),
+      work_location: masterValue(form.workLocation),
+      reporting_manager: masterValue(form.reportingManager),
+      working_hours_start: form.workStart || null,
+      working_hours_end: form.workEnd || null,
+      weekly_off_days: form.weeklyOff,
+      attendance_tracking_mode: masterValue(form.trackingMode),
+      salary_structure: masterValue(form.salaryStructure),
+      basic_salary: form.basicSalary ? parseFloat(form.basicSalary) : null,
+      bank_account:
+        form.accountNumber && form.accountType
+          ? {
+              bank_name: masterValue(form.bankName) || undefined,
+              account_number: form.accountNumber,
+              account_type: form.accountType,
+              ifsc_code: form.ifscCode || undefined,
+              account_holder_name: `${form.firstName} ${form.lastName}`,
+            }
+          : null,
+      pan_number: form.taxId || null,
+      leave_policy: masterValue(form.leavePolicy),
+      annual_leave_balance: form.annualLeave ? parseInt(form.annualLeave) : null,
+      sick_leave_balance: form.sickLeave ? parseInt(form.sickLeave) : null,
+      verification_status: masterValue(form.bgcStatus),
+      agency_name: form.bgcAgency || null,
+      background_remarks: form.bgcRemarks || null,
       assets,
-    });
+      username: form.username || null,
+      temporary_password: form.password || null,
+      system_role: form.role || null,
+      is_draft: false,
+      is_active: true,
+    };
 
-    dispatch(addAdminEmployee(newEmp));
-    
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      const response: AddEmployeeResponse = await createEmployee(payload);
+
+      // Also keep local Redux store in sync so the directory updates immediately
+      const newEmp = normalizeLegacyEmployee({
+        ...form,
+        id: response.employee_id,
+        name: response.full_name,
+        phone: `${form.phoneCode}${form.phone}`,
+        status: "Active",
+      });
+      dispatch(addAdminEmployee(newEmp));
+
+      setSubmitting(false);
+      setSubmitted(true);
+    } catch (err: any) {
+      setSubmitting(false);
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.errors ||
+        "Failed to create employee. Please check your inputs and try again.";
+      alert(typeof detail === "string" ? detail : JSON.stringify(detail));
+    }
   };
 
   const handleDraft = async () => {
     setDraftSaving(true);
-    await new Promise((r) => setTimeout(r, 700));
-    setDraftSaving(false);
+    try {
+      await saveDraft(
+        {
+          ...form,
+          // strip File objects — not serialisable
+          photo: null,
+        },
+        "new",
+      );
+    } catch {
+      // draft save is best-effort; silently ignore network errors
+    } finally {
+      setDraftSaving(false);
+    }
   };
 
   const ok = (k: keyof FormState) => !!(touched[k] && !errors[k] && form[k]);
@@ -1604,11 +1697,12 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Reporting Manager" required hint="Searchable — type to filter">
-                  <SearchableSelect
+                <FF label="Reporting Manager" hint="Optional — Select if applicable">
+                  <MasterSearchableDropdown
+                    masterName="Employee"
                     value={form.reportingManager}
                     onChange={(v) => set("reportingManager", v)}
-                    options={MANAGERS.map(m => ({ value: m.v, label: m.l }))}
+                    placeholder="Search Manager..."
                   />
                 </FF>
 
@@ -1642,11 +1736,11 @@ export function AddEmployeePage() {
                 </div>
 
                 <FF label="Referred By">
-                  <Sel
+                  <MasterSearchableDropdown
+                    masterName="Employee"
                     value={form.referredBy}
-                    onChange={(e) => set("referredBy", e.target.value)}
-                    ph="Select referral"
-                    opts={MANAGERS.map((m) => ({ v: m.v, l: m.l }))}
+                    onChange={(v) => set("referredBy", v)}
+                    placeholder="Search referrer..."
                   />
                 </FF>
 
@@ -1764,63 +1858,50 @@ export function AddEmployeePage() {
               Icon={Briefcase}
             >
               <FF label="Department" required error={errors.department} ok={ok("department")}>
-                <Sel
+                <MasterDropdown
+                  masterName="Department"
                   value={form.department}
-                  onChange={(e) => {
-                    set("department", e.target.value);
+                  onChange={(v) => {
+                    set("department", v);
                     setTouched((t) => ({ ...t, department: true }));
                   }}
-                  onBlur={() => blur("department")}
-                  ph="Select department"
-                  err={!!errors.department}
-                  success={ok("department")}
-                  opts={DEPTS.map((d) => ({ v: d.toLowerCase().replace(/\s+/g, "-"), l: d }))}
+                  placeholder="Select department"
+                  required
                 />
               </FF>
 
               <FF label="Designation / Role" required error={errors.designation} ok={ok("designation")}>
-                <Sel
+                <MasterDropdown
+                  masterName="Designation"
                   value={form.designation}
-                  onChange={(e) => {
-                    set("designation", e.target.value);
+                  onChange={(v) => {
+                    set("designation", v);
                     setTouched((t) => ({ ...t, designation: true }));
                   }}
-                  onBlur={() => blur("designation")}
-                  ph="Select role"
-                  err={!!errors.designation}
-                  success={ok("designation")}
-                  opts={ROLES.map((r) => ({
-                    v: r.toLowerCase().replace(/\s+\/\s+|\s+/g, "-"),
-                    l: r,
-                  }))}
+                  placeholder="Select role"
+                  required
                 />
               </FF>
 
               <FF label="Employment Type" required error={errors.employmentType} ok={ok("employmentType")}>
-                <Sel
+                <MasterDropdown
+                  masterName="EmployeeType"
                   value={form.employmentType}
-                  onChange={(e) => {
-                    set("employmentType", e.target.value);
+                  onChange={(v) => {
+                    set("employmentType", v);
                     setTouched((t) => ({ ...t, employmentType: true }));
                   }}
-                  onBlur={() => blur("employmentType")}
-                  ph="Select type"
-                  err={!!errors.employmentType}
-                  success={ok("employmentType")}
-                  opts={[
-                    { v: "full-time", l: "Full-time" },
-                    { v: "part-time", l: "Part-time" },
-                    { v: "contract", l: "Contract" },
-                  ]}
+                  placeholder="Select type"
+                  required
                 />
               </FF>
 
               <FF label="Work Location">
-                <Inp
+                <MasterDropdown
+                  masterName="OfficeLocation"
                   value={form.workLocation}
-                  onChange={(e) => set("workLocation", e.target.value)}
-                  placeholder="New York HQ / Remote"
-                  icon={<MapPin size={13} />}
+                  onChange={(v) => set("workLocation", v)}
+                  placeholder="Select location"
                 />
               </FF>
             </SC>
@@ -1854,23 +1935,19 @@ export function AddEmployeePage() {
               </FF>
 
               <FF label="Weekly Off Days">
-                <MultiSel
-                  opts={DAYS}
-                  sel={form.weeklyOff}
+                <MasterMultiDropdown
+                  masterName="WeeklyOffDays"
+                  values={form.weeklyOff}
                   onChange={(v) => set("weeklyOff", v)}
-                  ph="Select days off…"
                 />
               </FF>
 
               <FF label="Attendance Tracking Mode">
-                <Sel
+                <MasterDropdown
+                  masterName="AttendanceTrackingMode"
                   value={form.trackingMode}
-                  onChange={(e) => set("trackingMode", e.target.value)}
-                  opts={[
-                    { v: "biometric", l: "Biometric" },
-                    { v: "manual", l: "Manual" },
-                    { v: "hybrid", l: "Hybrid" },
-                  ]}
+                  onChange={(v) => set("trackingMode", v)}
+                  placeholder="Select mode"
                 />
               </FF>
             </SC>
@@ -1886,14 +1963,11 @@ export function AddEmployeePage() {
               Icon={CreditCard}
             >
               <FF label="Salary Structure">
-                <Sel
+                <MasterDropdown
+                  masterName="SalaryStructure"
                   value={form.salaryStructure}
-                  onChange={(e) => set("salaryStructure", e.target.value)}
-                  ph="Select structure"
-                  opts={SALARY_STRUCTS.map((s) => ({
-                    v: s.toLowerCase().replace(/\s+\/\s+|\s+/g, "-"),
-                    l: s,
-                  }))}
+                  onChange={(v) => set("salaryStructure", v)}
+                  placeholder="Select structure"
                 />
               </FF>
 
@@ -1912,11 +1986,20 @@ export function AddEmployeePage() {
               </FF>
 
               <FF label="Bank Name">
-                <Inp
+                <MasterDropdown
+                  masterName="Bank"
                   value={form.bankName}
-                  onChange={(e) => set("bankName", e.target.value)}
-                  placeholder="Chase Bank"
-                  icon={<Building2 size={13} />}
+                  onChange={(v) => set("bankName", v)}
+                  placeholder="Select bank"
+                />
+              </FF>
+
+              <FF label="Account Type" required hint="Required for bank account">
+                <MasterDropdown
+                  masterName="AccountType"
+                  value={form.accountType}
+                  onChange={(v) => set("accountType", v)}
+                  placeholder="Select account type"
                 />
               </FF>
 
@@ -1958,11 +2041,11 @@ export function AddEmployeePage() {
               Icon={Calendar}
             >
               <FF label="Leave Policy" span2>
-                <Sel
+                <MasterDropdown
+                  masterName="LeavePolicy"
                   value={form.leavePolicy}
-                  onChange={(e) => set("leavePolicy", e.target.value)}
-                  ph="Select leave policy"
-                  opts={LEAVE_POLICIES}
+                  onChange={(v) => set("leavePolicy", v)}
+                  placeholder="Select policy"
                 />
               </FF>
               
@@ -1981,16 +2064,11 @@ export function AddEmployeePage() {
               Icon={Shield}
             >
               <FF label="Verification Status">
-                <Sel 
-                  value={form.bgcStatus} 
-                  onChange={(e) => set("bgcStatus", e.target.value)}
-                  opts={[
-                    { v: "Pending", l: "Pending" },
-                    { v: "In Progress", l: "In Progress" },
-                    { v: "Verified", l: "Verified" },
-                    { v: "Failed", l: "Failed" },
-                    { v: "Not Required", l: "Not Required" }
-                  ]}
+                <MasterDropdown
+                  masterName="VerificationStatus"
+                  value={form.bgcStatus}
+                  onChange={(v) => set("bgcStatus", v)}
+                  placeholder="Select status"
                 />
               </FF>
               <FF label="Agency Name">

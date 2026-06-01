@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAdminLeaveApplications, type AdminLeaveApplicationApiRow } from "./useAdminLeave";
 import { ADMIN_LEAVE_REQUESTS } from "./mock";
 import type { AdminActorRole, AdminLeaveRequestRow, LeaveRequestStatus } from "./types";
 import type { LeaveApplicationAPI } from "../leaves/types";
@@ -8,8 +9,10 @@ import { readStore, writeStore } from "../leaves/storage";
 const REQUESTS_KEY = "hrms-admin-superadmin-leave-requests-v1";
 const LEAVE_APP_KEY = "hrms-demo-leave-applications";
 
-function mapCategoryFromLeave(app: LeaveApplicationAPI): AdminLeaveRequestRow["category"] {
-  const code = app.leave_type_detail?.code?.toUpperCase() ?? "";
+function mapCategoryFromLeave(app: AdminLeaveSource): AdminLeaveRequestRow["category"] {
+  const code = "leave_type_detail" in app
+    ? app.leave_type_detail?.code?.toUpperCase() ?? ""
+    : app.leave_type_id?.toUpperCase() ?? "";
   if (code === "CO") return "COMP_OFF";
   if (code === "SHL") return "SHORT_LEAVE";
   if (code === "OD") return "OUT_DUTY";
@@ -19,49 +22,63 @@ function mapCategoryFromLeave(app: LeaveApplicationAPI): AdminLeaveRequestRow["c
   return "LEAVE";
 }
 
-function mapLeaveAppToAdminRow(app: LeaveApplicationAPI, existing?: AdminLeaveRequestRow): AdminLeaveRequestRow {
-  const status = app.status === "PENDING" ? "SUBMITTED" : app.status;
+function mapLeaveAppToAdminRow(app: AdminLeaveSource, existing?: AdminLeaveRequestRow): AdminLeaveRequestRow {
+  const status = "leave_status" in app ? app.leave_status : app.status;
+  const normalizedStatus = status === "PENDING" ? "SUBMITTED" : status;
+  const leaveTypeCode = "leave_type_detail" in app
+    ? app.leave_type_detail?.code ?? "L"
+    : app.leave_type_id ?? "L";
+  const leaveTypeName = "leave_type_detail" in app
+    ? app.leave_type_detail?.name ?? app.leave_type
+    : app.leave_type;
+  const leaveTypeId = "leave_type_detail" in app
+    ? app.leave_type
+    : app.leave_type_id;
+
+  const employeeName = "employee_name" in app ? app.employee_name : existing?.employee.employee_name ?? "Employee";
+  const employeeCode = "employee_code" in app ? app.employee_code : existing?.employee.employee_code ?? "EMP000";
+
   return {
     id: app.id,
     employee: {
-      employee_code: app.employee_code,
-      employee_name: app.employee_name,
+      employee_code: employeeCode,
+      employee_name: employeeName,
       department: existing?.employee.department ?? "General",
       designation: existing?.employee.designation ?? "Employee",
       avatarColor: existing?.employee.avatarColor ?? "#343A40",
-      initials: existing?.employee.initials ?? app.employee_name.split(" ").map((x) => x[0]).join("").slice(0, 2).toUpperCase(),
+      initials: existing?.employee.initials ?? employeeName.split(" ").map((x) => x[0]).join("").slice(0, 2).toUpperCase(),
     },
     leave_type: {
-      id: app.leave_type,
-      code: app.leave_type_detail?.code ?? "L",
-      name: app.leave_type_detail?.name ?? "Leave",
-      is_paid: app.leave_type_detail?.is_paid ?? true,
+      id: leaveTypeId,
+      code: leaveTypeCode,
+      name: leaveTypeName,
+      is_paid: "leave_type_detail" in app ? app.leave_type_detail?.is_paid ?? true : true,
       is_active: true,
     },
     from_date: app.from_date,
     to_date: app.to_date,
     total_days: app.total_days,
     duration: app.total_days <= 0.5 ? "HALF" : "FULL",
-    applied_on: app.applied_on,
-    reason: app.reason,
+    applied_on: "applied_at" in app ? app.applied_at : app.applied_on,
+    reason: "reason" in app ? app.reason : existing?.reason ?? "",
     backup_employee: existing?.backup_employee,
-    status: (status as LeaveRequestStatus) ?? "SUBMITTED",
+    status: (normalizedStatus as LeaveRequestStatus) ?? "SUBMITTED",
     priority: existing?.priority ?? "MEDIUM",
     workflow_stage:
-      status === "APPROVED"
+      normalizedStatus === "APPROVED"
         ? "Completed"
-        : status === "REJECTED"
+        : normalizedStatus === "REJECTED"
           ? "Closed"
-          : status === "CANCELLED"
+          : normalizedStatus === "CANCELLED"
             ? "Cancelled"
             : "Manager Review",
     category: mapCategoryFromLeave(app),
     current_approver:
-      status === "APPROVED" || status === "REJECTED" || status === "CANCELLED"
+      normalizedStatus === "APPROVED" || normalizedStatus === "REJECTED" || normalizedStatus === "CANCELLED"
         ? "—"
         : existing?.current_approver ?? "Manager",
     payroll_lock: existing?.payroll_lock ?? "Unlocked",
-    workflow_level: existing?.workflow_level ?? (status === "SUBMITTED" ? 1 : 2),
+    workflow_level: existing?.workflow_level ?? (normalizedStatus === "SUBMITTED" ? 1 : 2),
     deleted_at: existing?.deleted_at ?? null,
     approval_history: existing?.approval_history ?? [],
     comments: existing?.comments ?? [],
@@ -117,6 +134,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+type AdminLeaveSource = LeaveApplicationAPI | AdminLeaveApplicationApiRow;
+
 type RequestAction =
   | "APPROVE"
   | "REJECT"
@@ -138,10 +157,12 @@ const ACTION_TO_STATUS: Record<RequestAction, LeaveRequestStatus | null> = {
 
 export function useAdminLeaveRequestsStore() {
   const [rows, setRows] = useState<AdminLeaveRequestRow[]>(() => readRequests());
+  const adminLeaveApplicationsQuery = useAdminLeaveApplications();
 
   const refresh = useCallback(() => {
     setRows(readRequests());
-  }, []);
+    adminLeaveApplicationsQuery.refetch();
+  }, [adminLeaveApplicationsQuery]);
 
   useEffect(() => {
     refresh();
@@ -161,6 +182,26 @@ export function useAdminLeaveRequestsStore() {
       window.removeEventListener("storage", onStorage);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    const data = adminLeaveApplicationsQuery.data as
+      | import("./useAdminLeave").AdminLeaveApplicationListResponse
+      | undefined;
+
+    if (!data?.items) return;
+
+    setRows((currentRows) => {
+      const localById = new Map(currentRows.map((row) => [row.id, row]));
+      const mappedFromApi = data.items.map((app) =>
+        mapLeaveAppToAdminRow(app as any, localById.get(app.id)),
+      );
+      const leaveIds = new Set(mappedFromApi.map((row) => row.id));
+      const adminOnlyRows = currentRows.filter((row) => !leaveIds.has(row.id));
+      const nextRows = [...mappedFromApi, ...adminOnlyRows];
+      writeRequests(nextRows);
+      return nextRows;
+    });
+  }, [adminLeaveApplicationsQuery.data]);
 
   const persist = useCallback((next: AdminLeaveRequestRow[]) => {
     setRows(next);
@@ -243,6 +284,13 @@ export function useAdminLeaveRequestsStore() {
   const activeRows = useMemo(() => rows.filter((r) => !r.deleted_at), [rows]);
   const deletedRows = useMemo(() => rows.filter((r) => !!r.deleted_at), [rows]);
 
-  return { rows, activeRows, deletedRows, refresh, runAction };
+  return {
+    rows,
+    activeRows,
+    deletedRows,
+    refresh,
+    runAction,
+    isLoading: adminLeaveApplicationsQuery.isLoading,
+  };
 }
 

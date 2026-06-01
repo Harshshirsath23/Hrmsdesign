@@ -33,6 +33,7 @@ import { ensureProfile } from "../../modules/ess/storage";
 import { ContentSection } from "../../components/employees/ContentSection";
 import { SidebarSection } from "../../components/employees/SidebarMenu";
 import { Employee } from "../../components/employees/mockData";
+import { EssEmployeeProfile } from "../../components/employees/sections/EssEmployeeProfile";
 import { useAuth } from "../../context/AuthContext";
 import {
   getChangeRequests,
@@ -606,43 +607,72 @@ function FamilyForm({ employee, value, onChange }: { employee: Employee; value: 
 
 /* 4. NOMINEE DETAILS ─────────────────────────────────────────────────────── */
 function NomineeForm({ employee, value, onChange }: { employee: Employee; value: any[]; onChange: (v: any[]) => void }) {
-  const add = () => onChange([...value, { id: `nom-${Date.now()}`, nomineeName: "", relationship: "", dateOfBirth: "", contactNumber: "", address: "", sharePercentage: "", email: "", nomineeType: "", shareEPF: "", shareEPS: "", shareGratuity: "", isMinor: false }]);
+  const add = () => onChange([...value, { id: `nom-${Date.now()}`, nomineeName: "", nomineeEmail: "", relationship: "", dateOfBirth: "", contactNumber: "", address: "", nomineeType: 'EPF', epfPercentage: "", epsPercentage: "", gratuityPercentage: "", customPercentage: "", isMinor: false, guardian: {} }]);
   const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const update = (i: number, key: string, v: any) => {
     const arr = [...value];
     arr[i] = { ...arr[i], [key]: v };
     onChange(arr);
   };
+  const computeTotals = (rows: any[]) => {
+    const totals: Record<string, number> = { EPF: 0, EPS: 0, Gratuity: 0, Custom: 0 };
+    rows.forEach((r) => {
+      const add = (v?: string) => (v ? Number(v) || 0 : 0);
+      totals.EPF += add(r.epfPercentage);
+      totals.EPS += add(r.epsPercentage);
+      totals.Gratuity += add(r.gratuityPercentage);
+      totals.Custom += add(r.customPercentage);
+    });
+    return totals;
+  };
   return (
     <div className="space-y-4">
       {value.length === 0 && <p className="text-sm text-muted-foreground italic">No nominee records.</p>}
-      {value.map((row, i) => (
-        <CardRow key={i} index={i} onRemove={() => remove(i)}>
-          <FieldRow label="Nominee Name"><Input value={row.nomineeName ?? ""} onChange={(v) => update(i, "nomineeName", v)} /></FieldRow>
-          <FieldRow label="Relationship"><Input value={row.relationship ?? ""} onChange={(v) => update(i, "relationship", v)} /></FieldRow>
-          <FieldRow label="Date of Birth"><Input type="date" value={row.dateOfBirth ?? ""} onChange={(v) => update(i, "dateOfBirth", v)} /></FieldRow>
-          <FieldRow label="Contact Number"><Input value={row.contactNumber ?? ""} onChange={(v) => update(i, "contactNumber", v)} /></FieldRow>
-          <FieldRow label="Email"><Input type="email" value={row.email ?? ""} onChange={(v) => update(i, "email", v)} /></FieldRow>
-          <FieldRow label="Address"><Input value={row.address ?? ""} onChange={(v) => update(i, "address", v)} /></FieldRow>
-          <FieldRow label="Nominee Type">
-            <Select value={row.nomineeType ?? ""} onChange={(v) => update(i, "nomineeType", v)} options={["EPF", "EPS", "Gratuity", "Custom"]} />
-          </FieldRow>
-          <FieldRow label="Share % (Overall)"><Input value={row.sharePercentage ?? ""} onChange={(v) => update(i, "sharePercentage", v)} placeholder="e.g. 50" /></FieldRow>
-          <FieldRow label="Share % EPF"><Input value={row.shareEPF ?? ""} onChange={(v) => update(i, "shareEPF", v)} /></FieldRow>
-          <FieldRow label="Share % EPS"><Input value={row.shareEPS ?? ""} onChange={(v) => update(i, "shareEPS", v)} /></FieldRow>
-          <FieldRow label="Share % Gratuity"><Input value={row.shareGratuity ?? ""} onChange={(v) => update(i, "shareGratuity", v)} /></FieldRow>
-          <div className="sm:col-span-2">
-            <Checkbox label="Minor Nominee" checked={row.isMinor ?? false} onChange={(v) => update(i, "isMinor", v)} />
-          </div>
-          {row.isMinor && (
-            <>
-              <FieldRow label="Guardian Name"><Input value={row.guardian?.name ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), name: v })} /></FieldRow>
-              <FieldRow label="Guardian Relationship"><Input value={row.guardian?.relationship ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), relationship: v })} /></FieldRow>
-              <FieldRow label="Guardian Contact"><Input value={row.guardian?.contactNumber ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), contactNumber: v })} /></FieldRow>
-            </>
-          )}
-        </CardRow>
-      ))}
+      {value.map((row, i) => {
+        const totals = computeTotals(value);
+        const remainingFor = (type: string) => Math.max(0, 100 - (totals[type] - (type === 'EPF' ? Number(row.epfPercentage || 0) : type === 'EPS' ? Number(row.epsPercentage || 0) : type === 'Gratuity' ? Number(row.gratuityPercentage || 0) : Number(row.customPercentage || 0))));
+        return (
+          <CardRow key={i} index={i} onRemove={() => remove(i)}>
+            <FieldRow label="Nominee Name"><Input value={row.nomineeName ?? ""} onChange={(v) => update(i, "nomineeName", v)} /></FieldRow>
+            <FieldRow label="Relationship"><Input value={row.relationship ?? ""} onChange={(v) => update(i, "relationship", v)} /></FieldRow>
+            <FieldRow label="Date of Birth"><Input type="date" value={row.dateOfBirth ?? ""} onChange={(v) => update(i, "dateOfBirth", v)} /></FieldRow>
+            <FieldRow label="Contact Number"><Input value={row.contactNumber ?? ""} onChange={(v) => update(i, "contactNumber", v)} /></FieldRow>
+            <FieldRow label="Email"><Input type="email" value={row.nomineeEmail ?? row.email ?? ""} onChange={(v) => update(i, "nomineeEmail", v)} /></FieldRow>
+            <FieldRow label="Address"><Input value={row.address ?? ""} onChange={(v) => update(i, "address", v)} /></FieldRow>
+            <FieldRow label="Nominee Type">
+              <Select
+                value={row.nomineeType ?? 'EPF'}
+                onChange={(v) => {
+                  const currentPct = v === 'EPF' ? Number(row.epfPercentage || 0) : v === 'EPS' ? Number(row.epsPercentage || 0) : v === 'Gratuity' ? Number(row.gratuityPercentage || 0) : Number(row.customPercentage || 0);
+                  const rem = remainingFor(v);
+                  if (rem <= 0 && currentPct <= 0) return; // prevent selection if no allocation
+                  update(i, "nomineeType", v);
+                }}
+                options={[
+                  { value: 'EPF', label: 'EPF', disabled: totals.EPF >= 100 && Number(row.epfPercentage || 0) <= 0 },
+                  { value: 'EPS', label: 'EPS', disabled: totals.EPS >= 100 && Number(row.epsPercentage || 0) <= 0 },
+                  { value: 'Gratuity', label: 'Gratuity', disabled: totals.Gratuity >= 100 && Number(row.gratuityPercentage || 0) <= 0 },
+                  { value: 'Custom', label: 'Custom', disabled: totals.Custom >= 100 && Number(row.customPercentage || 0) <= 0 },
+                ] as any}
+              />
+            </FieldRow>
+            { (row.nomineeType || 'EPF') === 'EPF' && <FieldRow label="EPF (%)"><Input value={row.epfPercentage ?? ''} onChange={(v) => update(i, 'epfPercentage', v)} /></FieldRow> }
+            { (row.nomineeType || 'EPF') === 'EPS' && <FieldRow label="EPS (%)"><Input value={row.epsPercentage ?? ''} onChange={(v) => update(i, 'epsPercentage', v)} /></FieldRow> }
+            { (row.nomineeType || 'EPF') === 'Gratuity' && <FieldRow label="Gratuity (%)"><Input value={row.gratuityPercentage ?? ''} onChange={(v) => update(i, 'gratuityPercentage', v)} /></FieldRow> }
+            { (row.nomineeType || 'EPF') === 'Custom' && <FieldRow label="Custom (%)"><Input value={row.customPercentage ?? ''} onChange={(v) => update(i, 'customPercentage', v)} /></FieldRow> }
+            <div className="sm:col-span-2">
+              <Checkbox label="Minor Nominee" checked={row.isMinor ?? false} onChange={(v) => update(i, "isMinor", v)} />
+            </div>
+            {row.isMinor && (
+              <>
+                <FieldRow label="Guardian Name"><Input value={row.guardian?.guardianName ?? row.guardian?.name ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), guardianName: v })} /></FieldRow>
+                <FieldRow label="Guardian Relationship"><Input value={row.guardian?.relationshipWithMinor ?? row.guardian?.relationship ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), relationshipWithMinor: v })} /></FieldRow>
+                <FieldRow label="Guardian Contact"><Input value={row.guardian?.contactNumber ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), contactNumber: v })} /></FieldRow>
+              </>
+            )}
+          </CardRow>
+        );
+      })}
       <AddMoreBtn label="Add Nominee" onClick={add} />
     </div>
   );
@@ -1372,6 +1402,7 @@ export function SelfProfileInformationPage() {
   const dispatch = useDispatch<AppDispatch>();
 
   const [ack, setAck] = useState(false);
+  const [isFinalSubmitted, setIsFinalSubmitted] = useState(false);
 
   const employee = useMemo(() => {
     const requestedId = user?.employeeId;
@@ -1448,6 +1479,7 @@ export function SelfProfileInformationPage() {
                 dispatch(addNotification({ type: 'warning', message: 'Please acknowledge before final submission.' }));
                 return;
               }
+              if (isFinalSubmitted) return;
               try {
                 // Set admin row flag
                 const updatedAdmin = { ...employee, profileLocked: true } as any;
@@ -1460,14 +1492,16 @@ export function SelfProfileInformationPage() {
                 } catch (e) {
                   console.error('Error updating ESS profile', e);
                 }
+                setIsFinalSubmitted(true);
                 dispatch(addNotification({ type: 'success', message: 'Profile final submitted and locked.' }));
               } catch (e) {
                 dispatch(addNotification({ type: 'error', message: 'Failed to finalize profile submission.' }));
               }
             }}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-foreground text-primary-foreground text-xs font-bold hover:opacity-95 transition-opacity"
+            disabled={isFinalSubmitted}
+            className={`inline-flex items-center gap-2 h-9 px-3 rounded-lg text-xs font-bold transition-opacity ${isFinalSubmitted ? 'opacity-60 cursor-not-allowed bg-surface-100 text-muted-foreground' : 'bg-foreground text-primary-foreground hover:opacity-95'}`}
           >
-            Final Submit
+            {isFinalSubmitted ? 'Submitted' : 'Final Submit'}
           </button>
           <span className={`rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${statusStyle[employee.status] ?? "bg-secondary text-muted-foreground"}`}>
             {employee.status}
@@ -1521,6 +1555,8 @@ export function SelfProfileInformationPage() {
                 This section is managed by your administrator and cannot be updated via My Request.
               </p>
             </div>
+          ) : activeSection === "profile" ? (
+            <EssEmployeeProfile employee={employee} />
           ) : (
             <ContentSection
               employee={employee}
@@ -1528,6 +1564,7 @@ export function SelfProfileInformationPage() {
               disableBankEdit
               showAssetAccessActions={false}
               showSalaryActions={false}
+              isFinalSubmitted={isFinalSubmitted}
             />
           )}
         </main>
