@@ -5,11 +5,12 @@ import { Filters } from "./Filters";
 import { CalendarView } from "./CalendarView";
 import { ListView } from "./ListView";
 import { RegularizationTab } from "./RegularizationTab";
+import { RegularizationHistoryTab } from "./RegularizationHistoryTab";
 import { SwipeDetailsDrawer } from "./SwipeDetailsDrawer";
 import { AttendanceCharts } from "./AttendanceCharts";
 import { Legend } from "./Legend";
 import { calculateMetrics, AttendanceMetrics } from "./utils";
-import { DailyAttendance } from "../../../modules/attendance/types";
+import { AttendanceRequest, DailyAttendance } from "../../../modules/attendance/types";
 import { attendanceDataset } from "../../../modules/attendance/store";
 import { motion, AnimatePresence } from "motion/react";
 import type { PunchDetailsResponse, RegularizationBulkPayload } from "../../../../api/employeeAttendanceClient";
@@ -22,6 +23,7 @@ interface MyAttendanceModuleProps {
   showTitle?: boolean;
   /** When set, uses API-backed records instead of the local mock dataset. */
   externalRecords?: DailyAttendance[];
+  externalRegularizationRequests?: AttendanceRequest[];
   externalMetrics?: AttendanceMetrics;
   externalLoading?: boolean;
   externalError?: string | null;
@@ -37,6 +39,7 @@ export function MyAttendanceModule({
   readOnly = false,
   showTitle = true,
   externalRecords,
+  externalRegularizationRequests,
   externalMetrics,
   externalLoading = false,
   externalError = null,
@@ -44,7 +47,7 @@ export function MyAttendanceModule({
   onFetchPunchDetails,
   onSubmitRegularization,
 }: MyAttendanceModuleProps) {
-  const [view, setView] = useState<"calendar" | "list" | "regularization">("calendar");
+  const [view, setView] = useState<"calendar" | "list" | "regularization" | "regularization-history">("calendar");
   const [currentDate, setCurrentDate] = useState(() =>
     externalRecords !== undefined ? new Date() : new Date(2026, 4, 1),
   );
@@ -66,8 +69,8 @@ export function MyAttendanceModule({
       ? (externalRecords ?? [])
       : attendanceDataset.records.filter(r => r.employeeId === employeeId);
 
-    // Filter by month/year unless in regularization tab where we might need historical data
-    if (view !== "regularization") {
+    // Filter by month/year unless in regularization/history tab where we might need historical data
+    if (view !== "regularization" && view !== "regularization-history") {
       records = records.filter(r => isSameMonth(parseISO(r.date), currentDate));
     }
 
@@ -134,7 +137,7 @@ export function MyAttendanceModule({
           view={view}
           onViewChange={(newView) => {
             setView(newView);
-            if (newView !== "regularization") setSelectedDateForRegularize(null);
+            if (newView !== "regularization" && newView !== "regularization-history") setSelectedDateForRegularize(null);
           }}
           currentDate={currentDate}
           onDateChange={setCurrentDate}
@@ -146,7 +149,7 @@ export function MyAttendanceModule({
       {/* Main Content Area */}
       <div className="relative">
         <AnimatePresence mode="wait">
-          {externalLoading ? null : employeeRecords.length > 0 || view === "regularization" ? (
+          {externalLoading ? null : employeeRecords.length > 0 || view === "regularization" || view === "regularization-history" ? (
             <motion.div
               key={view + currentDate.getTime()}
               initial={{ opacity: 0, y: 20 }}
@@ -185,12 +188,17 @@ export function MyAttendanceModule({
                   onRegularize={handleRegularize}
                   readOnly={readOnly}
                 />
-              ) : (
+              ) : view === "regularization" ? (
                 <RegularizationTab
                   records={usesExternalData ? employeeRecords : attendanceDataset.records.filter(r => r.employeeId === employeeId)}
                   initialDate={selectedDateForRegularize}
                   readOnly={readOnly}
                   onSubmitRegularization={onSubmitRegularization}
+                />
+              ) : (
+                <RegularizationHistoryTab
+                  requests={externalRegularizationRequests ?? attendanceDataset.requests}
+                  employeeId={employeeId}
                 />
               )}
             </motion.div>

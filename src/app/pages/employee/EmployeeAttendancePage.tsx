@@ -9,6 +9,7 @@ export function EmployeeAttendancePage() {
 
   const {
     records,
+    regularizationRequests,
     metrics,
     loading,
     error,
@@ -27,6 +28,7 @@ export function EmployeeAttendancePage() {
           <MyAttendanceModule
             employeeId={user?.employeeId ?? user?.employeeCode ?? ""}
             externalRecords={records}
+            externalRegularizationRequests={regularizationRequests}
             externalMetrics={metrics ?? undefined}
             externalLoading={loading}
             externalError={error}

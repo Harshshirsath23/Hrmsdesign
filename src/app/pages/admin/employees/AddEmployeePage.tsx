@@ -359,20 +359,20 @@ function Inp({
   return (
     <div className="relative">
       {icon && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none flex items-center">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-muted-foreground pointer-events-none flex items-center">
           {icon}
         </span>
       )}
       <input
         className={[
-          "flat-input h-9 px-3 text-sm",
+          "flat-input h-9 px-3 text-sm dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400",
           wfull ? "w-full" : "",
-          icon ? "pl-9" : "",
+          icon ? "pl-12" : "",
           err
-            ? "!border-red-400 focus:!border-red-500 focus:!shadow-[0_0_0_3px_rgba(220,53,69,0.08)]"
+            ? "!border-red-400 dark:!border-red-500 focus:!border-red-500 focus:!shadow-[0_0_0_3px_rgba(220,53,69,0.08)] dark:focus:!shadow-[0_0_0_3px_rgba(220,53,69,0.15)]"
             : "",
-          success && !err ? "!border-green-500 pr-9" : "",
-          p.readOnly ? "opacity-60 cursor-not-allowed" : "",
+          success && !err ? "!border-green-500 dark:!border-green-600 pr-9" : "",
+          p.readOnly ? "opacity-60 dark:opacity-50 cursor-not-allowed" : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -381,7 +381,7 @@ function Inp({
       {success && !err && (
         <CheckCircle
           size={14}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 dark:text-green-400 pointer-events-none"
         />
       )}
     </div>
@@ -611,12 +611,12 @@ function SearchSel({
         />
       </button>
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-          <div className="p-2 border-b border-border">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-slate-900 border border-border dark:border-slate-700 rounded-lg shadow-lg z-50 overflow-hidden">
+          <div className="p-2 border-b border-border dark:border-slate-700">
             <div className="relative">
               <Search
                 size={13}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-slate-400 pointer-events-none"
               />
               <input
                 ref={inputRef}
@@ -624,13 +624,13 @@ function SearchSel({
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search managers…"
-                className="w-full h-8 pl-8 pr-3 text-xs bg-background rounded-md border border-border focus:outline-none focus:border-foreground/40 text-foreground placeholder:text-muted-foreground"
+                className="w-full h-8 pl-9 pr-3 text-xs bg-background dark:bg-slate-800 rounded-md border border-border dark:border-slate-700 focus:outline-none focus:border-foreground/40 dark:focus:border-slate-500 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-slate-400"
               />
             </div>
           </div>
           <div className="max-h-44 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <p className="px-3 py-2.5 text-xs text-muted-foreground">No results</p>
+              <p className="px-3 py-2.5 text-xs text-muted-foreground dark:text-slate-400">No results</p>
             ) : (
               filtered.map((o) => (
                 <button

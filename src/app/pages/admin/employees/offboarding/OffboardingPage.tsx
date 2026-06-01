@@ -282,7 +282,7 @@ export function OffboardingPage() {
                 placeholder="Search by Employee Name, ID, Department..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="flat-input w-full pl-10 pr-4 py-2.5 text-sm font-bold"
+                className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 w-full pl-12 pr-4 py-2.5 text-sm font-bold"
               />
             </div>
             <div className="flex items-center gap-2">

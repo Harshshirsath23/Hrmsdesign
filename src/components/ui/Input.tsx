@@ -23,25 +23,25 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         {required ? <span className="h-1.5 w-1.5 rounded-full bg-danger-500" aria-hidden="true" /> : null}
       </span>
       <span className="relative flex items-center">
-        {leftIcon ? <span className="pointer-events-none absolute left-3 text-text-tertiary">{leftIcon}</span> : null}
+        {leftIcon ? <span className="pointer-events-none absolute left-3 text-text-tertiary dark:text-text-tertiary">{leftIcon}</span> : null}
         <input
           ref={ref}
           id={inputId}
           className={cn(
             'input-base',
-            leftIcon && 'pl-10',
+            leftIcon && 'pl-12',
             rightIcon && 'pr-10',
-            error && 'border-danger-500 focus:border-danger-500 focus:ring-danger-500/15',
+            error && 'border-danger-500 dark:border-danger-500 focus:border-danger-500 dark:focus:border-danger-500 focus:ring-danger-500/15 dark:focus:ring-danger-500/15',
             className
           )}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-help` : undefined}
           {...props}
         />
-        {rightIcon ? <span className="pointer-events-none absolute right-3 text-text-tertiary">{rightIcon}</span> : null}
+        {rightIcon ? <span className="pointer-events-none absolute right-3 text-text-tertiary dark:text-text-tertiary">{rightIcon}</span> : null}
       </span>
       {error ? <span id={`${inputId}-error`} className="text-xs text-danger-700 dark:text-rose-300">{error}</span> : null}
-      {!error && helperText ? <span id={`${inputId}-help`} className="text-xs text-text-tertiary">{helperText}</span> : null}
+      {!error && helperText ? <span id={`${inputId}-help`} className="text-xs text-text-tertiary dark:text-text-tertiary">{helperText}</span> : null}
     </label>
   );
 });

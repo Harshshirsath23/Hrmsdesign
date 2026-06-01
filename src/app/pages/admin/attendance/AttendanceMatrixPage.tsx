@@ -396,7 +396,7 @@ export function AttendanceMatrixPage() {
             {/* Filter/Search Bar Inline */}
             <div className="flex items-center gap-3 border-l pl-6 border-border/50">
               <div className="relative w-[250px]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground dark:text-muted-foreground" />
                 <Input
                   className="pl-8 h-9 rounded-lg bg-secondary border-transparent focus:bg-background transition-all font-bold text-xs shadow-inner"
                   placeholder="Search Employee..."
