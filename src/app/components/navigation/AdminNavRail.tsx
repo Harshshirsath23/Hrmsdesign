@@ -34,7 +34,7 @@ function TopNavDropdown<T extends string>({
   }, []);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative z-50">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -55,7 +55,7 @@ function TopNavDropdown<T extends string>({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1.5 z-50 min-w-[200px] rounded-xl border border-border bg-card shadow-lg py-1.5">
+        <div className="absolute top-full left-0 mt-2 z-[999] min-w-[220px] rounded-lg border border-border bg-card shadow-xl py-2">
           {group.items.map((item) => {
             const Icon = item.icon;
             const isActive = active === item.id;
@@ -68,10 +68,10 @@ function TopNavDropdown<T extends string>({
                   setOpen(false);
                 }}
                 className={cn(
-                  "w-full flex items-center gap-2.5 px-3.5 py-2 text-sm transition-colors duration-100",
+                  "w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors duration-100",
                   isActive
-                    ? "bg-secondary/60 text-foreground font-medium"
-                    : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground"
+                    ? "bg-secondary text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                 )}
               >
                 <Icon

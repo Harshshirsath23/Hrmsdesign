@@ -6,7 +6,7 @@ export function SuperadminAuditLogs() {
   const events = useMemo(
     () =>
       rows
-        .flatMap((r) => r.audit.map((a) => ({ ...a, requestId: r.id, employee: r.employee.employee_name })))
+        .flatMap((r) => (r.audit ?? []).map((a) => ({ ...a, requestId: r.id, employee: r.employee?.employee_name ?? "Unknown" })))
         .sort((a, b) => b.at.localeCompare(a.at)),
     [rows],
   );

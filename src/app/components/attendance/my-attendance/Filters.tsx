@@ -100,7 +100,7 @@ export function Filters({
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input 
             type="text" 
-            placeholder={view === "regularization-history" ? "Search date, status, reason..." : "Search date, status, shift..."}
+            placeholder={view === "regularization-history" ? "Search date, status, reason..." : "        Search date, status, shift..."}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="attendance-search-input w-full md:w-64 pl-12 pr-4 py-3 text-xs font-medium"

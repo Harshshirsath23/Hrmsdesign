@@ -132,7 +132,7 @@ export function EmployeeSegmentPage() {
         </div>
         <Button 
           onClick={handleCreate}
-          className="h-10 px-5 rounded-xl bg-foreground text-primary-foreground text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-foreground/90 transition-all shadow-md"
+          className="h-10 px-5 rounded-xl bg-foreground text-background text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-foreground/90 transition-all shadow-md"
         >
           <Plus size={14} strokeWidth={3} /> Create Segment
         </Button>

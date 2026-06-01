@@ -9,6 +9,15 @@ export function AdminHolidayCalendarManagement({ onAddHoliday }: { onAddHoliday?
   const year = new Date().getFullYear();
   const holidaysQ = useAdminLeaveHolidays(year);
 
+  if (holidaysQ.error) {
+    return (
+      <div className="flat-card bg-card p-6 text-center">
+        <p className="text-sm text-rose-600 font-semibold">Failed to load holidays</p>
+        <p className="text-xs text-muted-foreground mt-1">{holidaysQ.error}</p>
+      </div>
+    );
+  }
+
   const holidays = useMemo(() => {
     return (holidaysQ.data ?? []).map((holiday) => ({
       id: holiday.id,

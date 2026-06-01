@@ -168,13 +168,7 @@ export function ManagerTeamAttendancePage() {
     <div className="attendance-liquid team-attendance-page space-y-7 p-4 md:p-6">
       <div className="attendance-hero p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="attendance-kicker">Team pulse</p>
-            <h1 className="text-3xl font-semibold text-foreground tracking-tight">Team Attendance</h1>
-            <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
-              Search team members, review daily attendance, and open the full attendance history.
-            </p>
-          </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -211,7 +205,7 @@ export function ManagerTeamAttendancePage() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by employee name or ID"
+              placeholder="        Search by employee name or ID"
               className="attendance-form-control h-10 w-full pl-9 pr-3 text-sm text-foreground outline-none"
             />
           </div>

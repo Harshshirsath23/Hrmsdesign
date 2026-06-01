@@ -76,7 +76,9 @@ export function useAdminLeaveApplications(page?: number) {
     queryKey: ["admin-leave-applications", page ?? 1],
     queryFn: () => fetchAdminLeaveApplications(page ?? 1),
     staleTime: 60_000,
-    keepPreviousData: true,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1000,
   });
 }
 
@@ -93,6 +95,9 @@ export function useAdminLeaveHolidays(year: number) {
     queryKey: ["admin-leave-holidays", year],
     queryFn: () => fetchAdminLeaveHolidays(year),
     staleTime: 60_000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1000,
   });
 }
 
@@ -106,5 +111,8 @@ export function useAdminLeaveBalances() {
     queryKey: ["admin-leave-balances"],
     queryFn: fetchAdminLeaveBalances,
     staleTime: 60_000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1000,
   });
 }

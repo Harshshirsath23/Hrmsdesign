@@ -106,15 +106,6 @@ export function MyAttendanceModule({
 
   return (
     <div className="attendance-workspace space-y-7 pb-12">
-      {showTitle ? (
-        <div className="attendance-hero flex items-center justify-between">
-          <div>
-            <p className="attendance-kicker">Attendance intelligence</p>
-            <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight">{title}</h1>
-            <p className="text-sm text-muted-foreground font-medium mt-2 max-w-2xl">{subtitle}</p>
-          </div>
-        </div>
-      ) : null}
 
       {externalError ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
@@ -128,10 +119,7 @@ export function MyAttendanceModule({
         </div>
       ) : null}
 
-      {/* Summary Cards */}
-      <SummaryCards metrics={metrics} />
-
-      {/* Filters & View Switcher */}
+       {/* Filters & View Switcher */}
       <div className="sticky top-4 z-50 attendance-sticky-tools">
         <Filters
           view={view}
@@ -146,6 +134,11 @@ export function MyAttendanceModule({
         />
       </div>
 
+
+      {/* Summary Cards */}
+      <SummaryCards metrics={metrics} />
+
+     
       {/* Main Content Area */}
       <div className="relative">
         <AnimatePresence mode="wait">

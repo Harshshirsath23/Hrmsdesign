@@ -343,7 +343,7 @@ export function EmployeeDirectory() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search employees…"
+              placeholder="          Search employees…"
               value={filters.search}
               onChange={(e) => updateFilter("search", e.target.value)}
               className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 w-full pl-12 pr-4 py-2.5 text-sm font-medium transition-all focus:shadow-md dark:focus:shadow-md"
