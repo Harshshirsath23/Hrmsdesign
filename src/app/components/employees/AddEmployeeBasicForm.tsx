@@ -556,13 +556,11 @@ export default function AddEmployeeBasicForm() {
                 </FormField>
 
                 <FormField label="Employee ID" required hint="Admin editable only" error={errors.employeeId?.message}>
-                  <div className="relative group">
-                    <Input
-                      {...form.register('employeeId')}
-                      className="h-11 bg-slate-50/50 dark:bg-gray-800/50 border-border/50 focus:border-primary/50 rounded-xl px-4 text-sm font-bold tracking-tight transition-all"
-                    />
-                    <Shield size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
-                  </div>
+                  <Input
+                    {...form.register('employeeId')}
+                    rightIcon={<Shield size={14} />}
+                    className="h-11 bg-slate-50/50 dark:bg-gray-800/50 border-border/50 focus:border-primary/50 rounded-xl text-sm font-bold tracking-tight transition-all"
+                  />
                 </FormField>
 
                 <div className="sm:col-span-2 py-4">
@@ -580,10 +578,12 @@ export default function AddEmployeeBasicForm() {
                 </div>
 
                 <FormField label="Date of Birth" required error={errors.dateOfBirth?.message}>
-                  <div className="relative">
-                    <Input type="date" {...form.register('dateOfBirth')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
-                  </div>
+                  <Input
+                    type="date"
+                    {...form.register('dateOfBirth')}
+                    rightIcon={<Calendar size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
 
                 <FormField label="Gender" required error={errors.gender?.message}>
@@ -627,25 +627,30 @@ export default function AddEmployeeBasicForm() {
                 </FormField>
 
                 <FormField label="Personal Email" required error={errors.personalEmail?.message}>
-                  <div className="relative">
-                    <Input type="email" placeholder="personal@email.com" {...form.register('personalEmail')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
-                  </div>
+                  <Input
+                    type="email"
+                    placeholder="personal@email.com"
+                    {...form.register('personalEmail')}
+                    leftIcon={<Mail size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
 
                 <FormField label="Personal Mobile" required error={errors.personalMobileNumber?.message}>
-                  <div className="relative">
-                    <Input placeholder="+91 00000 00000" {...form.register('personalMobileNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
-                  </div>
+                  <Input
+                    placeholder="+91 00000 00000"
+                    {...form.register('personalMobileNumber')}
+                    leftIcon={<Phone size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
 
                 <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800">
                   <FormField label="Emergency Contact Name" required error={errors.emergencyContactName?.message}>
-                    <Input placeholder="Full Name" {...form.register('emergencyContactName')} className="h-10 bg-white dark:bg-gray-800 rounded-lg px-3 text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
+                      <Input placeholder="Full Name" {...form.register('emergencyContactName')} leftIcon={<User size={14} />} className="h-10 bg-white dark:bg-gray-800 rounded-lg text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
                   </FormField>
                   <FormField label="Emergency Number" required error={errors.emergencyContactNumber?.message}>
-                    <Input placeholder="+91..." {...form.register('emergencyContactNumber')} className="h-10 bg-white dark:bg-gray-800 rounded-lg px-3 text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
+                      <Input placeholder="+91..." {...form.register('emergencyContactNumber')} leftIcon={<Phone size={14} />} className="h-10 bg-white dark:bg-gray-800 rounded-lg text-sm border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
                   </FormField>
                 </div>
 
@@ -673,13 +678,13 @@ export default function AddEmployeeBasicForm() {
 
                 <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
                   <FormField label="Father's Name">
-                    <Input {...form.register('fathersName')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm border-border/40" />
+                    <Input {...form.register('fathersName')} leftIcon={<User size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm border-border/40" />
                   </FormField>
                   <FormField label="Mother's Name">
-                    <Input {...form.register('mothersName')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm border-border/40" />
+                    <Input {...form.register('mothersName')} leftIcon={<User size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm border-border/40" />
                   </FormField>
                   <FormField label="Spouse Name">
-                    <Input {...form.register('spouseName')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm border-border/40" />
+                    <Input {...form.register('spouseName')} leftIcon={<User size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm border-border/40" />
                   </FormField>
                 </div>
               </div>
@@ -725,10 +730,12 @@ export default function AddEmployeeBasicForm() {
                   />
                 </FormField>
                 <FormField label="Date of Joining" required error={errors.dateOfJoining?.message}>
-                  <div className="relative">
-                    <Input type="date" {...form.register('dateOfJoining')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
-                  </div>
+                  <Input
+                    type="date"
+                    {...form.register('dateOfJoining')}
+                    rightIcon={<Calendar size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
                 <div className="flex items-end gap-3">
                   <FormField label="Probation Period" className="flex-1">
@@ -744,16 +751,21 @@ export default function AddEmployeeBasicForm() {
                   </div>
                 </div>
                 <FormField label="Official Email" required error={errors.officialEmail?.message}>
-                  <div className="relative">
-                    <Input type="email" placeholder="official@company.com" {...form.register('officialEmail')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" />
-                  </div>
+                  <Input
+                    type="email"
+                    placeholder="official@company.com"
+                    {...form.register('officialEmail')}
+                    leftIcon={<Building2 size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
                 <FormField label="Official Mobile" required error={errors.officialMobileNumber?.message}>
-                  <div className="relative">
-                    <Input placeholder="+91 00000 00000" {...form.register('officialMobileNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-10 text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all" />
-                    <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50" />
-                  </div>
+                  <Input
+                    placeholder="+91 00000 00000"
+                    {...form.register('officialMobileNumber')}
+                    leftIcon={<Phone size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-bold border-border/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                  />
                 </FormField>
               </div>
             </FormSection>
@@ -826,13 +838,18 @@ export default function AddEmployeeBasicForm() {
               <SectionHeader title="Documents" icon={Upload} description="Upload identification and employment documents" />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <FormField label="Aadhaar Number" required error={errors.aadhaarNumber?.message}>
-                  <Input placeholder="0000 0000 0000" {...form.register('aadhaarNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-mono tracking-widest border-border/40 transition-all" />
+                  <Input
+                    placeholder="0000 0000 0000"
+                    {...form.register('aadhaarNumber')}
+                    leftIcon={<Shield size={16} />}
+                    className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-mono tracking-widest border-border/40 transition-all"
+                  />
                 </FormField>
                 <FormField label="PAN Number" required error={errors.panNumber?.message}>
-                  <Input placeholder="ABCDE1234F" {...form.register('panNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-mono tracking-widest uppercase border-border/40 transition-all" />
+                  <Input placeholder="ABCDE1234F" {...form.register('panNumber')} leftIcon={<FileText size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-mono tracking-widest uppercase border-border/40 transition-all" />
                 </FormField>
                 <FormField label="Passport Number">
-                  <Input {...form.register('passportNumber')} className="h-11 bg-white dark:bg-gray-800 rounded-xl px-4 text-sm font-mono border-border/40" />
+                  <Input {...form.register('passportNumber')} leftIcon={<FileText size={14} />} className="h-11 bg-white dark:bg-gray-800 rounded-xl text-sm font-mono border-border/40" />
                 </FormField>
               </div>
               <div className="mt-8 p-12 text-center border-2 border-dashed border-border rounded-[2rem] bg-slate-50/50">

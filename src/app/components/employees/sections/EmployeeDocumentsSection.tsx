@@ -17,9 +17,10 @@ import type { DocumentTypeConfig } from "../../../modules/employees/documentType
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
-export function EmployeeDocumentsSection({ employee }: Props) {
+export function EmployeeDocumentsSection({ employee, showAddButton = true }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const documentTypes = useSelector(selectActiveDocumentTypes);
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
@@ -82,7 +83,7 @@ export function EmployeeDocumentsSection({ employee }: Props) {
         isEditing={false}
         onSave={() => {}}
         onCancel={() => {}}
-        headerExtra={
+        headerExtra={showAddButton ? (
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -92,7 +93,7 @@ export function EmployeeDocumentsSection({ employee }: Props) {
               Add New Document
             </button>
           </div>
-        }
+        ) : null}
       >
         <EmployeeDocumentsGrid
           documentTypes={documentTypes}

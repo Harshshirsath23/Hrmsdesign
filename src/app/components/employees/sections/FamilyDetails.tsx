@@ -185,12 +185,13 @@ export function FamilyDetails({ employee, showAddButton = true }: Props) {
 
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-6">
-                    <div>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Name</span>
                       {isEditing ? (
                         <input type="text" value={member.name} onChange={e => updateMember(index, 'name', e.target.value)}
-                          className="text-base font-black text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 mb-2" />
+                          className="w-full text-base font-black text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 mb-2" />
                       ) : (
-                        <h4 className="text-base font-black text-foreground">{member.name}</h4>
+                        <h4 className="text-base font-black text-foreground">{member.name || "—"}</h4>
                       )}
                       <div className="flex flex-wrap gap-2 mt-2">
                         <StatusBadge icon={ShieldCheck} label="Dependent" active={member.isDependent} />

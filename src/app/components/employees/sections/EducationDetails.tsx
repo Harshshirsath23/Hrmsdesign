@@ -8,7 +8,7 @@ import {
   ProfileInfoField,
   EmptyStateCard,
   ConfirmationDialog,
-  validateEducationYear,
+  validateDateOrder,
   validatePercentageCgpa,
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
@@ -23,7 +23,8 @@ const emptyEdu = (): EducationEntry => ({
   specialization: "",
   institutionName: "",
   university: "",
-  yearOfPassing: "",
+  fromDate: "",
+  toDate: "",
   percentageCgpa: "",
   grade: "",
 });
@@ -60,9 +61,9 @@ export function EducationDetails({ employee, showAddButton = true }: Props) {
       const row = draft[i];
       const hasAny = Object.values(row).some((v) => String(v).trim() !== "");
       if (!hasAny) continue;
-      const yErr = validateEducationYear(row.yearOfPassing);
-      if (yErr) {
-        setFormError(`Education ${i + 1}: ${yErr}`);
+      const dErr = validateDateOrder(row.fromDate || "", row.toDate || "");
+      if (dErr) {
+        setFormError(`Education ${i + 1}: ${dErr}`);
         return;
       }
       const pErr = validatePercentageCgpa(row.percentageCgpa);
@@ -161,10 +162,18 @@ export function EducationDetails({ employee, showAddButton = true }: Props) {
                     options={boardOptions}
                   />
                   <ProfileInfoField
-                    label="Year Of Passing"
-                    value={row.yearOfPassing}
+                    label="From"
+                    value={row.fromDate || ''}
                     editing={isEditing}
-                    onChange={(v) => updateRow(index, { yearOfPassing: v })}
+                    type="date"
+                    onChange={(v) => updateRow(index, { fromDate: v })}
+                  />
+                  <ProfileInfoField
+                    label="To"
+                    value={row.toDate || ''}
+                    editing={isEditing}
+                    type="date"
+                    onChange={(v) => updateRow(index, { toDate: v })}
                   />
                   <ProfileInfoField
                     label="Percentage / CGPA"
