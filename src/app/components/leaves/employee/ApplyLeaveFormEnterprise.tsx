@@ -21,11 +21,11 @@ export function ApplyLeaveFormEnterprise({
   const { data: leaveTypes = [] } = useLeaveTypes();
   // employee param is kept for display only; auth token identifies the employee on the backend
   const applyLeave = useApplyLeave();
- 
+
   const [leaveTypeId, setLeaveTypeId] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
- 
+
   // Session 1 = Morning (AM), Session 2 = Afternoon (PM)
   // Backend uses a single is_half_day boolean, so we derive it from sessions.
   const [fromSession, setFromSession] = useState<"first_half" | "second_half">("first_half");

@@ -97,6 +97,7 @@ export interface LeaveApplicationAPI {
   leave_type_id: string;
   /** leave_type.name  – exposed as "leave_type" in the serializer */
   leave_type_name: string;
+  leave_type_code: string;
   from_date: string;
   to_date: string;
   from_session: "first_half" | "second_half";
