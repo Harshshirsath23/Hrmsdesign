@@ -8,6 +8,7 @@ const API_BASE_URL =
   'http://acme.localhost:8000';
 const EMP_STORAGE_KEY = 'hrms-demo-employees';
 
+
 const DEMO_EMPLOYEES: EmployeeListItem[] = [
   {
     id: 'emp-1',
