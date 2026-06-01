@@ -1,7 +1,9 @@
+import api from '@/api/client';
 import type { MasterListQuery, MasterRecord, PaginatedMasterResponse } from "./types";
 
-const BASE_URL = "/api/masters";
 const DEMO_STORAGE_PREFIX = "hrms-superadmin-demo-masters";
+const ALLOW_DEMO_MASTER_FALLBACK =
+  import.meta.env.VITE_ALLOW_DEMO_MASTER_FALLBACK === "true";
 
 const DEMO_MASTERS: Record<string, MasterRecord[]> = {
   Company: [
@@ -108,6 +110,26 @@ function listDemoMasters(masterApiName: string, query: MasterListQuery): Paginat
   return { count: results.length, next: null, previous: null, results };
 }
 
+function normalizeMasterListResponse(
+  data: PaginatedMasterResponse<MasterRecord> | MasterRecord[],
+): PaginatedMasterResponse<MasterRecord> {
+  if (Array.isArray(data)) {
+    return {
+      count: data.length,
+      next: null,
+      previous: null,
+      results: data,
+    };
+  }
+
+  return {
+    count: data.count ?? data.results?.length ?? 0,
+    next: data.next ?? null,
+    previous: data.previous ?? null,
+    results: data.results ?? [],
+  };
+}
+
 function makeDemoRecord(masterApiName: string, payload: Record<string, unknown>): MasterRecord {
   const labelValue = String(payload.label ?? payload.name ?? payload.title ?? `New ${formatMasterName(masterApiName)}`);
   return {
@@ -132,41 +154,25 @@ function toQueryString(query: MasterListQuery) {
   return str ? `?${str}` : "";
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!res.ok) {
-    let msg = `Request failed (${res.status})`;
-    try {
-      const body = (await res.json()) as { detail?: string; message?: string };
-      msg = body.detail ?? body.message ?? msg;
-    } catch {
-      // ignore
-    }
-    throw new Error(msg);
-  }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
-}
-
 export async function getMasterList(masterApiName: string, query: MasterListQuery) {
   try {
-    return await request<PaginatedMasterResponse<MasterRecord>>(
-      `${BASE_URL}/${masterApiName}/${toQueryString(query)}`,
+    const res = await api.get<PaginatedMasterResponse<MasterRecord> | MasterRecord[]>(
+      `/masters/${masterApiName}/${toQueryString(query)}`,
     );
-  } catch {
+    return normalizeMasterListResponse(res.data);
+  } catch (error) {
+    if (!ALLOW_DEMO_MASTER_FALLBACK) {
+      console.error(`Failed to load master '${masterApiName}'`, error);
+      return { count: 0, next: null, previous: null, results: [] };
+    }
     return listDemoMasters(masterApiName, query);
   }
 }
 
 export async function createMaster(masterApiName: string, payload: Record<string, unknown>) {
   try {
-    return await request<MasterRecord>(`${BASE_URL}/${masterApiName}/`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const res = await api.post<MasterRecord>(`/masters/${masterApiName}/`, payload);
+    return res.data;
   } catch {
     const record = makeDemoRecord(masterApiName, payload);
     writeDemoMasters(masterApiName, [record, ...readDemoMasters(masterApiName)]);
@@ -176,10 +182,8 @@ export async function createMaster(masterApiName: string, payload: Record<string
 
 export async function patchMaster(masterApiName: string, id: string | number, payload: Record<string, unknown>) {
   try {
-    return await request<MasterRecord>(`${BASE_URL}/${masterApiName}/${id}/`, {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    });
+    const res = await api.patch<MasterRecord>(`/masters/${masterApiName}/${id}/`, payload);
+    return res.data;
   } catch {
     const records = readDemoMasters(masterApiName);
     const updated = records.map((record) =>
@@ -192,9 +196,7 @@ export async function patchMaster(masterApiName: string, id: string | number, pa
 
 export async function deleteMaster(masterApiName: string, id: string | number) {
   try {
-    return await request<void>(`${BASE_URL}/${masterApiName}/${id}/`, {
-      method: "DELETE",
-    });
+    await api.delete(`/masters/${masterApiName}/${id}/`);
   } catch {
     writeDemoMasters(
       masterApiName,

@@ -1,10 +1,20 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json'
   }
+});
+
+// Attach JWT token from localStorage on every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('hrms_access_token');
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export default api;

@@ -302,6 +302,14 @@ export function useShiftTypes() {
   });
 }
 
+export function useAccountTypes() {
+  return useQuery({
+    queryKey: ['masters-account-types'],
+    queryFn: () => fetchMaster('account-types'),
+    staleTime: 10 * 60_000,
+  });
+}
+
 export function useInviteEmployee() {
   const qc = useQueryClient();
   return useMutation({

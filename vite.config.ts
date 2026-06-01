@@ -41,4 +41,20 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  server: {
+    proxy: {
+      // Forward all /api/* requests to the Django backend.
+      // Uses 127.0.0.1 directly so Windows DNS does not need acme.localhost.
+      // The Host header is set manually so Django tenant middleware still works.
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: false,
+        secure: false,
+        headers: {
+          Host: 'acme.localhost:8000',
+        },
+      },
+    },
+  },
 })
