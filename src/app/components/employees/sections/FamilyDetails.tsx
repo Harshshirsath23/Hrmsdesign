@@ -111,7 +111,7 @@ export function FamilyDetails({ employee, showAddButton = true }: Props) {
     if (employee.editRequestStatus === 'Pending') return { l: 'Pending Employee Update', c: 'bg-amber-500/10 text-amber-600 border-amber-200' };
     if (employee.editRequestStatus === 'Updated') return { l: 'Updated by Employee', c: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' };
     if (isEditable) return { l: 'Editable by Employee', c: 'bg-indigo-500/10 text-indigo-600 border-indigo-200' };
-    return { l: 'Locked by Admin', c: 'bg-slate-500/10 text-slate-500 border-slate-200' };
+    return { l: '', c: '' };
   };
 
   const status = getStatusLabel();
@@ -129,9 +129,11 @@ export function FamilyDetails({ employee, showAddButton = true }: Props) {
               {editedFamily.length} Registered Members
             </p>
           </div>
-          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border transition-all ${status.c}`}>
-            {status.l}
-          </span>
+          {status.l ? (
+            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border transition-all ${status.c}`}>
+              {status.l}
+            </span>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-6">

@@ -365,6 +365,8 @@ export interface Employee {
 
   // Selective Editing for ESS
   editableSections?: string[]; // IDs of sections/subsections employee can edit
+  /** When true the profile is locked for direct edits; changes must go through PROFILE_EDIT_REQUEST workflow */
+  profileLocked?: boolean;
   editRequestStatus?: 'None' | 'Pending' | 'Updated';
 }
 

@@ -91,6 +91,8 @@ export interface AssetDetail {
 
 export interface EmployeeProfile {
   employeeId: string;
+  /** When true the ESS profile is locked for direct edits; must use request workflow */
+  profileLocked?: boolean;
   profile: {
     firstName: string;
     middleName: string;

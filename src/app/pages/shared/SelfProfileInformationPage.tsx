@@ -27,6 +27,9 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../../store";
 import { addNotification } from "../../../store/slices/notificationSlice";
+import { updateAdminEmployee } from "../../../store/slices/adminSlice";
+import { saveEssProfileWithAdminSync } from "../../../store/slices/employeeSlice";
+import { ensureProfile } from "../../modules/ess/storage";
 import { ContentSection } from "../../components/employees/ContentSection";
 import { SidebarSection } from "../../components/employees/SidebarMenu";
 import { Employee } from "../../components/employees/mockData";
@@ -1046,6 +1049,16 @@ function MyRequestSection({ employee }: { employee: Employee }) {
     }
   };
 
+  // Auto-open a section if triggered via global request (Request Change button)
+  useEffect(() => {
+    const pending = (window as any).__ess_open_request_for as SelfSection | undefined;
+    if (pending) {
+      // clear the global marker
+      try { delete (window as any).__ess_open_request_for; } catch { (window as any).__ess_open_request_for = undefined; }
+      openSection(pending);
+    }
+  }, []);
+
   const sectionLabel = activeSection ? menuItems.find((m) => m.id === activeSection)?.label : "";
 
   return (
@@ -1356,6 +1369,9 @@ export function SelfProfileInformationPage() {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<SelfSection>("profile");
   const employees = useSelector((state: RootState) => state.admin.employees);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const [ack, setAck] = useState(false);
 
   const employee = useMemo(() => {
     const requestedId = user?.employeeId;
@@ -1373,6 +1389,34 @@ export function SelfProfileInformationPage() {
   if (!employee) {
     return <div className="p-6 text-sm text-muted-foreground">No employee profile found.</div>;
   }
+
+  // Listen for request-change events fired by EditableSectionCard
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as any;
+      const sectionId: string = detail?.sectionId;
+      if (!sectionId) return;
+      // map sectionId prefix to top-level self section
+      let mapped: SelfSection | undefined;
+      if (sectionId.startsWith('profile')) mapped = 'profile';
+      else if (sectionId.startsWith('education')) mapped = 'education';
+      else if (sectionId.startsWith('family')) mapped = 'family';
+      else if (sectionId.startsWith('nominee')) mapped = 'nominee';
+      else if (sectionId.startsWith('insurance')) mapped = 'insurance';
+      else if (sectionId.startsWith('work')) mapped = 'work';
+      else if (sectionId.startsWith('bank')) mapped = 'bank';
+      else if (sectionId.startsWith('passport')) mapped = 'passport';
+      else if (sectionId.startsWith('documents')) mapped = 'documents';
+      else if (sectionId.startsWith('asset')) mapped = 'assets';
+      else if (sectionId.startsWith('access')) mapped = 'access';
+      else mapped = 'profile';
+
+      (window as any).__ess_open_request_for = mapped;
+      setActiveSection('myRequest');
+    };
+    window.addEventListener('ess:request_change', handler as EventListener);
+    return () => window.removeEventListener('ess:request_change', handler as EventListener);
+  }, []);
 
   const activeLabel = menuItems.find((item) => item.id === activeSection)?.label ?? "Employee Profile";
 
@@ -1392,9 +1436,43 @@ export function SelfProfileInformationPage() {
           <span className="text-border">/</span>
           <span className="rounded-md border border-border bg-secondary px-2.5 py-0.5 text-xs font-semibold text-foreground">{activeLabel}</span>
         </div>
-        <span className={`rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${statusStyle[employee.status] ?? "bg-secondary text-muted-foreground"}`}>
-          {employee.status}
-        </span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <input id="final-ack" type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="h-4 w-4 rounded border-border" />
+            <label htmlFor="final-ack" className="text-xs text-muted-foreground">I understand I cannot directly edit after final submission.</label>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!ack) {
+                dispatch(addNotification({ type: 'warning', message: 'Please acknowledge before final submission.' }));
+                return;
+              }
+              try {
+                // Set admin row flag
+                const updatedAdmin = { ...employee, profileLocked: true } as any;
+                dispatch(updateAdminEmployee(updatedAdmin));
+                // Update ESS profile storage
+                try {
+                  const profile = ensureProfile(employee.id);
+                  const next = { ...profile, profileLocked: true };
+                  await dispatch(saveEssProfileWithAdminSync({ employeeId: employee.id, profile: next }) as any);
+                } catch (e) {
+                  console.error('Error updating ESS profile', e);
+                }
+                dispatch(addNotification({ type: 'success', message: 'Profile final submitted and locked.' }));
+              } catch (e) {
+                dispatch(addNotification({ type: 'error', message: 'Failed to finalize profile submission.' }));
+              }
+            }}
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-foreground text-primary-foreground text-xs font-bold hover:opacity-95 transition-opacity"
+          >
+            Final Submit
+          </button>
+          <span className={`rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${statusStyle[employee.status] ?? "bg-secondary text-muted-foreground"}`}>
+            {employee.status}
+          </span>
+        </div>
       </div>
 
       <div className="relative flex flex-1 overflow-hidden">

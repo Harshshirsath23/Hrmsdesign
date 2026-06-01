@@ -22,6 +22,7 @@ import {
   ProfileInfoField,
   UploadField,
   EmptyStateCard,
+  ConfirmationDialog,
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
 
@@ -225,6 +226,7 @@ export function EmployeeProfile({ employee }: Props) {
         icon={User}
         sectionId="profile-personal"
         canEmployeeEdit={isEditable("profile-personal")}
+        profileLocked={employee.profileLocked}
         onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "profile-personal", v)}
         requestStatus={employee.editRequestStatus}
         isEditing={personalEdit}

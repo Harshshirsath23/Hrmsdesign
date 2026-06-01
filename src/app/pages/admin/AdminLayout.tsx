@@ -62,41 +62,36 @@ export function AdminLayout() {
 
   return (
     <div className="app-shell flex h-screen overflow-hidden bg-background text-foreground">
-      {/* ── Sidebar ─────────────────────────────────────── */}
+      {/* Sidebar */}
       <aside
-        className={`app-sidebar flex flex-col flex-shrink-0 bg-gradient-to-br from-ocean-900 via-ocean-700 to-ocean-teal border-r border-border
+        className={`app-sidebar flex flex-col flex-shrink-0 border-r border-border bg-card
           transition-all duration-200 ease-in-out overflow-hidden
-          ${collapsed ? "w-[72px]" : "w-60"}`}
+          ${collapsed ? "w-[68px]" : "w-[220px]"}`}
       >
-        {/* Logo */}
         <div
-          className={`app-sidebar-logo h-16 flex items-center flex-shrink-0 border-b border-border
-          ${collapsed ? "justify-center px-0" : "px-5 gap-3"}`}
+          className={`app-sidebar-logo flex items-center flex-shrink-0 border-b border-border
+          ${collapsed ? "justify-center px-0" : "px-4 gap-2.5"}`}
         >
-          <div className="app-brand-mark w-8 h-8 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-4 h-4 text-primary-foreground" />
+          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-sm font-bold text-foreground leading-tight">
-                HR<span className="text-muted-foreground">MS</span>
+              <p className="text-[13px] font-bold text-foreground leading-tight">
+                HR<span className="text-muted-foreground font-semibold">MS</span>
               </p>
-              <p className="text-[10px] text-muted-foreground tracking-widest uppercase font-medium">
+              <p className="text-[9px] text-muted-foreground tracking-wider uppercase font-medium">
                 Admin Console
               </p>
             </div>
           )}
         </div>
 
-        {/* Nav section label */}
         {!collapsed && (
-          <p className="px-5 pt-6 pb-2 text-[10px] text-muted-foreground tracking-widest uppercase font-semibold">
-            Navigation
-          </p>
+          <p className="sidebar-section-title">Navigation</p>
         )}
 
-        {/* Nav items */}
-        <nav className={`flex-1 overflow-y-auto space-y-0.5 ${collapsed ? "px-3 pt-4" : "px-3"}`}>
+        <nav className={`flex-1 overflow-y-auto ${collapsed ? "px-2 pt-3 space-y-0.5" : "px-2 space-y-0.5"}`}>
           {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
             const active = isActive(path);
             return (
@@ -104,160 +99,144 @@ export function AdminLayout() {
                 key={path}
                 onClick={() => navigate(path)}
                 title={collapsed ? label : undefined}
-                className={`app-nav-item ${active ? "active" : ""} w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                  transition-all duration-150 group relative
-                  ${active
-                    ? "bg-secondary text-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }
-                  ${collapsed ? "justify-center" : ""}`}
+                className={`app-nav-item w-full flex items-center gap-2.5 rounded-md text-[12px] font-medium
+                  transition-all duration-150
+                  ${active ? "active" : ""}
+                  ${collapsed ? "justify-center px-2 py-2" : "px-2.5 py-2"}`}
               >
-                {active && (
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-full shadow-[0_0_16px_rgba(108,99,255,.55)]" />
-                )}
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-                {!collapsed && <span>{label}</span>}
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {!collapsed && <span className="truncate">{label}</span>}
                 {!collapsed && active && (
-                  <ChevronRight className="w-3.5 h-3.5 ml-auto text-muted-foreground" />
+                  <ChevronRight className="w-3 h-3 ml-auto opacity-60" />
                 )}
               </button>
             );
           })}
         </nav>
 
-        {/* Collapse toggle */}
-        <div className="px-3 pb-3 border-t border-border pt-3">
+        <div className="px-2 pb-2 border-t border-border pt-2">
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-              text-muted-foreground hover:bg-secondary hover:text-foreground app-nav-item
-              transition-all duration-150 ${collapsed ? "justify-center" : ""}`}
+            className={`app-nav-item w-full flex items-center gap-2.5 rounded-md text-[12px] font-medium
+              ${collapsed ? "justify-center px-2 py-2" : "px-2.5 py-2"}`}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <Menu className="w-[18px] h-[18px] flex-shrink-0" />
+            <Menu className="w-4 h-4 flex-shrink-0" />
             {!collapsed && <span>Collapse</span>}
           </button>
         </div>
 
-        {/* User */}
-        <div className={`border-t border-border p-3 ${collapsed ? "" : ""}`}>
+        <div className="border-t border-border p-2">
           {collapsed ? (
             <button
               onClick={handleLogout}
               title="Logout"
-              className="w-full flex items-center justify-center py-2.5 rounded-lg
-                text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              className="app-nav-item w-full flex items-center justify-center py-2 rounded-md"
             >
-              <LogOut className="w-[18px] h-[18px]" />
+              <LogOut className="w-4 h-4" />
             </button>
           ) : (
-            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary transition-colors">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="premium-avatar w-8 h-8 rounded-lg bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+            <div className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-secondary transition-colors">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="premium-avatar w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                   {user?.initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                  <p className="text-[12px] font-semibold text-foreground truncate leading-tight">
                     {user?.name}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">Administrator</p>
+                  <p className="text-[10px] text-muted-foreground truncate">Administrator</p>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
                 title="Logout"
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-border transition-colors flex-shrink-0"
+                className="app-icon-button p-1 rounded-md flex-shrink-0"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
         </div>
       </aside>
 
-      {/* ── Main area ────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="app-topbar h-16 bg-gradient-to-r from-ocean-700 via-ocean-600 to-ocean-green border-b border-border flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-30">
-          <div>
-            <h1 className="text-base font-semibold text-foreground">{currentPage}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+      {/* Main area */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <header className="app-topbar flex items-center justify-between px-4 flex-shrink-0 sticky top-0 z-30">
+          <div className="min-w-0">
+            <h1 className="text-[13px] font-semibold text-foreground leading-tight">{currentPage}</h1>
+            <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
               {new Date().toLocaleDateString("en-IN", {
-                weekday: "long",
+                weekday: "short",
                 day: "2-digit",
-                month: "long",
+                month: "short",
                 year: "numeric",
               })}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="app-search hidden md:flex items-center gap-2 px-3">
-              <Search className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-1.5">
+            <div className="app-search hidden md:flex items-center gap-2 px-2.5">
+              <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               <input
-                className="h-full flex-1 border-0 bg-transparent p-0 text-sm shadow-none outline-none placeholder:text-muted-foreground"
+                className="h-full flex-1 border-0 bg-transparent p-0 text-[12px] shadow-none outline-none placeholder:text-muted-foreground text-foreground"
                 placeholder="Search anything"
                 aria-label="Global search"
               />
             </div>
 
-            {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              className="app-icon-button w-9 h-9 flex items-center justify-center rounded-lg border border-border
-                text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="app-icon-button flex items-center justify-center"
               title={isDark ? "Light mode" : "Dark mode"}
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Notifications */}
             <button
-              className="app-icon-button w-9 h-9 flex items-center justify-center rounded-lg border border-border
-              text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors relative"
+              className="app-icon-button flex items-center justify-center relative"
+              title="Notifications"
             >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-foreground" />
+              <Bell className="w-3.5 h-3.5" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
             </button>
 
             <button
-              className="app-icon-button w-9 h-9 flex items-center justify-center rounded-lg border border-border
-              text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="app-icon-button flex items-center justify-center"
               title="Calendar"
             >
-              <CalendarDays className="w-4 h-4" />
+              <CalendarDays className="w-3.5 h-3.5" />
             </button>
 
-            <div className="w-px h-6 bg-border mx-1" />
+            <div className="w-px h-5 bg-border mx-0.5 hidden sm:block" />
 
-            {/* Profile */}
             <div className="relative">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-secondary border border-transparent
+                className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-secondary border border-transparent
                   hover:border-border transition-all duration-150"
               >
-                <div className="premium-avatar w-7 h-7 rounded-md bg-foreground text-primary-foreground flex items-center justify-center text-xs font-bold">
+                <div className="premium-avatar w-6 h-6 rounded-md bg-primary text-primary-foreground flex items-center justify-center text-[9px] font-bold">
                   {user?.initials}
                 </div>
-                <span className="text-sm font-medium text-foreground hidden sm:block">
+                <span className="text-[12px] font-medium text-foreground hidden sm:block max-w-[120px] truncate">
                   {user?.name}
                 </span>
               </button>
 
               {profileOpen && (
-                <div className="absolute top-12 right-0 w-52 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border">
-                    <p className="text-sm font-semibold text-foreground">{user?.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{user?.email}</p>
+                <div className="absolute top-10 right-0 w-48 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-border">
+                    <p className="text-[12px] font-semibold text-foreground">{user?.name}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{user?.email}</p>
                   </div>
                   <div className="p-1">
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left px-3 py-2 flex items-center gap-3 text-sm text-foreground
+                      className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-[12px] text-foreground
                         hover:bg-secondary rounded-md transition-colors"
                     >
-                      <LogOut className="w-4 h-4 text-muted-foreground" />
+                      <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
                       Sign out
                     </button>
                   </div>
@@ -267,8 +246,7 @@ export function AdminLayout() {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="app-main flex-1 overflow-x-hidden overflow-y-auto bg-background">
+        <main className="app-main flex-1 overflow-x-hidden overflow-y-auto">
           <EmployeeProvider>
             <Outlet />
           </EmployeeProvider>

@@ -106,10 +106,12 @@ export function EmployeeDocumentsSection({ employee }: Props) {
           }}
           onRemoveType={handleRemoveType}
         />
+      
       </EditableSectionCard>
 
       <DocumentTypeModal
-        open={modalOpen}
+        sectionId="employee-documents"
+        profileLocked={employee.profileLocked}
         onOpenChange={setModalOpen}
         initial={editingType}
         existingIds={existingIds}

@@ -206,7 +206,8 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
   const taxRegimeOptions = useMasterOptions("TaxRegime");
   const pfSchemeOptions = useMasterOptions("PfScheme");
   const esiSchemeOptions = useMasterOptions("EsiScheme");
-  const { handleAdminSave } = useAdminSync();
+  const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const [sectionEditing, setSectionEditing] = useState(false);
 
   // ── Statutory (single record) ──────────────────────────────────────────────
   const [statutoryEditing, setStatutoryEditing] = useState(false);
@@ -225,7 +226,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
   // ── Bank accounts ──────────────────────────────────────────────────────────
   const bankBaseline = useMemo(() => employee.bankAccounts || [], [employee.bankAccounts]);
   const [bankRecords, setBankRecords] = useState<BankAccount[]>(bankBaseline);
-  const [bankEditingId, setBankEditingId] = useState<string | null>(null);
+  const [bankEditingId, setBankEditingId] = useState<string | 'all' | null>(null);
   const [bankDeleteId, setBankDeleteId] = useState<string | null>(null);
 
   useEffect(() => { setBankRecords(bankBaseline); }, [bankBaseline]);
@@ -237,6 +238,22 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
     const rec = emptyBank();
     setBankRecords((prev) => [...prev, rec]);
     setBankEditingId(rec.id);
+  };
+
+  const startSectionEdit = () => {
+    setStatutoryData(employee);
+    setBankRecords(bankBaseline.map((r) => ({ ...r })));
+    setSectionEditing(true);
+    setStatutoryEditing(true);
+    setBankEditingId('all');
+  };
+
+  const startSectionEditAndAdd = () => {
+    setStatutoryData(employee);
+    setBankRecords([...bankBaseline.map((r) => ({ ...r })), emptyBank()]);
+    setSectionEditing(true);
+    setStatutoryEditing(true);
+    setBankEditingId('all');
   };
 
   const handleEditBank = (id: string) => {
@@ -264,6 +281,24 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
     setBankDeleteId(null);
   };
 
+  const handleSaveSection = async () => {
+    const updated = { ...statutoryData, bankAccounts: bankRecords } as Employee;
+    const ok = await handleAdminSave("Bank / PF / ESI Details", employee, updated);
+    if (ok) {
+      setSectionEditing(false);
+      setStatutoryEditing(false);
+      setBankEditingId(null);
+    }
+  };
+
+  const handleCancelSection = () => {
+    setStatutoryData(employee);
+    setBankRecords(bankBaseline.map((r) => ({ ...r })));
+    setSectionEditing(false);
+    setStatutoryEditing(false);
+    setBankEditingId(null);
+  };
+
   // PF/ESI simplified UI uses `statutoryData` (single record) instead of separate lists
 
   const bankSelectOptionsFor = (current: string) =>
@@ -281,7 +316,28 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
       </div>
 
       {/* ── Bank Accounts ────────────────────────────────────────────────── */}
-      <div className="space-y-1">
+      <EditableSectionCard
+        title="Bank / PF / ESI Details"
+        icon={Building2}
+        sectionId="bank-pf-esi-details"
+        canEmployeeEdit={employee.editableSections?.includes("bank-pf-esi-details")}
+        onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "bank-pf-esi-details", v)}
+        requestStatus={employee.editRequestStatus}
+        isEditing={sectionEditing}
+        onEdit={startSectionEdit}
+        onSave={handleSaveSection}
+        onCancel={handleCancelSection}
+        headerExtra={!sectionEditing && !disableEdit ? (
+          <button
+            type="button"
+            onClick={() => (sectionEditing ? handleAddBank() : startSectionEditAndAdd())}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
+          >
+            <Plus size={12} /> Add Bank
+          </button>
+        ) : null}
+      >
+        <div className="space-y-1">
         <div className="flex items-center justify-between py-1">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-muted-foreground" />
@@ -290,15 +346,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
               {bankRecords.length}
             </span>
           </h3>
-          {!disableEdit && (
-            <button
-              type="button"
-              onClick={handleAddBank}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
-            >
-              <Plus size={12} /> Add Bank
-            </button>
-          )}
+          {!disableEdit && null}
         </div>
 
         {bankRecords.length === 0 ? (
@@ -309,7 +357,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         ) : (
           <div className="space-y-4">
             {bankRecords.map((rec, index) => {
-              const isEditing = bankEditingId === rec.id;
+              const isEditing = bankEditingId === 'all' || bankEditingId === rec.id;
               return (
                 <RecordCard
                   key={rec.id}
@@ -395,6 +443,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
           </div>
         )}
       </div>
+      </EditableSectionCard>
 
       {/* ── Statutory Documents (single record) ─────────────────────────── */}
       <EditableSectionCard
@@ -541,9 +590,6 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
           </div>
         </div>
       </EditableSectionCard>
-
-      {/* PF/ESI/LWF simplified coverage — replaced multi-record management */}
-
       {/* ── Confirmation dialogs ──────────────────────────────────────────── */}
       <ConfirmationDialog
         open={bankDeleteId !== null}
