@@ -112,6 +112,7 @@ export function EssEmployeeProfile({ employee }: Props) {
   const religionRecords = useMasterList("Religion", masterQuery).data?.results ?? [];
   const casteRecords = useMasterList("Caste", masterQuery).data?.results ?? [];
   const casteCategoryRecords = useMasterList("CasteCategory", masterQuery).data?.results ?? [];
+  const relationRecords = useMasterList("Relation", masterQuery).data?.results ?? [];
 
   const [personalEdit, setPersonalEdit] = useState(false);
   const [personal, setPersonal] = useState(employee);
@@ -898,12 +899,152 @@ export function EssEmployeeProfile({ employee }: Props) {
           </div>
         ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ProfileInfoField label="Emergency Contact Name" value={emergency.ec?.name || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, ec: { ...e.ec, name: v, relationship: e.ec?.relationship || "", phone: e.ec?.phone || "" } }))} />
-          <ProfileInfoField label="Emergency Contact #" value={emergency.ec?.phone || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, ec: { name: e.ec?.name || "", relationship: e.ec?.relationship || "", phone: v, alternatePhone: e.ec?.alternatePhone } }))} />
-          <ProfileInfoField label="Relationship" value={emergency.ec?.relationship || emergency.med?.relationship || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, ec: { name: e.ec?.name || "", phone: e.ec?.phone || "", relationship: v } }))} />
-          <ProfileInfoField label="Medical Conditions" value={emergency.med?.conditions || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, conditions: v } }))} type="textarea" />
-          <ProfileInfoField label="Allergies" value={emergency.med?.allergies || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, allergies: v } }))} />
-          <ProfileInfoField label="Doctor Name" value={emergency.med?.doctorName || ""} editing={emEdit} onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, doctorName: v } }))} />
+          <ProfileInfoField
+            label="Emergency Contact Name"
+            value={emergency.ec?.name || ""}
+            editing={emEdit}
+            onChange={(v) =>
+              setEmergency((e) => ({
+                ...e,
+                ec: {
+                  name: v,
+                  relationship: e.ec?.relationship || "",
+                  phone: e.ec?.phone || "",
+                  alternatePhone: e.ec?.alternatePhone,
+                },
+              }))
+            }
+          />
+          <ProfileInfoField
+            label="Emergency Contact #"
+            value={emergency.ec?.phone || ""}
+            editing={emEdit}
+            onChange={(v) =>
+              setEmergency((e) => ({
+                ...e,
+                ec: {
+                  name: e.ec?.name || "",
+                  relationship: e.ec?.relationship || "",
+                  phone: v,
+                  alternatePhone: e.ec?.alternatePhone,
+                },
+              }))
+            }
+          />
+          <ProfileInfoField
+            label="Relationship"
+            value={emergency.ec?.relationship || emergency.med?.relationship || ""}
+            editing={emEdit}
+            options={masterOptions(relationRecords)}
+            onChange={(v) =>
+              setEmergency((e) => ({
+                ...e,
+                ec: { name: e.ec?.name || "", phone: e.ec?.phone || "", relationship: v },
+                med: { ...e.med, relationship: v },
+              }))
+            }
+          />
+
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="flex items-center gap-3 mb-3 text-sm font-semibold text-foreground">
+              <input
+                type="checkbox"
+                checked={Boolean(emergency.med?.hasDisease)}
+                disabled={!emEdit}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEmergency((prev) => ({
+                    ...prev,
+                    med: {
+                      ...prev.med,
+                      hasDisease: checked,
+                      ...(checked ? {} : { diseaseDetails: "" }),
+                    },
+                  }));
+                }}
+              />
+              Has Any Disease?
+            </label>
+            {emergency.med?.hasDisease ? (
+              <ProfileInfoField
+                label="Disease Details"
+                value={emergency.med?.diseaseDetails || ""}
+                editing={emEdit}
+                type="textarea"
+                placeholder="Enter disease name, description, medication, since when, etc."
+                onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, diseaseDetails: v } }))}
+              />
+            ) : null}
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="flex items-center gap-3 mb-3 text-sm font-semibold text-foreground">
+              <input
+                type="checkbox"
+                checked={Boolean(emergency.med?.hasSurgery)}
+                disabled={!emEdit}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEmergency((prev) => ({
+                    ...prev,
+                    med: {
+                      ...prev.med,
+                      hasSurgery: checked,
+                      ...(checked ? {} : { surgeryDetails: "" }),
+                    },
+                  }));
+                }}
+              />
+              Any Surgery or Operation Done?
+            </label>
+            {emergency.med?.hasSurgery ? (
+              <ProfileInfoField
+                label="Surgery / Operation Details"
+                value={emergency.med?.surgeryDetails || ""}
+                editing={emEdit}
+                type="textarea"
+                placeholder="Enter surgery name, hospital, date, recovery status, etc."
+                onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, surgeryDetails: v } }))}
+              />
+            ) : null}
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="flex items-center gap-3 mb-3 text-sm font-semibold text-foreground">
+              <input
+                type="checkbox"
+                checked={Boolean(emergency.med?.hasAllergies)}
+                disabled={!emEdit}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEmergency((prev) => ({
+                    ...prev,
+                    med: {
+                      ...prev.med,
+                      hasAllergies: checked,
+                      ...(checked ? {} : { allergyDetails: "" }),
+                    },
+                  }));
+                }}
+              />
+              Any Allergies?
+            </label>
+            {emergency.med?.hasAllergies ? (
+              <ProfileInfoField
+                label="Allergy Details"
+                value={emergency.med?.allergyDetails || ""}
+                editing={emEdit}
+                type="textarea"
+                placeholder="Enter allergy type and description."
+                onChange={(v) =>
+                  setEmergency((e) => ({
+                    ...e,
+                    med: { ...e.med, allergyDetails: v, allergies: v },
+                  }))
+                }
+              />
+            ) : null}
+          </div>
         </div>
       </EditableSectionCard>
     </div>

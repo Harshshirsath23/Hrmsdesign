@@ -12,6 +12,14 @@ export interface EmployeeMedicalDetailsApi {
   emergency_contact_number?: string | null;
   emergency_contact_relationship?: string | null;
   medical_conditions?: string | null;
+  any_disease?: boolean | null;
+  has_disease?: boolean | null;
+  disease_description?: string | null;
+  pre_existing_diseases?: string | null;
+  undergone_major_surgery?: boolean | null;
+  any_surgery_operation_done?: boolean | null;
+  surgery_details?: string | null;
+  surgery_operation_description?: string | null;
   allergies?: string | null;
   doctor_name?: string | null;
 }
@@ -102,6 +110,10 @@ export async function patchEmployeeMedicalDetails(
 }
 
 export function medicalDetailsToEmployeePatch(details: EmployeeMedicalDetailsApi): Partial<Employee> {
+  const diseaseDetails = details.disease_description || details.pre_existing_diseases || "";
+  const surgeryDetails = details.surgery_operation_description || details.surgery_details || "";
+  const allergyDetails = details.allergies || "";
+
   return {
     emergencyContact: {
       name: details.emergency_contact_name || "",
@@ -110,6 +122,12 @@ export function medicalDetailsToEmployeePatch(details: EmployeeMedicalDetailsApi
     },
     medicalInfo: {
       conditions: details.medical_conditions || "",
+      hasDisease: Boolean(details.has_disease ?? details.any_disease ?? diseaseDetails),
+      diseaseDetails,
+      hasSurgery: Boolean(details.undergone_major_surgery ?? details.any_surgery_operation_done ?? surgeryDetails),
+      surgeryDetails,
+      hasAllergies: Boolean(allergyDetails),
+      allergyDetails,
       allergies: details.allergies || "",
       doctorName: details.doctor_name || "",
       relationship: details.emergency_contact_relationship || "",
@@ -130,7 +148,17 @@ export function employeeMedicalDetailsToPayload(
       emergency_contact_relationship:
         emergency.ec?.relationship || emergency.med?.relationship || null,
       medical_conditions: emergency.med?.conditions || null,
-      allergies: emergency.med?.allergies || null,
+      has_disease: Boolean(emergency.med?.hasDisease),
+      any_disease: Boolean(emergency.med?.hasDisease),
+      disease_description: emergency.med?.hasDisease ? emergency.med?.diseaseDetails || null : null,
+      pre_existing_diseases: emergency.med?.hasDisease ? emergency.med?.diseaseDetails || null : null,
+      undergone_major_surgery: Boolean(emergency.med?.hasSurgery),
+      any_surgery_operation_done: Boolean(emergency.med?.hasSurgery),
+      surgery_details: emergency.med?.hasSurgery ? emergency.med?.surgeryDetails || null : null,
+      surgery_operation_description: emergency.med?.hasSurgery ? emergency.med?.surgeryDetails || null : null,
+      allergies: emergency.med?.hasAllergies
+        ? emergency.med?.allergyDetails || emergency.med?.allergies || null
+        : null,
       doctor_name: emergency.med?.doctorName || null,
     },
   };
@@ -142,6 +170,14 @@ export function hasMedicalDetails(details: EmployeeMedicalDetailsApi) {
       details.emergency_contact_number ||
       details.emergency_contact_relationship ||
       details.medical_conditions ||
+      details.has_disease ||
+      details.any_disease ||
+      details.disease_description ||
+      details.pre_existing_diseases ||
+      details.undergone_major_surgery ||
+      details.any_surgery_operation_done ||
+      details.surgery_details ||
+      details.surgery_operation_description ||
       details.allergies ||
       details.doctor_name
   );
