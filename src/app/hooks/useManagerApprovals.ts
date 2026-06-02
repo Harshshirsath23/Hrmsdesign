@@ -45,6 +45,9 @@ export function useManagerApprovals(filters?: ManagerApprovalListParams) {
     filters?.date_from,
     filters?.date_to,
     filters?.search,
+    filters?.department,
+    filters?.page,
+    filters?.per_page,
   ]);
 
   useEffect(() => {

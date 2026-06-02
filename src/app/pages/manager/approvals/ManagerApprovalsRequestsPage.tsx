@@ -426,15 +426,33 @@ export default function ManagerApprovalsRequestsPage() {
   const [showOnlyPending, setShowOnlyPending] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [pageNum, setPageNum] = useState(1);
+  const [perPage, setPerPage] = useState(50);
+
+  // Helper to convert humanized request type back to reg_type code
+  const getRawRegType = (humanizedType: string): string | undefined => {
+    if (!humanizedType || humanizedType === "ALL") return undefined;
+    const regTypes: Record<string, string> = {
+      "Missing Punch": "MISSING_PUNCH",
+      "Wrong Punch": "WRONG_PUNCH",
+      "Late Login": "LATE_LOGIN",
+      "Early Exit": "EARLY_EXIT",
+    };
+    return regTypes[humanizedType];
+  };
 
   const attendanceFilters = useMemo(
     () => ({
       status: showOnlyPending ? "PENDING" : status !== "ALL" ? status.toUpperCase() : undefined,
+      reg_type: getRawRegType(requestType),
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
       search: query.trim() || undefined,
+      department: department !== "ALL" ? department : undefined,
+      page: pageNum,
+      per_page: perPage,
     }),
-    [showOnlyPending, status, dateFrom, dateTo, query],
+    [showOnlyPending, status, requestType, dateFrom, dateTo, query, department, pageNum, perPage],
   );
 
   const {
@@ -745,6 +763,7 @@ export default function ManagerApprovalsRequestsPage() {
     setDepartment("ALL");
     setDateFrom("");
     setDateTo("");
+    setPageNum(1);
     setShowOnlyPending(false);
   };
 
