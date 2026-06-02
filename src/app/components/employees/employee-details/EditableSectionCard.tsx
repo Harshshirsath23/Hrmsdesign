@@ -1,4 +1,4 @@
-import { LucideIcon, Save, X, Pencil, Plus } from "lucide-react";
+import { LucideIcon, Save, X, Pencil, Plus, Send } from "lucide-react";
 import { cn } from "../../ui/utils";
 import { useEmployeeFormContext } from "./EmployeeFormContext";
 
@@ -51,7 +51,13 @@ export function EditableSectionCard({
   const status = getStatusLabel();
   const ctx = useEmployeeFormContext();
   const finalSubmitted = ctx?.finalSubmitted;
-  const effectiveProfileLocked = profileLocked || !!finalSubmitted;
+  const essReadOnly = ctx?.essReadOnly;
+  const effectiveProfileLocked = profileLocked || !!finalSubmitted || !!essReadOnly;
+
+  const requestChange = () => {
+    if (!sectionId) return;
+    window.dispatchEvent(new CustomEvent("ess:request_change", { detail: { sectionId } }));
+  };
 
   return (
     <div className={cn("flat-card bg-card border border-border p-6", className)}>
@@ -93,42 +99,29 @@ export function EditableSectionCard({
                   Cancel
                 </button>
               </>
-            ) : (
-              // If the profile is locked, hide the regular Edit button and show Request Change instead
-              (onEdit && !effectiveProfileLocked) ? (
-                // Default Edit flow when not locked
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-                >
-                  {editLabel === "Add" ? (
-                    <Plus className="w-3.5 h-3.5" />
-                  ) : (
-                    <Pencil className="w-3.5 h-3.5" />
-                  )}
-                  {editLabel || "Edit"}
-                </button>
-              ) : (
-                // Profile locked — show Request Change button that dispatches a global event
-                sectionId ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        window.dispatchEvent(new CustomEvent('ess:request_change', { detail: { sectionId } }));
-                      } catch (e) {
-                        // noop
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Request Change
-                  </button>
-                ) : null
-              )
-            )}
+            ) : essReadOnly && sectionId ? (
+              <button
+                type="button"
+                onClick={requestChange}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+                Request Change
+              </button>
+            ) : onEdit ? (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+              >
+                {editLabel === "Add" ? (
+                  <Plus className="w-3.5 h-3.5" />
+                ) : (
+                  <Pencil className="w-3.5 h-3.5" />
+                )}
+                {editLabel || "Edit"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

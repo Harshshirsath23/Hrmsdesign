@@ -93,7 +93,7 @@ export function TeamLeaveApplicationsTable({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search employee, type, reason…"
-            className="flat-input h-10 w-full rounded-xl pl-10 pr-4 text-sm"
+            className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 h-10 w-full rounded-xl pl-12 pr-4 text-sm"
           />
         </div>
 

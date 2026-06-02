@@ -1,10 +1,12 @@
 import { ESS_SECTIONS, getSeedProfile } from "./data";
 import { EmployeeProfile, ProfileChangeRequest, RequestStatus, SectionKey } from "./types";
-import { mergeEssEmployeeOwnedIntoAdmin } from "./adminEssSync";
+import { mergeAdminEmployeeIntoEssProfile, applyApprovedSectionToAdmin } from "./adminEssSync";
 import type { Employee } from "../../components/employees/mockData";
+import { findEmployeeByStorageId } from "../../utils/resolveLoggedInEmployee";
 
 const PROFILES_KEY = "hrms_ess_profiles";
 const REQUESTS_KEY = "hrms_profile_change_requests";
+const LEGACY_REQUESTS_KEY = "mock_requests_db";
 
 type ProfilesStore = Record<string, EmployeeProfile>;
 
@@ -36,6 +38,132 @@ const writeRequests = (requests: ProfileChangeRequest[]) => {
   localStorage.setItem(REQUESTS_KEY, JSON.stringify(requests));
 };
 
+interface LegacyProfileRequest {
+  id: string;
+  employeeId: string;
+  section: SectionKey;
+  sectionLabel: string;
+  changes: Array<{ fieldName: string; fieldLabel?: string; oldValue?: unknown; newValue?: unknown }>;
+  status: RequestStatus;
+  createdAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  rejectionComment?: string;
+}
+
+const legacyFieldChangesToObject = (
+  changes: LegacyProfileRequest["changes"],
+): Record<string, unknown> => {
+  const result: Record<string, unknown> = {};
+  for (const change of changes) {
+    const keys = change.fieldName.split(".");
+    let current = result as Record<string, unknown>;
+    keys.forEach((key, index) => {
+      if (index === keys.length - 1) {
+        current[key] = change.newValue ?? "";
+      } else {
+        current[key] = (current[key] as Record<string, unknown>) || {};
+        current = current[key] as Record<string, unknown>;
+      }
+    });
+  }
+  return result;
+};
+
+const convertLegacyRequest = (request: LegacyProfileRequest): ProfileChangeRequest => ({
+  id: request.id,
+  employee_id: request.employeeId,
+  section: request.section,
+  section_label: request.sectionLabel,
+  changes: {
+    oldValue: legacyFieldChangesToObject(
+      request.changes.map((change) => ({
+        ...change,
+        newValue: change.oldValue,
+      })),
+    ),
+    newValue: legacyFieldChangesToObject(request.changes),
+  },
+  status: request.status,
+  created_at: request.createdAt,
+  reviewed_by: request.reviewedBy,
+  reviewed_at: request.reviewedAt,
+  rejection_comment: request.rejectionComment,
+  _source: "legacy",
+});
+
+/** Pull legacy mock_requests_db entries into the shared ESS store once. */
+const syncLegacyRequestsIntoStore = () => {
+  try {
+    const raw = localStorage.getItem(LEGACY_REQUESTS_KEY);
+    if (!raw) return;
+    const legacy = JSON.parse(raw) as LegacyProfileRequest[];
+    if (!Array.isArray(legacy) || legacy.length === 0) return;
+
+    const existing = readRequests();
+    const existingIds = new Set(existing.map((request) => request.id));
+    let changed = false;
+
+    for (const request of legacy) {
+      if (existingIds.has(request.id)) continue;
+      existing.push(convertLegacyRequest(request));
+      changed = true;
+    }
+
+    if (changed) writeRequests(existing);
+  } catch {
+    /* ignore corrupt legacy data */
+  }
+};
+
+const readAllLocalRequests = (): ProfileChangeRequest[] => {
+  syncLegacyRequestsIntoStore();
+  return readRequests();
+};
+
+const matchesEmployeeFilter = (
+  request: ProfileChangeRequest,
+  employeeFilter: string | string[],
+): boolean => {
+  const aliases = Array.isArray(employeeFilter) ? employeeFilter : [employeeFilter];
+  const aliasSet = new Set(aliases.filter(Boolean));
+  if (aliasSet.size === 0) return true;
+  if (aliasSet.has(request.employee_id)) return true;
+
+  try {
+    const raw = localStorage.getItem("admin_employees_db");
+    if (!raw) return false;
+    const employees = JSON.parse(raw) as Employee[];
+    for (const alias of aliasSet) {
+      const employee = findEmployeeByStorageId(employees, alias);
+      if (!employee) continue;
+      if (employee.id === request.employee_id || employee.employeeId === request.employee_id) {
+        return true;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return false;
+};
+
+export const mergeChangeRequests = (
+  local: ProfileChangeRequest[],
+  remote: ProfileChangeRequest[],
+): ProfileChangeRequest[] => {
+  const byId = new Map<string, ProfileChangeRequest>();
+  for (const request of local) {
+    byId.set(request.id, { ...request, _source: request._source ?? "local" });
+  }
+  for (const request of remote) {
+    byId.set(request.id, request);
+  }
+  return Array.from(byId.values()).sort((a, b) =>
+    a.created_at < b.created_at ? 1 : -1,
+  );
+};
+
 export const ensureProfile = (employeeId: string): EmployeeProfile => {
   const profiles = readProfiles();
   if (!profiles[employeeId]) {
@@ -47,10 +175,14 @@ export const ensureProfile = (employeeId: string): EmployeeProfile => {
 
 export const getProfile = (employeeId: string): EmployeeProfile => ensureProfile(employeeId);
 
-export const getChangeRequests = (employeeId?: string): ProfileChangeRequest[] => {
-  const requests = readRequests().sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  if (!employeeId) return requests;
-  return requests.filter((request) => request.employee_id === employeeId);
+export const getChangeRequests = (
+  employeeFilter?: string | string[],
+): ProfileChangeRequest[] => {
+  const requests = readAllLocalRequests().sort((a, b) =>
+    a.created_at < b.created_at ? 1 : -1,
+  );
+  if (!employeeFilter) return requests;
+  return requests.filter((request) => matchesEmployeeFilter(request, employeeFilter));
 };
 
 export const getPendingSections = (employeeId: string): SectionKey[] => {
@@ -181,10 +313,35 @@ export const submitSectionChangeRequest = (params: {
   return changeRequest;
 };
 
-export const getEmployeeDisplayName = (employeeId: string): string => {
+export const getEmployeeDisplayName = (
+  employeeId: string,
+  employees?: Employee[],
+  request?: Pick<ProfileChangeRequest, "_employeeName" | "_employeeCode">,
+): string => {
+  if (request?._employeeName?.trim()) return request._employeeName.trim();
+
+  const fromList = employees?.length
+    ? findEmployeeByStorageId(employees, employeeId)
+    : undefined;
+  if (fromList?.name?.trim()) return fromList.name.trim();
+
+  try {
+    const raw = localStorage.getItem("admin_employees_db");
+    if (raw) {
+      const stored = JSON.parse(raw) as Employee[];
+      const match = findEmployeeByStorageId(stored, employeeId);
+      if (match?.name?.trim()) return match.name.trim();
+    }
+  } catch {
+    /* ignore */
+  }
+
   const profile = ensureProfile(employeeId);
   const { firstName, middleName, lastName } = profile.profile;
-  return [firstName, middleName, lastName].filter(Boolean).join(" ") || employeeId;
+  const fromProfile = [firstName, middleName, lastName].filter(Boolean).join(" ");
+  if (fromProfile) return fromProfile;
+
+  return request?._employeeCode?.trim() || employeeId;
 };
 
 export const reviewChangeRequest = (params: {
@@ -208,34 +365,49 @@ export const reviewChangeRequest = (params: {
   if (params.status === "approved") {
     const profile = ensureProfile(request.employee_id);
     let nextProfile: EmployeeProfile;
-    if (request.section === "profile") {
-      nextProfile = {
-        ...profile,
-        ...(request.changes.newValue as any),
-      };
-    } else {
+
+    try {
+      const rawEmps = localStorage.getItem("admin_employees_db");
+      if (rawEmps) {
+        const emps = JSON.parse(rawEmps) as Employee[];
+        const adminIndex = emps.findIndex(
+          (e) =>
+            e.id === request.employee_id ||
+            e.employeeId === request.employee_id ||
+            e.id === request._employeeCode ||
+            e.employeeId === request._employeeCode,
+        );
+        if (adminIndex >= 0) {
+          const mergedAdmin = applyApprovedSectionToAdmin(
+            emps[adminIndex],
+            request.section,
+            request.changes.newValue,
+          );
+          emps[adminIndex] = mergedAdmin;
+          localStorage.setItem("admin_employees_db", JSON.stringify(emps));
+          nextProfile = mergeAdminEmployeeIntoEssProfile(mergedAdmin, profile);
+        } else {
+          nextProfile = {
+            ...profile,
+            [request.section]: deepClone(request.changes.newValue),
+          };
+        }
+      } else {
+        nextProfile = {
+          ...profile,
+          [request.section]: deepClone(request.changes.newValue),
+        };
+      }
+    } catch (e) {
+      console.error("Error syncing approved request to admin employee", e);
       nextProfile = {
         ...profile,
         [request.section]: deepClone(request.changes.newValue),
       };
     }
+
     profiles[request.employee_id] = nextProfile;
     writeProfiles(profiles);
-
-    try {
-      const rawEmps = localStorage.getItem('admin_employees_db');
-      if (rawEmps) {
-        const emps = JSON.parse(rawEmps) as Employee[];
-        const adminIndex = emps.findIndex(e => e.id === request.employee_id || e.employeeId === request.employee_id);
-        if (adminIndex >= 0) {
-          const merged = mergeEssEmployeeOwnedIntoAdmin(emps[adminIndex], nextProfile);
-          emps[adminIndex] = merged;
-          localStorage.setItem('admin_employees_db', JSON.stringify(emps));
-        }
-      }
-    } catch (e) {
-      console.error("Error syncing to admin_employees_db", e);
-    }
   }
 
   writeRequests(requests);

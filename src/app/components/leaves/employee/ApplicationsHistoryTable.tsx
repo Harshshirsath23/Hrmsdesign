@@ -324,7 +324,7 @@ export function ApplicationsHistoryTable({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search type, code, reason, status…"
-              className="flat-input h-10 w-full rounded-xl pl-10 pr-4 text-sm"
+              className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 h-10 w-full rounded-xl pl-12 pr-4 text-sm"
             />
 </div>
 <div className="flex flex-wrap items-center gap-3">
@@ -484,14 +484,11 @@ export function ApplicationsHistoryTable({
 <td className="px-4 py-3 sm:px-5">
 <div className="flex items-center gap-2">
 <LeaveTypePill
-                          code={app.leave_type_detail?.code ?? "—"}
+                          code={app.leave_type_code ?? "—"}
                         />
 <div className="min-w-0">
 <p className="truncate text-sm font-medium text-foreground">
-                            {app.leave_type_detail?.name}
-</p>
-<p className="text-[11px] text-muted-foreground">
-                            {app.leave_type_detail?.is_paid ? "Paid" : "Unpaid"}
+                            {app.leave_type}
 </p>
 </div>
 </div>
@@ -595,12 +592,12 @@ export function ApplicationsHistoryTable({
 </DropdownMenuItem>
                           )}
  
-                          <DropdownMenuItem
+                      <DropdownMenuItem
                             className="cursor-pointer rounded-md text-sm"
                             onClick={() => setDetail(app)}
 >
                             View details
-</DropdownMenuItem>
+                      </DropdownMenuItem>
 </DropdownMenuContent>
 </DropdownMenu>
 </td>

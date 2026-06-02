@@ -24,6 +24,7 @@ import { useMasterOptions } from "./useMasterOptions";
 interface Props {
   employee: Employee;
   disableEdit?: boolean;
+  showAddButton?: boolean;
 }
 
 const ESI_TYPE_OPTIONS = [
@@ -201,7 +202,7 @@ function RecordCard({
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function BankDetails({ employee, disableEdit = false }: Props) {
+export function BankDetails({ employee, disableEdit = false, showAddButton = true }: Props) {
   const bankOptions = useMasterOptions("Bank");
   const taxRegimeOptions = useMasterOptions("TaxRegime");
   const pfSchemeOptions = useMasterOptions("PfScheme");
@@ -327,7 +328,7 @@ export function BankDetails({ employee, disableEdit = false }: Props) {
         onEdit={startSectionEdit}
         onSave={handleSaveSection}
         onCancel={handleCancelSection}
-        headerExtra={!sectionEditing && !disableEdit ? (
+        headerExtra={!sectionEditing && !disableEdit && showAddButton ? (
           <button
             type="button"
             onClick={() => (sectionEditing ? handleAddBank() : startSectionEditAndAdd())}

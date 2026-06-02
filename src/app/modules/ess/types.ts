@@ -33,7 +33,8 @@ export interface EducationDetail {
   specialization: string;
   institutionName: string;
   university: string;
-  yearOfPassing: string;
+  fromDate?: string;
+  toDate?: string;
   percentageCgpa: string;
   grade: string;
 }
@@ -211,4 +212,8 @@ export interface ProfileChangeRequest {
     dataUrl: string;
     uploadedAt: string;
   };
+  /** Populated when loaded from the backend API */
+  _source?: "local" | "api" | "legacy";
+  _employeeName?: string;
+  _employeeCode?: string;
 }

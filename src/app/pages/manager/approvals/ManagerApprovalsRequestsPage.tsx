@@ -792,9 +792,9 @@ export default function ManagerApprovalsRequestsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Approvals Inbox</h1>
+          <p className="text-sm text-muted-foreground">Manage your approval requests here.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           {/* <select
             value={workflowType}
             onChange={(e) => {
@@ -813,6 +813,9 @@ export default function ManagerApprovalsRequestsPage() {
             <option value="Delegate Approval Authority">Delegate Approval Authority</option>
             <option value="Approval Workflow Configuration">Approval Workflow Configuration</option>
           </select> */}
+          <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90">
+            Requests
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { setLocalRows(MOCK_REQUESTS.map((r) => ({ ...r, source: "local" as RowSource }))); refreshTeam(); reloadAttendance(); }}>
             <RefreshCw className={cn("mr-2 h-4 w-4", attendanceLoading && "animate-spin")} />
             Refresh

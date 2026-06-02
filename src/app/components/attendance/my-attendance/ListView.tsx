@@ -69,14 +69,14 @@ export function ListView({ records, onSwipeDetails, onRegularize, readOnly = fal
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-2">
-                      {record.workMode === "Office" ? <Fingerprint size={14} className="text-blue-500" /> : <Monitor size={14} className="text-purple-500" />}
+                      {record.workMode === "WFO" ? <Fingerprint size={14} className="text-blue-500" /> : <Monitor size={14} className="text-purple-500" />}
                       <span className="text-xs font-semibold text-foreground">{record.workMode || "Office"}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-foreground">{record.workHours.toFixed(1)}h</span>
-                      {record.overtime > 0 && <span className="text-[9px] font-semibold text-violet-500">+{record.overtime}m OT</span>}
+                      {record.otMins > 0 && <span className="text-[9px] font-semibold text-violet-500">+{record.otMins}m OT</span>}
                     </div>
                   </td>
                   <td className="px-8 py-6">

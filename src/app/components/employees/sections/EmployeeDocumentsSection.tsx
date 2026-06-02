@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FileText } from "lucide-react";
+import { toast } from "sonner";
 import { Employee } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { EditableSectionCard } from "../employee-details";
@@ -17,9 +18,10 @@ import type { DocumentTypeConfig } from "../../../modules/employees/documentType
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
-export function EmployeeDocumentsSection({ employee }: Props) {
+export function EmployeeDocumentsSection({ employee, showAddButton = true }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const documentTypes = useSelector(selectActiveDocumentTypes);
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
@@ -42,8 +44,10 @@ export function EmployeeDocumentsSection({ employee }: Props) {
   const handleSaveType = (config: DocumentTypeConfig) => {
     if (editingType) {
       dispatch(updateDocumentType(config));
+      toast.success(`"${config.documentName}" updated`);
     } else {
       dispatch(addDocumentType(config));
+      toast.success(`"${config.documentName}" added to document list`);
     }
     setEditingType(null);
   };
@@ -82,7 +86,7 @@ export function EmployeeDocumentsSection({ employee }: Props) {
         isEditing={false}
         onSave={() => {}}
         onCancel={() => {}}
-        headerExtra={
+        headerExtra={showAddButton ? (
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -92,14 +96,14 @@ export function EmployeeDocumentsSection({ employee }: Props) {
               Add New Document
             </button>
           </div>
-        }
+        ) : null}
       >
         <EmployeeDocumentsGrid
           documentTypes={documentTypes}
           docs={docs}
           isEditing={true}
           onChange={handleDocsChange}
-          showTypeControls={false}
+          showTypeControls={showAddButton}
           onEditType={(type) => {
             setEditingType(type);
             setModalOpen(true);
@@ -110,9 +114,11 @@ export function EmployeeDocumentsSection({ employee }: Props) {
       </EditableSectionCard>
 
       <DocumentTypeModal
-        sectionId="employee-documents"
-        profileLocked={employee.profileLocked}
-        onOpenChange={setModalOpen}
+        open={modalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) setEditingType(null);
+        }}
         initial={editingType}
         existingIds={existingIds}
         onSave={handleSaveType}

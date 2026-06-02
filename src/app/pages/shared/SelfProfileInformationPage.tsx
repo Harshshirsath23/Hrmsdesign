@@ -29,18 +29,23 @@ import { AppDispatch, RootState } from "../../../store";
 import { addNotification } from "../../../store/slices/notificationSlice";
 import { updateAdminEmployee } from "../../../store/slices/adminSlice";
 import { saveEssProfileWithAdminSync } from "../../../store/slices/employeeSlice";
-import { ensureProfile } from "../../modules/ess/storage";
 import { ContentSection } from "../../components/employees/ContentSection";
+import { EmployeeFormProvider } from "../../components/employees/employee-details/EmployeeFormContext";
 import { SidebarSection } from "../../components/employees/SidebarMenu";
 import { Employee } from "../../components/employees/mockData";
+import { EssEmployeeProfile } from "../../components/employees/sections/EssEmployeeProfile";
 import { useAuth } from "../../context/AuthContext";
 import {
+  ensureProfile,
   getChangeRequests,
-  getProfile,
   saveDraftChangeRequest,
   submitDraftChangeRequest,
 } from "../../modules/ess/storage";
 import { ProfileChangeRequest, SectionKey } from "../../modules/ess/types";
+import {
+  employeeIdAliases,
+  resolveLoggedInEmployee,
+} from "../../utils/resolveLoggedInEmployee";
 
 /* ─── Types & helpers ─────────────────────────────────────────────────────── */
 
@@ -606,43 +611,72 @@ function FamilyForm({ employee, value, onChange }: { employee: Employee; value: 
 
 /* 4. NOMINEE DETAILS ─────────────────────────────────────────────────────── */
 function NomineeForm({ employee, value, onChange }: { employee: Employee; value: any[]; onChange: (v: any[]) => void }) {
-  const add = () => onChange([...value, { id: `nom-${Date.now()}`, nomineeName: "", relationship: "", dateOfBirth: "", contactNumber: "", address: "", sharePercentage: "", email: "", nomineeType: "", shareEPF: "", shareEPS: "", shareGratuity: "", isMinor: false }]);
+  const add = () => onChange([...value, { id: `nom-${Date.now()}`, nomineeName: "", nomineeEmail: "", relationship: "", dateOfBirth: "", contactNumber: "", address: "", nomineeType: 'EPF', epfPercentage: "", epsPercentage: "", gratuityPercentage: "", customPercentage: "", isMinor: false, guardian: {} }]);
   const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const update = (i: number, key: string, v: any) => {
     const arr = [...value];
     arr[i] = { ...arr[i], [key]: v };
     onChange(arr);
   };
+  const computeTotals = (rows: any[]) => {
+    const totals: Record<string, number> = { EPF: 0, EPS: 0, Gratuity: 0, Custom: 0 };
+    rows.forEach((r) => {
+      const add = (v?: string) => (v ? Number(v) || 0 : 0);
+      totals.EPF += add(r.epfPercentage);
+      totals.EPS += add(r.epsPercentage);
+      totals.Gratuity += add(r.gratuityPercentage);
+      totals.Custom += add(r.customPercentage);
+    });
+    return totals;
+  };
   return (
     <div className="space-y-4">
       {value.length === 0 && <p className="text-sm text-muted-foreground italic">No nominee records.</p>}
-      {value.map((row, i) => (
-        <CardRow key={i} index={i} onRemove={() => remove(i)}>
-          <FieldRow label="Nominee Name"><Input value={row.nomineeName ?? ""} onChange={(v) => update(i, "nomineeName", v)} /></FieldRow>
-          <FieldRow label="Relationship"><Input value={row.relationship ?? ""} onChange={(v) => update(i, "relationship", v)} /></FieldRow>
-          <FieldRow label="Date of Birth"><Input type="date" value={row.dateOfBirth ?? ""} onChange={(v) => update(i, "dateOfBirth", v)} /></FieldRow>
-          <FieldRow label="Contact Number"><Input value={row.contactNumber ?? ""} onChange={(v) => update(i, "contactNumber", v)} /></FieldRow>
-          <FieldRow label="Email"><Input type="email" value={row.email ?? ""} onChange={(v) => update(i, "email", v)} /></FieldRow>
-          <FieldRow label="Address"><Input value={row.address ?? ""} onChange={(v) => update(i, "address", v)} /></FieldRow>
-          <FieldRow label="Nominee Type">
-            <Select value={row.nomineeType ?? ""} onChange={(v) => update(i, "nomineeType", v)} options={["EPF", "EPS", "Gratuity", "Custom"]} />
-          </FieldRow>
-          <FieldRow label="Share % (Overall)"><Input value={row.sharePercentage ?? ""} onChange={(v) => update(i, "sharePercentage", v)} placeholder="e.g. 50" /></FieldRow>
-          <FieldRow label="Share % EPF"><Input value={row.shareEPF ?? ""} onChange={(v) => update(i, "shareEPF", v)} /></FieldRow>
-          <FieldRow label="Share % EPS"><Input value={row.shareEPS ?? ""} onChange={(v) => update(i, "shareEPS", v)} /></FieldRow>
-          <FieldRow label="Share % Gratuity"><Input value={row.shareGratuity ?? ""} onChange={(v) => update(i, "shareGratuity", v)} /></FieldRow>
-          <div className="sm:col-span-2">
-            <Checkbox label="Minor Nominee" checked={row.isMinor ?? false} onChange={(v) => update(i, "isMinor", v)} />
-          </div>
-          {row.isMinor && (
-            <>
-              <FieldRow label="Guardian Name"><Input value={row.guardian?.name ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), name: v })} /></FieldRow>
-              <FieldRow label="Guardian Relationship"><Input value={row.guardian?.relationship ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), relationship: v })} /></FieldRow>
-              <FieldRow label="Guardian Contact"><Input value={row.guardian?.contactNumber ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), contactNumber: v })} /></FieldRow>
-            </>
-          )}
-        </CardRow>
-      ))}
+      {value.map((row, i) => {
+        const totals = computeTotals(value);
+        const remainingFor = (type: string) => Math.max(0, 100 - (totals[type] - (type === 'EPF' ? Number(row.epfPercentage || 0) : type === 'EPS' ? Number(row.epsPercentage || 0) : type === 'Gratuity' ? Number(row.gratuityPercentage || 0) : Number(row.customPercentage || 0))));
+        return (
+          <CardRow key={i} index={i} onRemove={() => remove(i)}>
+            <FieldRow label="Nominee Name"><Input value={row.nomineeName ?? ""} onChange={(v) => update(i, "nomineeName", v)} /></FieldRow>
+            <FieldRow label="Relationship"><Input value={row.relationship ?? ""} onChange={(v) => update(i, "relationship", v)} /></FieldRow>
+            <FieldRow label="Date of Birth"><Input type="date" value={row.dateOfBirth ?? ""} onChange={(v) => update(i, "dateOfBirth", v)} /></FieldRow>
+            <FieldRow label="Contact Number"><Input value={row.contactNumber ?? ""} onChange={(v) => update(i, "contactNumber", v)} /></FieldRow>
+            <FieldRow label="Email"><Input type="email" value={row.nomineeEmail ?? row.email ?? ""} onChange={(v) => update(i, "nomineeEmail", v)} /></FieldRow>
+            <FieldRow label="Address"><Input value={row.address ?? ""} onChange={(v) => update(i, "address", v)} /></FieldRow>
+            <FieldRow label="Nominee Type">
+              <Select
+                value={row.nomineeType ?? 'EPF'}
+                onChange={(v) => {
+                  const currentPct = v === 'EPF' ? Number(row.epfPercentage || 0) : v === 'EPS' ? Number(row.epsPercentage || 0) : v === 'Gratuity' ? Number(row.gratuityPercentage || 0) : Number(row.customPercentage || 0);
+                  const rem = remainingFor(v);
+                  if (rem <= 0 && currentPct <= 0) return; // prevent selection if no allocation
+                  update(i, "nomineeType", v);
+                }}
+                options={[
+                  { value: 'EPF', label: 'EPF', disabled: totals.EPF >= 100 && Number(row.epfPercentage || 0) <= 0 },
+                  { value: 'EPS', label: 'EPS', disabled: totals.EPS >= 100 && Number(row.epsPercentage || 0) <= 0 },
+                  { value: 'Gratuity', label: 'Gratuity', disabled: totals.Gratuity >= 100 && Number(row.gratuityPercentage || 0) <= 0 },
+                  { value: 'Custom', label: 'Custom', disabled: totals.Custom >= 100 && Number(row.customPercentage || 0) <= 0 },
+                ] as any}
+              />
+            </FieldRow>
+            { (row.nomineeType || 'EPF') === 'EPF' && <FieldRow label="EPF (%)"><Input value={row.epfPercentage ?? ''} onChange={(v) => update(i, 'epfPercentage', v)} /></FieldRow> }
+            { (row.nomineeType || 'EPF') === 'EPS' && <FieldRow label="EPS (%)"><Input value={row.epsPercentage ?? ''} onChange={(v) => update(i, 'epsPercentage', v)} /></FieldRow> }
+            { (row.nomineeType || 'EPF') === 'Gratuity' && <FieldRow label="Gratuity (%)"><Input value={row.gratuityPercentage ?? ''} onChange={(v) => update(i, 'gratuityPercentage', v)} /></FieldRow> }
+            { (row.nomineeType || 'EPF') === 'Custom' && <FieldRow label="Custom (%)"><Input value={row.customPercentage ?? ''} onChange={(v) => update(i, 'customPercentage', v)} /></FieldRow> }
+            <div className="sm:col-span-2">
+              <Checkbox label="Minor Nominee" checked={row.isMinor ?? false} onChange={(v) => update(i, "isMinor", v)} />
+            </div>
+            {row.isMinor && (
+              <>
+                <FieldRow label="Guardian Name"><Input value={row.guardian?.guardianName ?? row.guardian?.name ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), guardianName: v })} /></FieldRow>
+                <FieldRow label="Guardian Relationship"><Input value={row.guardian?.relationshipWithMinor ?? row.guardian?.relationship ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), relationshipWithMinor: v })} /></FieldRow>
+                <FieldRow label="Guardian Contact"><Input value={row.guardian?.contactNumber ?? ""} onChange={(v) => update(i, "guardian", { ...(row.guardian ?? {}), contactNumber: v })} /></FieldRow>
+              </>
+            )}
+          </CardRow>
+        );
+      })}
       <AddMoreBtn label="Add Nominee" onClick={add} />
     </div>
   );
@@ -896,14 +930,74 @@ function DocumentsForm({ employee, value, onChange }: { employee: Employee; valu
 /* ─── Initial form value builders ─────────────────────────────────────────── */
 function buildInitialValue(section: SelfSection, employee: Employee): any {
   switch (section) {
-    case "profile": return {};
+    case "profile":
+      return {
+        firstName: employee.firstName,
+        middleName: employee.middleName,
+        lastName: employee.lastName,
+        preferredName: employee.preferredName,
+        dateOfBirth: employee.dateOfBirth,
+        actualDob: employee.actualDob,
+        placeOfBirth: employee.placeOfBirth,
+        gender: employee.gender,
+        maritalStatus: employee.maritalStatus,
+        bloodGroup: employee.bloodGroup,
+        nationality: employee.nationality,
+        religion: employee.religion,
+        caste: employee.caste,
+        casteCategory: employee.casteCategory,
+        fathersName: employee.fathersName,
+        motherName: employee.motherName,
+        spouseName: employee.spouseName,
+        identificationMark: employee.identificationMark,
+        height: employee.height,
+        weight: employee.weight,
+        phone: employee.phone,
+        alternateMobile: employee.alternateMobile,
+        email: employee.email,
+        bio: employee.bio,
+        isPhysicallyChallenged: employee.isPhysicallyChallenged,
+        isInternationalEmployee: employee.isInternationalEmployee,
+        languages: [...(employee.languages ?? [])],
+        emergencyContact: { ...(employee.emergencyContact ?? {}) },
+        medicalInfo: { ...(employee.medicalInfo ?? {}) },
+        currentAddress: { ...(employee.currentAddress ?? {}) },
+        permanentAddress: { ...(employee.permanentAddress ?? {}) },
+      };
     case "education": return [...(employee.education ?? [])];
     case "family": return [...(employee.family ?? [])];
     case "nominee": return [...(employee.nominees ?? [])];
     case "insurance": return [...(employee.insurance ?? [])];
     case "work": return [...(employee.workExperience ?? [])];
-    case "bank": return {};
-    case "passport": return {};
+    case "bank":
+      return {
+        bankAccounts: [...(employee.bankAccounts ?? [])],
+        panNumber: employee.panNumber,
+        aadhaarNumber: employee.aadhaarNumber,
+        uanNumber: employee.uanNumber,
+        pfNumber: employee.pfNumber,
+        esiNumber: employee.esiNumber,
+        linNumber: employee.linNumber,
+        taxRegime: employee.taxRegime,
+        isPfCovered: employee.isPfCovered,
+        isEsiCovered: employee.isEsiCovered,
+      };
+    case "passport":
+      return {
+        passportNumber: employee.passportNumber,
+        passportHolderName: employee.passportHolderName,
+        passportIssueDate: employee.passportIssueDate,
+        passportPlaceOfIssue: employee.passportPlaceOfIssue,
+        passportCountryOfIssue: employee.passportCountryOfIssue,
+        passportCategory: employee.passportCategory,
+        passportStatus: employee.passportStatus,
+        passportExpiry: employee.passportExpiry,
+        visaNumber: employee.visaNumber,
+        visaType: employee.visaType,
+        visaIssueDate: employee.visaIssueDate,
+        visaExpiry: employee.visaExpiry,
+        visaCountry: employee.visaCountry,
+      };
     case "documents": return { ...(employee.employeeDocuments ?? {}) };
     default: return {};
   }
@@ -911,7 +1005,13 @@ function buildInitialValue(section: SelfSection, employee: Employee): any {
 
 /* ─── My Request Section ──────────────────────────────────────────────────── */
 
-function MyRequestSection({ employee }: { employee: Employee }) {
+function MyRequestSection({
+  employee,
+  requestEmployeeIds,
+}: {
+  employee: Employee;
+  requestEmployeeIds: string[];
+}) {
   const dispatch = useDispatch<AppDispatch>();
   const [tick, setTick] = useState(0); // force re-read from storage
   const [filter, setFilter] = useState<"all" | "draft" | "pending" | "approved" | "rejected">("all");
@@ -924,8 +1024,8 @@ function MyRequestSection({ employee }: { employee: Employee }) {
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
 
   const allRequests: ProfileChangeRequest[] = useMemo(() => {
-    return getChangeRequests(employee.id);
-  }, [employee.id, tick]);
+    return getChangeRequests(requestEmployeeIds);
+  }, [requestEmployeeIds, tick]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return allRequests;
@@ -1370,25 +1470,52 @@ export function SelfProfileInformationPage() {
   const [activeSection, setActiveSection] = useState<SelfSection>("profile");
   const employees = useSelector((state: RootState) => state.admin.employees);
   const dispatch = useDispatch<AppDispatch>();
-
   const [ack, setAck] = useState(false);
+  const [localSubmitted, setLocalSubmitted] = useState(false);
 
-  const employee = useMemo(() => {
-    const requestedId = user?.employeeId;
-    const matched = employees.find(
-      (item) =>
-        item.id === requestedId ||
-        item.employeeId === requestedId ||
-        (item.email?.toLowerCase() ?? "") === (user?.email?.toLowerCase() ?? "")
-    );
-    if (matched) return matched;
-    const fallbackId = user?.role === "manager" ? "2" : "1";
-    return employees.find((item) => item.id === fallbackId) ?? employees[0];
-  }, [employees, user?.email, user?.employeeId, user?.role]);
+  const employee = useMemo(
+    () => resolveLoggedInEmployee(employees, user),
+    [employees, user],
+  );
 
-  if (!employee) {
-    return <div className="p-6 text-sm text-muted-foreground">No employee profile found.</div>;
-  }
+  const requestEmployeeIds = useMemo(
+    () => employeeIdAliases(employee, user),
+    [employee, user],
+  );
+
+  const employeeId = employee?.id;
+  const employeeCode = employee?.employeeId;
+
+  const isProfileFinalSubmitted = useMemo(() => {
+    if (localSubmitted) return true;
+    if (employee?.profileLocked) return true;
+    if (!employeeId) return false;
+    try {
+      return Boolean(ensureProfile(employeeId).profileLocked);
+    } catch {
+      return false;
+    }
+  }, [localSubmitted, employee?.profileLocked, employeeId, employees]);
+
+  // Sync profile from storage when tab regains focus (e.g. after admin approval)
+  useEffect(() => {
+    if (!employeeId) return;
+    const syncEmployee = () => {
+      try {
+        const raw = localStorage.getItem("admin_employees_db");
+        if (!raw) return;
+        const emps = JSON.parse(raw) as Employee[];
+        const fresh = emps.find(
+          (e) => e.id === employeeId || e.employeeId === employeeId || e.employeeId === employeeCode,
+        );
+        if (fresh) dispatch(updateAdminEmployee(fresh));
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("focus", syncEmployee);
+    return () => window.removeEventListener("focus", syncEmployee);
+  }, [dispatch, employeeId, employeeCode]);
 
   // Listen for request-change events fired by EditableSectionCard
   useEffect(() => {
@@ -1396,7 +1523,6 @@ export function SelfProfileInformationPage() {
       const detail = (e as CustomEvent).detail as any;
       const sectionId: string = detail?.sectionId;
       if (!sectionId) return;
-      // map sectionId prefix to top-level self section
       let mapped: SelfSection | undefined;
       if (sectionId.startsWith('profile')) mapped = 'profile';
       else if (sectionId.startsWith('education')) mapped = 'education';
@@ -1418,6 +1544,10 @@ export function SelfProfileInformationPage() {
     return () => window.removeEventListener('ess:request_change', handler as EventListener);
   }, []);
 
+  if (!employee) {
+    return <div className="p-6 text-sm text-muted-foreground">No employee profile found.</div>;
+  }
+
   const activeLabel = menuItems.find((item) => item.id === activeSection)?.label ?? "Employee Profile";
 
   // Keep these sections visible in the main view (render ContentSection)
@@ -1426,6 +1556,7 @@ export function SelfProfileInformationPage() {
   const isMyRequest = activeSection === "myRequest";
 
   return (
+    <EmployeeFormProvider value={{ finalSubmitted: isProfileFinalSubmitted, essReadOnly: isProfileFinalSubmitted }}>
     <div className="flex h-full flex-col bg-background">
       {/* Top bar */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-card px-6 py-3">
@@ -1437,38 +1568,61 @@ export function SelfProfileInformationPage() {
           <span className="rounded-md border border-border bg-secondary px-2.5 py-0.5 text-xs font-semibold text-foreground">{activeLabel}</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <input id="final-ack" type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="h-4 w-4 rounded border-border" />
-            <label htmlFor="final-ack" className="text-xs text-muted-foreground">I understand I cannot directly edit after final submission.</label>
-          </div>
-          <button
-            type="button"
-            onClick={async () => {
-              if (!ack) {
-                dispatch(addNotification({ type: 'warning', message: 'Please acknowledge before final submission.' }));
-                return;
-              }
-              try {
-                // Set admin row flag
-                const updatedAdmin = { ...employee, profileLocked: true } as any;
-                dispatch(updateAdminEmployee(updatedAdmin));
-                // Update ESS profile storage
-                try {
-                  const profile = ensureProfile(employee.id);
-                  const next = { ...profile, profileLocked: true };
-                  await dispatch(saveEssProfileWithAdminSync({ employeeId: employee.id, profile: next }) as any);
-                } catch (e) {
-                  console.error('Error updating ESS profile', e);
-                }
-                dispatch(addNotification({ type: 'success', message: 'Profile final submitted and locked.' }));
-              } catch (e) {
-                dispatch(addNotification({ type: 'error', message: 'Failed to finalize profile submission.' }));
-              }
-            }}
-            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-foreground text-primary-foreground text-xs font-bold hover:opacity-95 transition-opacity"
-          >
-            Final Submit
-          </button>
+          {!isProfileFinalSubmitted ? (
+            <>
+              <div className="flex items-center gap-2">
+                <input
+                  id="final-ack"
+                  type="checkbox"
+                  checked={ack}
+                  onChange={(e) => setAck(e.target.checked)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <label htmlFor="final-ack" className="text-xs text-muted-foreground">
+                  I understand I cannot directly edit after final submission.
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!ack) {
+                    dispatch(addNotification({ type: "warning", message: "Please acknowledge before final submission." }));
+                    return;
+                  }
+                  if (isProfileFinalSubmitted) return;
+                  try {
+                    const updatedAdmin = { ...employee, profileLocked: true };
+                    dispatch(updateAdminEmployee(updatedAdmin));
+                    const profile = ensureProfile(employee.id);
+                    await dispatch(
+                      saveEssProfileWithAdminSync({
+                        employeeId: employee.id,
+                        profile: { ...profile, profileLocked: true },
+                      }) as any,
+                    );
+                    setLocalSubmitted(true);
+                    dispatch(addNotification({ type: "success", message: "Profile final submitted. Use My Request for future updates." }));
+                  } catch {
+                    dispatch(addNotification({ type: "error", message: "Failed to finalize profile submission." }));
+                  }
+                }}
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-lg text-xs font-bold bg-foreground text-primary-foreground hover:opacity-95 transition-opacity"
+              >
+                Final Submit
+              </button>
+            </>
+          ) : (
+            !isMyRequest && (
+              <button
+                type="button"
+                onClick={() => setActiveSection("myRequest")}
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Update via My Request
+              </button>
+            )
+          )}
           <span className={`rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${statusStyle[employee.status] ?? "bg-secondary text-muted-foreground"}`}>
             {employee.status}
           </span>
@@ -1512,7 +1666,7 @@ export function SelfProfileInformationPage() {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-6">
           {isMyRequest ? (
-            <MyRequestSection employee={employee} />
+            <MyRequestSection employee={employee} requestEmployeeIds={requestEmployeeIds} />
           ) : isReadOnlySection ? (
             <div className="rounded-xl border border-border bg-card p-8 text-center space-y-3">
               <Lock className="h-8 w-8 mx-auto text-muted-foreground/40" />
@@ -1521,17 +1675,34 @@ export function SelfProfileInformationPage() {
                 This section is managed by your administrator and cannot be updated via My Request.
               </p>
             </div>
+          ) : activeSection === "profile" ? (
+            <EssEmployeeProfile employee={employee} />
           ) : (
-            <ContentSection
-              employee={employee}
-              activeSection={activeSection}
-              disableBankEdit
-              showAssetAccessActions={false}
-              showSalaryActions={false}
-            />
+            <div className="space-y-4">
+              {isProfileFinalSubmitted && (
+                <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
+                  Your profile has been submitted. To update information, open{" "}
+                  <button type="button" onClick={() => setActiveSection("myRequest")} className="font-semibold text-foreground underline underline-offset-2 hover:opacity-80">
+                    My Request
+                  </button>{" "}
+                  and submit changes for admin approval.
+                </div>
+              )}
+              <ContentSection
+                employee={employee}
+                activeSection={activeSection}
+                essReadOnly={isProfileFinalSubmitted}
+                disableBankEdit
+                showAssetAccessActions={false}
+                showSalaryActions={false}
+                showAddButtons={!isProfileFinalSubmitted}
+                isFinalSubmitted={isProfileFinalSubmitted}
+              />
+            </div>
           )}
         </main>
       </div>
     </div>
+    </EmployeeFormProvider>
   );
 }

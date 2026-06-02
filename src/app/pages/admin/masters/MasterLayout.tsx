@@ -71,7 +71,7 @@ export function MasterLayout() {
             {currentCategory.label}
           </p>
           <div className="relative mb-3">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground dark:text-muted-foreground" />
             <Input
               value={masterSearch}
               onChange={(event) => setMasterSearch(event.target.value)}
