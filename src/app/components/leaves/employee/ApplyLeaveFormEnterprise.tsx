@@ -124,7 +124,7 @@ export function ApplyLeaveFormEnterprise({
 
       from_session: fromSession,
       to_session: toSession,
-
+      contact_during_leave: contactDuringLeave.trim(),
       reason: reason.trim(),
       attachment: attachment,
     },
