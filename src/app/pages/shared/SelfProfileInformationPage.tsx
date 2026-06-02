@@ -29,18 +29,22 @@ import { AppDispatch, RootState } from "../../../store";
 import { addNotification } from "../../../store/slices/notificationSlice";
 import { updateAdminEmployee } from "../../../store/slices/adminSlice";
 import { saveEssProfileWithAdminSync } from "../../../store/slices/employeeSlice";
-import { ensureProfile } from "../../modules/ess/storage";
 import { ContentSection } from "../../components/employees/ContentSection";
+import { EmployeeFormProvider } from "../../components/employees/employee-details/EmployeeFormContext";
 import { SidebarSection } from "../../components/employees/SidebarMenu";
 import { Employee } from "../../components/employees/mockData";
 import { useAuth } from "../../context/AuthContext";
 import {
+  ensureProfile,
   getChangeRequests,
-  getProfile,
   saveDraftChangeRequest,
   submitDraftChangeRequest,
 } from "../../modules/ess/storage";
 import { ProfileChangeRequest, SectionKey } from "../../modules/ess/types";
+import {
+  employeeIdAliases,
+  resolveLoggedInEmployee,
+} from "../../utils/resolveLoggedInEmployee";
 
 /* ─── Types & helpers ─────────────────────────────────────────────────────── */
 
@@ -925,14 +929,74 @@ function DocumentsForm({ employee, value, onChange }: { employee: Employee; valu
 /* ─── Initial form value builders ─────────────────────────────────────────── */
 function buildInitialValue(section: SelfSection, employee: Employee): any {
   switch (section) {
-    case "profile": return {};
+    case "profile":
+      return {
+        firstName: employee.firstName,
+        middleName: employee.middleName,
+        lastName: employee.lastName,
+        preferredName: employee.preferredName,
+        dateOfBirth: employee.dateOfBirth,
+        actualDob: employee.actualDob,
+        placeOfBirth: employee.placeOfBirth,
+        gender: employee.gender,
+        maritalStatus: employee.maritalStatus,
+        bloodGroup: employee.bloodGroup,
+        nationality: employee.nationality,
+        religion: employee.religion,
+        caste: employee.caste,
+        casteCategory: employee.casteCategory,
+        fathersName: employee.fathersName,
+        motherName: employee.motherName,
+        spouseName: employee.spouseName,
+        identificationMark: employee.identificationMark,
+        height: employee.height,
+        weight: employee.weight,
+        phone: employee.phone,
+        alternateMobile: employee.alternateMobile,
+        email: employee.email,
+        bio: employee.bio,
+        isPhysicallyChallenged: employee.isPhysicallyChallenged,
+        isInternationalEmployee: employee.isInternationalEmployee,
+        languages: [...(employee.languages ?? [])],
+        emergencyContact: { ...(employee.emergencyContact ?? {}) },
+        medicalInfo: { ...(employee.medicalInfo ?? {}) },
+        currentAddress: { ...(employee.currentAddress ?? {}) },
+        permanentAddress: { ...(employee.permanentAddress ?? {}) },
+      };
     case "education": return [...(employee.education ?? [])];
     case "family": return [...(employee.family ?? [])];
     case "nominee": return [...(employee.nominees ?? [])];
     case "insurance": return [...(employee.insurance ?? [])];
     case "work": return [...(employee.workExperience ?? [])];
-    case "bank": return {};
-    case "passport": return {};
+    case "bank":
+      return {
+        bankAccounts: [...(employee.bankAccounts ?? [])],
+        panNumber: employee.panNumber,
+        aadhaarNumber: employee.aadhaarNumber,
+        uanNumber: employee.uanNumber,
+        pfNumber: employee.pfNumber,
+        esiNumber: employee.esiNumber,
+        linNumber: employee.linNumber,
+        taxRegime: employee.taxRegime,
+        isPfCovered: employee.isPfCovered,
+        isEsiCovered: employee.isEsiCovered,
+      };
+    case "passport":
+      return {
+        passportNumber: employee.passportNumber,
+        passportHolderName: employee.passportHolderName,
+        passportIssueDate: employee.passportIssueDate,
+        passportPlaceOfIssue: employee.passportPlaceOfIssue,
+        passportCountryOfIssue: employee.passportCountryOfIssue,
+        passportCategory: employee.passportCategory,
+        passportStatus: employee.passportStatus,
+        passportExpiry: employee.passportExpiry,
+        visaNumber: employee.visaNumber,
+        visaType: employee.visaType,
+        visaIssueDate: employee.visaIssueDate,
+        visaExpiry: employee.visaExpiry,
+        visaCountry: employee.visaCountry,
+      };
     case "documents": return { ...(employee.employeeDocuments ?? {}) };
     default: return {};
   }
@@ -940,7 +1004,13 @@ function buildInitialValue(section: SelfSection, employee: Employee): any {
 
 /* ─── My Request Section ──────────────────────────────────────────────────── */
 
-function MyRequestSection({ employee }: { employee: Employee }) {
+function MyRequestSection({
+  employee,
+  requestEmployeeIds,
+}: {
+  employee: Employee;
+  requestEmployeeIds: string[];
+}) {
   const dispatch = useDispatch<AppDispatch>();
   const [tick, setTick] = useState(0); // force re-read from storage
   const [filter, setFilter] = useState<"all" | "draft" | "pending" | "approved" | "rejected">("all");
@@ -953,8 +1023,8 @@ function MyRequestSection({ employee }: { employee: Employee }) {
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
 
   const allRequests: ProfileChangeRequest[] = useMemo(() => {
-    return getChangeRequests(employee.id);
-  }, [employee.id, tick]);
+    return getChangeRequests(requestEmployeeIds);
+  }, [requestEmployeeIds, tick]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return allRequests;
@@ -1399,26 +1469,52 @@ export function SelfProfileInformationPage() {
   const [activeSection, setActiveSection] = useState<SelfSection>("profile");
   const employees = useSelector((state: RootState) => state.admin.employees);
   const dispatch = useDispatch<AppDispatch>();
-
   const [ack, setAck] = useState(false);
-  const [isFinalSubmitted, setIsFinalSubmitted] = useState(false);
+  const [localSubmitted, setLocalSubmitted] = useState(false);
 
-  const employee = useMemo(() => {
-    const requestedId = user?.employeeId;
-    const matched = employees.find(
-      (item) =>
-        item.id === requestedId ||
-        item.employeeId === requestedId ||
-        (item.email?.toLowerCase() ?? "") === (user?.email?.toLowerCase() ?? "")
-    );
-    if (matched) return matched;
-    const fallbackId = user?.role === "manager" ? "2" : "1";
-    return employees.find((item) => item.id === fallbackId) ?? employees[0];
-  }, [employees, user?.email, user?.employeeId, user?.role]);
+  const employee = useMemo(
+    () => resolveLoggedInEmployee(employees, user),
+    [employees, user],
+  );
 
-  if (!employee) {
-    return <div className="p-6 text-sm text-muted-foreground">No employee profile found.</div>;
-  }
+  const requestEmployeeIds = useMemo(
+    () => employeeIdAliases(employee, user),
+    [employee, user],
+  );
+
+  const employeeId = employee?.id;
+  const employeeCode = employee?.employeeId;
+
+  const isProfileFinalSubmitted = useMemo(() => {
+    if (localSubmitted) return true;
+    if (employee?.profileLocked) return true;
+    if (!employeeId) return false;
+    try {
+      return Boolean(ensureProfile(employeeId).profileLocked);
+    } catch {
+      return false;
+    }
+  }, [localSubmitted, employee?.profileLocked, employeeId, employees]);
+
+  // Sync profile from storage when tab regains focus (e.g. after admin approval)
+  useEffect(() => {
+    if (!employeeId) return;
+    const syncEmployee = () => {
+      try {
+        const raw = localStorage.getItem("admin_employees_db");
+        if (!raw) return;
+        const emps = JSON.parse(raw) as Employee[];
+        const fresh = emps.find(
+          (e) => e.id === employeeId || e.employeeId === employeeId || e.employeeId === employeeCode,
+        );
+        if (fresh) dispatch(updateAdminEmployee(fresh));
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("focus", syncEmployee);
+    return () => window.removeEventListener("focus", syncEmployee);
+  }, [dispatch, employeeId, employeeCode]);
 
   // Listen for request-change events fired by EditableSectionCard
   useEffect(() => {
@@ -1426,7 +1522,6 @@ export function SelfProfileInformationPage() {
       const detail = (e as CustomEvent).detail as any;
       const sectionId: string = detail?.sectionId;
       if (!sectionId) return;
-      // map sectionId prefix to top-level self section
       let mapped: SelfSection | undefined;
       if (sectionId.startsWith('profile')) mapped = 'profile';
       else if (sectionId.startsWith('education')) mapped = 'education';
@@ -1448,6 +1543,10 @@ export function SelfProfileInformationPage() {
     return () => window.removeEventListener('ess:request_change', handler as EventListener);
   }, []);
 
+  if (!employee) {
+    return <div className="p-6 text-sm text-muted-foreground">No employee profile found.</div>;
+  }
+
   const activeLabel = menuItems.find((item) => item.id === activeSection)?.label ?? "Employee Profile";
 
   // Keep these sections visible in the main view (render ContentSection)
@@ -1456,6 +1555,7 @@ export function SelfProfileInformationPage() {
   const isMyRequest = activeSection === "myRequest";
 
   return (
+    <EmployeeFormProvider value={{ finalSubmitted: isProfileFinalSubmitted, essReadOnly: isProfileFinalSubmitted }}>
     <div className="flex h-full flex-col bg-background">
       {/* Top bar */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-border bg-card px-6 py-3">
@@ -1467,41 +1567,61 @@ export function SelfProfileInformationPage() {
           <span className="rounded-md border border-border bg-secondary px-2.5 py-0.5 text-xs font-semibold text-foreground">{activeLabel}</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <input id="final-ack" type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="h-4 w-4 rounded border-border" />
-            <label htmlFor="final-ack" className="text-xs text-muted-foreground">I understand I cannot directly edit after final submission.</label>
-          </div>
-          <button
-            type="button"
-            onClick={async () => {
-              if (!ack) {
-                dispatch(addNotification({ type: 'warning', message: 'Please acknowledge before final submission.' }));
-                return;
-              }
-              if (isFinalSubmitted) return;
-              try {
-                // Set admin row flag
-                const updatedAdmin = { ...employee, profileLocked: true } as any;
-                dispatch(updateAdminEmployee(updatedAdmin));
-                // Update ESS profile storage
-                try {
-                  const profile = ensureProfile(employee.id);
-                  const next = { ...profile, profileLocked: true };
-                  await dispatch(saveEssProfileWithAdminSync({ employeeId: employee.id, profile: next }) as any);
-                } catch (e) {
-                  console.error('Error updating ESS profile', e);
-                }
-                setIsFinalSubmitted(true);
-                dispatch(addNotification({ type: 'success', message: 'Profile final submitted and locked.' }));
-              } catch (e) {
-                dispatch(addNotification({ type: 'error', message: 'Failed to finalize profile submission.' }));
-              }
-            }}
-            disabled={isFinalSubmitted}
-            className={`inline-flex items-center gap-2 h-9 px-3 rounded-lg text-xs font-bold transition-opacity ${isFinalSubmitted ? 'opacity-60 cursor-not-allowed bg-surface-100 text-muted-foreground' : 'bg-foreground text-primary-foreground hover:opacity-95'}`}
-          >
-            {isFinalSubmitted ? 'Submitted' : 'Final Submit'}
-          </button>
+          {!isProfileFinalSubmitted ? (
+            <>
+              <div className="flex items-center gap-2">
+                <input
+                  id="final-ack"
+                  type="checkbox"
+                  checked={ack}
+                  onChange={(e) => setAck(e.target.checked)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <label htmlFor="final-ack" className="text-xs text-muted-foreground">
+                  I understand I cannot directly edit after final submission.
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!ack) {
+                    dispatch(addNotification({ type: "warning", message: "Please acknowledge before final submission." }));
+                    return;
+                  }
+                  if (isProfileFinalSubmitted) return;
+                  try {
+                    const updatedAdmin = { ...employee, profileLocked: true };
+                    dispatch(updateAdminEmployee(updatedAdmin));
+                    const profile = ensureProfile(employee.id);
+                    await dispatch(
+                      saveEssProfileWithAdminSync({
+                        employeeId: employee.id,
+                        profile: { ...profile, profileLocked: true },
+                      }) as any,
+                    );
+                    setLocalSubmitted(true);
+                    dispatch(addNotification({ type: "success", message: "Profile final submitted. Use My Request for future updates." }));
+                  } catch {
+                    dispatch(addNotification({ type: "error", message: "Failed to finalize profile submission." }));
+                  }
+                }}
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-lg text-xs font-bold bg-foreground text-primary-foreground hover:opacity-95 transition-opacity"
+              >
+                Final Submit
+              </button>
+            </>
+          ) : (
+            !isMyRequest && (
+              <button
+                type="button"
+                onClick={() => setActiveSection("myRequest")}
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Update via My Request
+              </button>
+            )
+          )}
           <span className={`rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest ${statusStyle[employee.status] ?? "bg-secondary text-muted-foreground"}`}>
             {employee.status}
           </span>
@@ -1545,7 +1665,7 @@ export function SelfProfileInformationPage() {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-6">
           {isMyRequest ? (
-            <MyRequestSection employee={employee} />
+            <MyRequestSection employee={employee} requestEmployeeIds={requestEmployeeIds} />
           ) : isReadOnlySection ? (
             <div className="rounded-xl border border-border bg-card p-8 text-center space-y-3">
               <Lock className="h-8 w-8 mx-auto text-muted-foreground/40" />
@@ -1555,17 +1675,31 @@ export function SelfProfileInformationPage() {
               </p>
             </div>
           ) : (
-            <ContentSection
-              employee={employee}
-              activeSection={activeSection}
-              disableBankEdit
-              showAssetAccessActions={false}
-              showSalaryActions={false}
-              isFinalSubmitted={isFinalSubmitted}
-            />
+            <div className="space-y-4">
+              {isProfileFinalSubmitted && (
+                <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
+                  Your profile has been submitted. To update information, open{" "}
+                  <button type="button" onClick={() => setActiveSection("myRequest")} className="font-semibold text-foreground underline underline-offset-2 hover:opacity-80">
+                    My Request
+                  </button>{" "}
+                  and submit changes for admin approval.
+                </div>
+              )}
+              <ContentSection
+                employee={employee}
+                activeSection={activeSection}
+                essReadOnly={isProfileFinalSubmitted}
+                disableBankEdit
+                showAssetAccessActions={false}
+                showSalaryActions={false}
+                showAddButtons={!isProfileFinalSubmitted}
+                isFinalSubmitted={isProfileFinalSubmitted}
+              />
+            </div>
           )}
         </main>
       </div>
     </div>
+    </EmployeeFormProvider>
   );
 }

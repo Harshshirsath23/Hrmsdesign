@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Employee } from "../mockData";
-import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X, Plus } from "lucide-react";
+import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X, Plus, Send } from "lucide-react";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { useMasterOptions } from "./useMasterOptions";
+import { useEmployeeFormContext } from "../employee-details/EmployeeFormContext";
 
 interface Props {
   employee: Employee;
@@ -77,6 +78,7 @@ export function FamilyDetails({ employee, showAddButton = true }: Props) {
   const relationOptions = useMasterOptions("Relation");
   const genderOptions = useMasterOptions("Gender");
   const bloodGroupOptions = useMasterOptions("BloodGroup");
+  const essReadOnly = useEmployeeFormContext()?.essReadOnly;
   const [isEditing, setIsEditing] = useState(false);
   const [editedFamily, setEditedFamily] = useState(employee.family || []);
   const { handleAdminSave } = useAdminSync();
@@ -148,6 +150,14 @@ export function FamilyDetails({ employee, showAddButton = true }: Props) {
                   <X size={12} /> Cancel
                 </button>
               </>
+            ) : essReadOnly ? (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("ess:request_change", { detail: { sectionId: "family-details" } }))}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
+              >
+                <Send size={12} /> Request Change
+              </button>
             ) : (
               <>
                 {showAddButton ? (

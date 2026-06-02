@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FileText } from "lucide-react";
+import { toast } from "sonner";
 import { Employee } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
 import { EditableSectionCard } from "../employee-details";
@@ -43,8 +44,10 @@ export function EmployeeDocumentsSection({ employee, showAddButton = true }: Pro
   const handleSaveType = (config: DocumentTypeConfig) => {
     if (editingType) {
       dispatch(updateDocumentType(config));
+      toast.success(`"${config.documentName}" updated`);
     } else {
       dispatch(addDocumentType(config));
+      toast.success(`"${config.documentName}" added to document list`);
     }
     setEditingType(null);
   };
@@ -100,7 +103,7 @@ export function EmployeeDocumentsSection({ employee, showAddButton = true }: Pro
           docs={docs}
           isEditing={true}
           onChange={handleDocsChange}
-          showTypeControls={false}
+          showTypeControls={showAddButton}
           onEditType={(type) => {
             setEditingType(type);
             setModalOpen(true);
@@ -111,9 +114,11 @@ export function EmployeeDocumentsSection({ employee, showAddButton = true }: Pro
       </EditableSectionCard>
 
       <DocumentTypeModal
-        sectionId="employee-documents"
-        profileLocked={employee.profileLocked}
-        onOpenChange={setModalOpen}
+        open={modalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) setEditingType(null);
+        }}
         initial={editingType}
         existingIds={existingIds}
         onSave={handleSaveType}
