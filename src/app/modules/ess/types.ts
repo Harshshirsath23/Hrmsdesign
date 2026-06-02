@@ -1,6 +1,6 @@
 import type { EmployeeDocumentKey, EmployeeDocumentMeta } from "../../components/employees/mockData";
 
-export type RequestStatus = "pending" | "approved" | "rejected";
+export type RequestStatus = "draft" | "pending" | "approved" | "rejected";
 
 export type AddressType = "current" | "permanent" | "temporary";
 
@@ -33,7 +33,8 @@ export interface EducationDetail {
   specialization: string;
   institutionName: string;
   university: string;
-  yearOfPassing: string;
+  fromDate?: string;
+  toDate?: string;
   percentageCgpa: string;
   grade: string;
 }
@@ -91,6 +92,8 @@ export interface AssetDetail {
 
 export interface EmployeeProfile {
   employeeId: string;
+  /** When true the ESS profile is locked for direct edits; must use request workflow */
+  profileLocked?: boolean;
   profile: {
     firstName: string;
     middleName: string;
@@ -204,4 +207,9 @@ export interface ProfileChangeRequest {
   reviewed_by: string | null;
   reviewed_at: string | null;
   rejection_comment?: string;
+  supportingDoc?: {
+    fileName: string;
+    dataUrl: string;
+    uploadedAt: string;
+  };
 }

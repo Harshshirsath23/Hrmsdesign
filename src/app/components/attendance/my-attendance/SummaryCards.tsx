@@ -45,6 +45,7 @@ const TREND_COLOR_STYLES: Record<
 };
 
 export function SummaryCards({ metrics }: SummaryCardsProps) {
+  const d = metrics.deltas;
   const cards: Array<{
     label: string;
     value: string;
@@ -56,20 +57,20 @@ export function SummaryCards({ metrics }: SummaryCardsProps) {
       label: "Avg Work Hours",
       value: metrics.avgWorkHours.toFixed(1) + "h",
       icon: Clock3,
-      trend: "+5%",
+      trend: d?.avgWorkHours ?? "+0%",
       color: "emerald",
     },
     {
       label: "Avg Actual Work",
       value: metrics.avgActualWorkHours.toFixed(1) + "h",
       icon: Activity,
-      trend: "-2%",
+      trend: d?.avgActualWork ?? "Stable",
       color: "blue",
     },
-    { label: "Present Days", value: String(metrics.presentDays), icon: CalendarCheck2, trend: "Stable", color: "green" },
-    { label: "Absent Days", value: String(metrics.absentDays), icon: CalendarX2, trend: "0", color: "rose" },
-    { label: "Leave Taken", value: String(metrics.leaveTaken), icon: Plane, trend: "+1", color: "amber" },
-    { label: "Late In", value: String(metrics.lateInCount), icon: AlarmClock, trend: "-3", color: "orange" },
+    { label: "Present Days", value: String(metrics.presentDays), icon: CalendarCheck2, trend: d?.presentDays ?? "Stable", color: "green" },
+    { label: "Absent Days", value: String(metrics.absentDays), icon: CalendarX2, trend: d?.absentDays ?? "0", color: "rose" },
+    { label: "Leave Taken", value: String(metrics.leaveTaken), icon: Plane, trend: d?.leaveTaken ?? "0", color: "amber" },
+    { label: "Late In", value: String(metrics.lateInCount), icon: AlarmClock, trend: d?.lateIn ?? "0", color: "orange" },
   ];
 
   return (

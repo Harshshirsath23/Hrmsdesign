@@ -25,16 +25,25 @@ export function mergeAdminEmployeeIntoEssProfile(admin: Employee, profile: Emplo
     canSpeak: l.canSpeak,
   }));
 
-  const nomineeDetails: NomineeDetail[] = (admin.nominees || []).map((n: AdminNominee, i) => ({
-    id: n.id || `nom-sync-${i}`,
-    name: n.nomineeName,
-    relation: n.relationship,
-    sharePercentage: n.sharePercentage,
-    phone: n.contactNumber,
-    dateOfBirth: n.dateOfBirth,
-    address: n.address,
-    idProofFileName: n.idProofFileName,
-  }));
+    const nomineeDetails: NomineeDetail[] = (admin.nominees || []).map((n: AdminNominee, i) => ({
+      id: n.id || `nom-sync-${i}`,
+      name: n.nomineeName,
+      relation: n.relationship,
+      // keep legacy sharePercentage for older consumers, also expose per-type allocations
+      sharePercentage: (n as any).sharePercentage ?? (n as any).epfPercentage ?? "",
+      phone: n.contactNumber,
+      dateOfBirth: n.dateOfBirth,
+      address: n.address,
+      idProofFileName: n.idProofFileName,
+      // additional fields (EPF/EPS/Gratuity/Custom)
+      epfPercentage: (n as any).epfPercentage || "",
+      epsPercentage: (n as any).epsPercentage || "",
+      gratuityPercentage: (n as any).gratuityPercentage || "",
+      customPercentage: (n as any).customPercentage || "",
+      nomineeType: (n as any).nomineeType || 'EPF',
+      isMinor: Boolean((n as any).isMinor),
+      guardian: (n as any).guardian || undefined,
+    }));
 
   return {
     ...profile,
@@ -139,11 +148,18 @@ export function mergeEssEmployeeOwnedIntoAdmin(admin: Employee, profile: Employe
   const nominees: AdminNominee[] = (profile.nomineeDetails || []).map((n) => ({
     id: n.id,
     nomineeName: n.name,
+    nomineeEmail: (n as any).email || '',
     relationship: n.relation,
     dateOfBirth: n.dateOfBirth || "",
     contactNumber: n.phone,
     address: n.address || "",
-    sharePercentage: n.sharePercentage,
+    nomineeType: (n as any).nomineeType || 'EPF',
+    epfPercentage: (n as any).epfPercentage || (n as any).sharePercentage || '',
+    epsPercentage: (n as any).epsPercentage || '',
+    gratuityPercentage: (n as any).gratuityPercentage || '',
+    customPercentage: (n as any).customPercentage || '',
+    isMinor: Boolean((n as any).isMinor),
+    guardian: (n as any).guardian || undefined,
     idProofFileName: n.idProofFileName,
   }));
 

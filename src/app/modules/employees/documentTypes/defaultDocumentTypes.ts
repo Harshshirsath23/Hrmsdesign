@@ -18,6 +18,7 @@ const LABELS: Record<string, string> = {
   relievingLetter: "Relieving Letter",
   appraisalLetters: "Appraisal Letters",
   incrementLetters: "Increment Letters",
+  form16: "Form 16",
 };
 
 const CATEGORIES: Record<string, string> = {
@@ -36,13 +37,29 @@ const CATEGORIES: Record<string, string> = {
   relievingLetter: "Employment",
   appraisalLetters: "HR",
   incrementLetters: "HR",
+  form16: "Tax",
 };
 
-const FRONT_BACK = new Set(["panCard", "aadhaarCard", "passport", "visa", "insuranceDocuments"]);
-const MULTIPLE = new Set(["joiningDocuments", "educationalCertificates", "salarySlips", "experienceLetters"]);
+const FRONT_BACK = new Set(["panCard", "aadhaarCard", "passport", "visa"]);
+const MULTIPLE = new Set(["joiningDocuments", "educationalCertificates", "salarySlips", "experienceLetters", "insuranceDocuments"]);
+
+/** Form 16 is an official tax document shown as a dummy entry */
+const FORM16_ENTRY: DocumentTypeConfig = {
+  id: "form16",
+  documentName: "Form 16",
+  documentSection: "Official",
+  category: "Tax",
+  uploadType: "single",
+  allowedFileTypes: ["pdf"],
+  mandatory: false,
+  allowEmployeeEdit: false,
+  displayOrder: 100,
+  status: "Active",
+  isSystem: true,
+};
 
 export function buildDefaultDocumentTypes(): DocumentTypeConfig[] {
-  return EMPLOYEE_DOCUMENT_KEYS.map((id, index) => ({
+  const base = EMPLOYEE_DOCUMENT_KEYS.map((id, index) => ({
     id,
     documentName: LABELS[id] || id,
     documentSection: inferDocumentSection(CATEGORIES[id] || "General"),
@@ -55,4 +72,10 @@ export function buildDefaultDocumentTypes(): DocumentTypeConfig[] {
     status: "Active" as const,
     isSystem: true,
   }));
+  // Add Form 16 only if not already present
+  if (!base.find((d) => d.id === "form16")) {
+    base.push(FORM16_ENTRY);
+  }
+  return base;
 }
+

@@ -23,6 +23,22 @@ export function clearAuthStorage() {
   localStorage.removeItem('hrms_company_id');
 }
 
+export function getAccessToken(): string | null {
+  return localStorage.getItem('hrms_access_token');
+}
+
+export function getCompanyId(): string | null {
+  return (
+    localStorage.getItem('hrms_company_id') ||
+    (import.meta.env.VITE_COMPANY_ID as string | undefined) ||
+    null
+  );
+}
+
+export function setAccessToken(token: string) {
+  localStorage.setItem('hrms_access_token', token);
+}
+
 export interface LoginResponseUser {
   user_id?: string;
   email?: string;

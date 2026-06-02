@@ -1,5 +1,6 @@
 import { LucideIcon, Save, X, Pencil, Plus } from "lucide-react";
 import { cn } from "../../ui/utils";
+import { useEmployeeFormContext } from "./EmployeeFormContext";
 
 interface EditableSectionCardProps {
   title: string;
@@ -20,6 +21,8 @@ interface EditableSectionCardProps {
   requestStatus?: 'None' | 'Pending' | 'Updated';
   /** When true, hides the admin-only "Allow Employee to Edit" checkbox (used on ESS side) */
   hideAdminControls?: boolean;
+  /** When true the profile/section is locked for direct edits */
+  profileLocked?: boolean;
 }
 
 export function EditableSectionCard({
@@ -36,15 +39,19 @@ export function EditableSectionCard({
   sectionId,
   canEmployeeEdit,
   requestStatus,
+  profileLocked,
 }: EditableSectionCardProps) {
   const getStatusLabel = () => {
     if (requestStatus === 'Pending') return { l: 'Pending Employee Update', c: 'bg-amber-500/10 text-amber-600 border-amber-200' };
     if (requestStatus === 'Updated') return { l: 'Updated by Employee', c: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' };
     if (canEmployeeEdit) return { l: 'Editable by Employee', c: 'bg-indigo-500/10 text-indigo-600 border-indigo-200' };
-    return { l: 'Locked by Admin', c: 'bg-slate-500/10 text-slate-500 border-slate-200' };
+    return { l: '', c: '' };
   };
 
   const status = getStatusLabel();
+  const ctx = useEmployeeFormContext();
+  const finalSubmitted = ctx?.finalSubmitted;
+  const effectiveProfileLocked = profileLocked || !!finalSubmitted;
 
   return (
     <div className={cn("flat-card bg-card border border-border p-6", className)}>
@@ -58,15 +65,15 @@ export function EditableSectionCard({
             ) : null}
             {title}
           </h3>
-          {sectionId && (
+          {sectionId && status.l ? (
              <span className={cn("text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border transition-all", status.c)}>
                {status.l}
              </span>
-          )}
+          ) : null}
         </div>
         <div className="flex items-center gap-4 flex-shrink-0">
           <div className="flex items-center gap-2">
-            {headerExtra}
+            {!effectiveProfileLocked && headerExtra}
             {isEditing ? (
               <>
                 <button
@@ -86,22 +93,21 @@ export function EditableSectionCard({
                   Cancel
                 </button>
               </>
-            ) : (
-              onEdit ? (
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-                >
-                  {editLabel === "Add" ? (
-                    <Plus className="w-3.5 h-3.5" />
-                  ) : (
-                    <Pencil className="w-3.5 h-3.5" />
-                  )}
-                  {editLabel || "Edit"}
-                </button>
-              ) : null
-            )}
+            ) : onEdit ? (
+              // Always show Edit button when not editing (Request Change removed)
+              <button
+                type="button"
+                onClick={onEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+              >
+                {editLabel === "Add" ? (
+                  <Plus className="w-3.5 h-3.5" />
+                ) : (
+                  <Pencil className="w-3.5 h-3.5" />
+                )}
+                {editLabel || "Edit"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { CheckCircle2, Clock, XCircle, Calendar as CalendarIcon, HelpCircle, Search, Plane, MapPinOff } from "lucide-react";
-import { MOCK_DEPARTMENTS, MOCK_DESIGNATIONS, MOCK_TEAMS } from "../../modules/attendance/mockData";
+import { useAttendanceFilterOptions } from "../../modules/attendance/hooks";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
@@ -38,6 +38,10 @@ interface WhosInTodayProps {
 }
 
 export function WhosInToday({ data, filters, setFilters }: WhosInTodayProps) {
+  const { data: filterOpts } = useAttendanceFilterOptions();
+  const departments = filterOpts?.departments ?? [];
+  const teams = filterOpts?.teams ?? [];
+
   const chartData = [
     { name: "On Time", value: data.onTime, color: "#10b981" },
     { name: "Late In", value: data.lateIn, color: "#f59e0b" },
@@ -114,7 +118,9 @@ export function WhosInToday({ data, filters, setFilters }: WhosInTodayProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Dept</SelectItem>
-                {MOCK_DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                {departments.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -124,7 +130,9 @@ export function WhosInToday({ data, filters, setFilters }: WhosInTodayProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Teams</SelectItem>
-                {MOCK_TEAMS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                {teams.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <div className="flex items-center gap-2">

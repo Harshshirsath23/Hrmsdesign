@@ -25,21 +25,27 @@ import {
 import { DailyAttendance } from "../../../modules/attendance/types";
 import { isDateLocked } from "./utils";
 import { motion } from "motion/react";
+import type { RegularizationBulkPayload } from "../../../../api/employeeAttendanceClient";
 
 interface RegularizationTabProps {
   records: DailyAttendance[];
   initialDate?: string | null;
   readOnly?: boolean;
+  onSubmitRegularization?: (payload: RegularizationBulkPayload) => Promise<void>;
 }
 
 export function RegularizationTab({
   records,
   initialDate,
   readOnly = false,
+  onSubmitRegularization,
 }: RegularizationTabProps) {
   const [currentNavDate, setCurrentNavDate] = useState(new Date());
 
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const [perDateComments, setPerDateComments] = useState<
     Record<string, string>
@@ -122,6 +128,39 @@ export function RegularizationTab({
   };
 
   const selectedCount = selectedDates.length;
+
+  const handleSubmit = async () => {
+    if (!onSubmitRegularization || readOnly || isLocked || selectedCount === 0) return;
+
+    const missingReason = selectedDates.some((date) => (perDateComments[date] || "").trim().length < 10);
+    if (missingReason) {
+      setSubmitError("Each selected date requires a reason of at least 10 characters.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+    try {
+      await onSubmitRegularization({
+        dates: selectedDates.map((date) => ({
+          date,
+          reason: perDateComments[date].trim(),
+        })),
+        request_type: requestType,
+        requested_status: requestStatus,
+        corrected_in_time: correctedInTime || null,
+        corrected_out_time: correctedOutTime || null,
+      });
+      setSubmitSuccess(true);
+      setSelectedDates([]);
+      setPerDateComments({});
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to submit regularization request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -508,7 +547,8 @@ export function RegularizationTab({
 
               <button
                 type="button"
-                disabled={isLocked}
+                disabled={isLocked || submitting || readOnly || !onSubmitRegularization}
+                onClick={() => void handleSubmit()}
                 className="
                   w-full
                   h-14
@@ -526,8 +566,20 @@ export function RegularizationTab({
                 "
               >
                 <Send size={18} />
-                Submit Request
+                {submitting ? "Submitting…" : "Submit Request"}
               </button>
+
+              {submitSuccess ? (
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 font-medium">
+                  Regularization request submitted successfully.
+                </div>
+              ) : null}
+
+              {submitError ? (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-500 font-medium">
+                  {submitError}
+                </div>
+              ) : null}
 
               {isLocked && (
                 <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-3">

@@ -9,9 +9,6 @@ import {
 import { cn } from "../../../components/ui/utils";
 
 const TABS = [
-  { label: "Generate Letter", path: "/admin/employees/management/generate-letter", icon: FileText },
-  { label: "Bulletin Board", path: "/admin/employees/management/bulletin-board", icon: Megaphone },
-  { label: "Mass Communication", path: "/admin/employees/management/communication", icon: Send },
   { label: "Identity Verification", path: "/admin/employees/management/verification", icon: ShieldCheck },
   { label: "Contract Details", path: "/admin/employees/management/contracts", icon: Handshake },
 ];

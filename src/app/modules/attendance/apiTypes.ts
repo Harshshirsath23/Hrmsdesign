@@ -1,3 +1,16 @@
+export interface PaginatedResponse<T> {
+  count?: number;
+  next?: string | null;
+  previous?: string | null;
+  results?: T[];
+}
+
+export interface FilterOption {
+  id: string;
+  name: string;
+  code?: string;
+}
+
 export interface DashboardSummaryApi {
   avg_work_hours?: number | string;
   total_present?: number | string;
@@ -22,6 +35,22 @@ export interface DashboardTrendApi {
   trend_data?: DashboardTrendPointApi[];
 }
 
+export interface DashboardWhosInApi {
+  on_time?: number;
+  late?: number;
+  not_yet_in?: number;
+  on_leave?: number;
+  out_of_office?: number;
+}
+
+export interface DashboardFilterApi {
+  departments?: FilterOption[];
+  designations?: FilterOption[];
+  teams?: FilterOption[];
+}
+
+export type WhoIsInStatus = 'NOT_IN' | 'LATE' | 'ON_TIME' | 'OUT_OF_OFFICE';
+
 export interface WhoIsInSummaryApi {
   summary?: {
     not_yet_in?: number;
@@ -31,8 +60,6 @@ export interface WhoIsInSummaryApi {
     total_employees?: number;
   };
 }
-
-export type WhoIsInStatus = 'NOT_IN' | 'LATE' | 'ON_TIME' | 'OUT_OF_OFFICE';
 
 export interface WhoIsInEmployeeApi {
   employee_id: string;
@@ -52,10 +79,17 @@ export interface WhoIsInEmployeeApi {
 export interface WhoIsInEmployeesApi {
   employees: WhoIsInEmployeeApi[];
   total?: number;
+  page?: number;
+}
+
+export interface WhoIsInLiveApi {
+  summary?: WhoIsInSummaryApi['summary'];
+  last_refreshed?: string;
 }
 
 export interface SwipeLogApi {
   id: string;
+  company_id?: string;
   employee_id?: string;
   employee_code?: string;
   employee_name?: string;
@@ -68,10 +102,16 @@ export interface SwipeLogApi {
   is_within_geofence?: boolean;
 }
 
-export interface SwipeLogListApi {
-  results?: SwipeLogApi[];
-  data?: SwipeLogApi[];
-  count?: number;
+export type SwipeLogListApi = PaginatedResponse<SwipeLogApi> | SwipeLogApi[];
+
+export interface SwipeLiveSummaryApi {
+  total_swipes_today?: number;
+  total_in?: number;
+  total_out?: number;
+  missing_punch_count?: number;
+  late_entry_count?: number;
+  wfh_count?: number;
+  office_count?: number;
 }
 
 export interface MatrixDayCellApi {
@@ -102,6 +142,13 @@ export interface MatrixGridApi {
   rows: MatrixRowApi[];
 }
 
+export interface MatrixSummaryApi {
+  present?: number;
+  absent?: number;
+  leave?: number;
+  late?: number;
+}
+
 export interface RosterCalendarEmployeeApi {
   id: string;
   name: string;
@@ -113,8 +160,70 @@ export interface RosterCalendarEmployeeApi {
 export interface RosterCalendarApi {
   month: number;
   year: number;
+  cycle_id?: string | null;
+  cycle_start?: string;
+  cycle_end?: string;
   employees: RosterCalendarEmployeeApi[];
   holidays?: string[];
   is_published?: boolean;
   is_locked?: boolean;
+}
+
+export interface RosterPublishStatusApi {
+  status?: string;
+  data?: { is_published?: boolean; published_at?: string; published_by?: string };
+}
+
+export interface ShiftMasterApi {
+  id: string;
+  code?: string;
+  name?: string;
+  start_time?: string;
+  end_time?: string;
+}
+
+export interface AttendanceRequestEmployeeApi {
+  id: string;
+  name: string;
+  department?: string;
+  designation?: string;
+}
+
+export interface AttendanceRequestApi {
+  id: string;
+  employee: AttendanceRequestEmployeeApi;
+  request_type: string;
+  request_type_display?: string;
+  date: string;
+  reason: string;
+  manager_status: string;
+  final_status: string;
+  created_at?: string;
+  attendance?: {
+    date?: string;
+    shift_time?: string;
+    punch_in?: string;
+    punch_out?: string;
+    working_hours?: string;
+  };
+  approval_workflow?: Array<{ stage?: string; status?: string; comment?: string }>;
+}
+
+export interface AttendanceRequestStatsApi {
+  pending?: number;
+  manager_approved?: number;
+  pending_admin?: number;
+  fully_approved?: number;
+  rejected?: number;
+}
+
+export interface IntelligenceDashboardApi {
+  total_swipes_today?: number;
+  total_in_entries?: number;
+  total_out_entries?: number;
+  missing_punch_count?: number;
+  late_entry_count?: number;
+  device_offline_count?: number;
+  wfh_attendance_count?: number;
+  office_attendance_count?: number;
 }

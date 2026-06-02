@@ -4,7 +4,7 @@ import { WorkHoursSummary } from "../../../components/attendance/WorkHoursSummar
 import { AnalyticsPanel } from "../../../components/attendance/AnalyticsPanel";
 import { TodayAttendanceOverview } from "../../../components/attendance/TodayAttendanceOverview";
 import { TotalLeaveTakenChart } from "../../../components/attendance/TotalLeaveTakenChart";
-import { useDashboardSummary, useDashboardTrend } from "../../../modules/attendance/hooks";
+import { useDashboardSummary, useDashboardTrend, useWhoIsInSummary, useMatrixSummary } from "../../../modules/attendance/hooks";
 import { format, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
 import { AlertCircle, Loader2 } from "lucide-react";
 
@@ -34,31 +34,49 @@ export function AttendanceDashboard() {
     isError: trendError,
   } = useDashboardTrend(month, year);
 
+  const { data: todayWhosIn } = useWhoIsInSummary(new Date());
+  const { data: matrixSummary } = useMatrixSummary(year, month);
+
   const leaveYearlyData = useMemo(() => {
     const months = eachMonthOfInterval({
       start: startOfYear(new Date(year, 0, 1)),
       end: endOfYear(new Date(year, 0, 1)),
     });
+    const selectedMonthLeave = Number(matrixSummary?.leave ?? 0);
     return months.map((m) => ({
       month: format(m, "MMM"),
-      leaveDays: 0,
-      approvedCount: 0,
-      employees: 0,
+      leaveDays: m.getMonth() + 1 === month ? selectedMonthLeave : 0,
+      approvedCount: m.getMonth() + 1 === month ? selectedMonthLeave : 0,
+      employees: metrics?.totalEmployees ?? 0,
     }));
-  }, [year]);
+  }, [year, month, matrixSummary?.leave, metrics?.totalEmployees]);
 
-  const todayStats = useMemo(
-    () => ({
+  const todayStats = useMemo(() => {
+    const total =
+      (todayWhosIn?.onTime ?? 0) +
+        (todayWhosIn?.lateIn ?? 0) +
+        (todayWhosIn?.notYetIn ?? 0) +
+        (todayWhosIn?.outOfOffice ?? 0) || 1;
+    const present = (todayWhosIn?.onTime ?? 0) + (todayWhosIn?.lateIn ?? 0);
+    return {
       overview: {
-        present: { count: metrics?.totalEmployees ?? 0, percentage: Math.round(metrics?.avgAttendance ?? 0) },
-        onLeave: { count: 0, percentage: 0 },
-        absent: { count: metrics?.totalAbsent ?? 0, percentage: 0 },
-        late: { count: metrics?.lateLogins ?? 0, percentage: 0 },
+        present: { count: present, percentage: Math.round((present / total) * 100) },
+        onLeave: {
+          count: todayWhosIn?.onLeave ?? 0,
+          percentage: Math.round(((todayWhosIn?.onLeave ?? 0) / total) * 100),
+        },
+        absent: {
+          count: todayWhosIn?.notYetIn ?? 0,
+          percentage: Math.round(((todayWhosIn?.notYetIn ?? 0) / total) * 100),
+        },
+        late: {
+          count: todayWhosIn?.lateIn ?? 0,
+          percentage: Math.round(((todayWhosIn?.lateIn ?? 0) / total) * 100),
+        },
         wfh: { count: 0, percentage: 0 },
       },
-    }),
-    [metrics],
-  );
+    };
+  }, [todayWhosIn]);
 
   const loading = summaryLoading || trendLoading;
   const hasError = summaryError || trendError;
@@ -110,12 +128,13 @@ export function AttendanceDashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6">
-            <TotalLeaveTakenChart data={leaveYearlyData} />
-          </div>
-
-          <div className="lg:col-span-3 flex flex-col gap-6">
-            <TodayAttendanceOverview stats={todayStats.overview} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <TotalLeaveTakenChart data={leaveYearlyData} />
+            </div>
+            <div className="lg:col-span-1">
+              <TodayAttendanceOverview stats={todayStats.overview} />
+            </div>
           </div>
         </>
       )}

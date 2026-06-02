@@ -42,20 +42,20 @@ export function AttendanceTable({ employeeId }: { employeeId?: string }) {
     <div className="flat-card bg-card overflow-hidden">
       <div className="overflow-auto max-h-[500px]">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-secondary z-10">
+          <thead className="sticky top-0 bg-secondary z-10 text-[11px]">
             <tr>
-              <th className="p-3 text-left cursor-pointer" onClick={() => setSortAsc((value) => !value)}>Date</th>
-              <th className="p-3 text-left">Employee Name</th>
-              <th className="p-3 text-left">Shift</th>
-              <th className="p-3 text-left">First In</th>
-              <th className="p-3 text-left">Last Out</th>
-              <th className="p-3 text-left">Work Hours</th>
-              <th className="p-3 text-left">Late</th>
-              <th className="p-3 text-left">Early Exit</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">LOP</th>
-              <th className="p-3 text-left">Exceptions</th>
-              <th className="p-3 text-left">Actions</th>
+              <th className="p-2 px-3 font-semibold text-left cursor-pointer" onClick={() => setSortAsc((value) => !value)}>Date</th>
+              <th className="p-2 px-3 font-semibold text-left">Employee Name</th>
+              <th className="p-2 px-3 font-semibold text-left">Shift</th>
+              <th className="p-2 px-3 font-semibold text-left">First In</th>
+              <th className="p-2 px-3 font-semibold text-left">Last Out</th>
+              <th className="p-2 px-3 font-semibold text-left">Work Hours</th>
+              <th className="p-2 px-3 font-semibold text-left">Late</th>
+              <th className="p-2 px-3 font-semibold text-left">Early Exit</th>
+              <th className="p-2 px-3 font-semibold text-left">Status</th>
+              <th className="p-2 px-3 font-semibold text-left">LOP</th>
+              <th className="p-2 px-3 font-semibold text-left">Exceptions</th>
+              <th className="p-2 px-3 font-semibold text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -65,18 +65,18 @@ export function AttendanceTable({ employeeId }: { employeeId?: string }) {
               return (
                 <Fragment key={row.id}>
                   <tr className="border-t border-border hover:bg-secondary/50">
-                    <td className="p-3">{row.date}</td>
-                    <td className="p-3">{attendanceDataset.employees.find((employee) => employee.id === row.employeeId)?.name}</td>
-                    <td className="p-3">{row.shiftName}</td>
-                    <td className="p-3">{row.firstIn}</td>
-                    <td className="p-3">{row.lastOut}</td>
-                    <td className="p-3">{row.workHours.toFixed(1)}</td>
-                    <td className="p-3">{row.lateMins}m</td>
-                    <td className="p-3">{row.earlyExitMins}m</td>
-                    <td className="p-3">{row.status}</td>
-                    <td className="p-3">{row.lop}</td>
-                    <td className="p-3">{rowException?.type || "—"}</td>
-                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="p-2 px-3 text-xs">{row.date}</td>
+                    <td className="p-2 px-3 text-xs">{attendanceDataset.employees.find((employee) => employee.id === row.employeeId)?.name}</td>
+                    <td className="p-2 px-3 text-xs">{row.shiftName}</td>
+                    <td className="p-2 px-3 text-xs">{row.firstIn}</td>
+                    <td className="p-2 px-3 text-xs">{row.lastOut}</td>
+                    <td className="p-2 px-3 text-xs">{row.workHours.toFixed(1)}</td>
+                    <td className="p-2 px-3 text-xs">{row.lateMins}m</td>
+                    <td className="p-2 px-3 text-xs">{row.earlyExitMins}m</td>
+                    <td className="p-2 px-3 text-xs">{row.status}</td>
+                    <td className="p-2 px-3 text-xs">{row.lop}</td>
+                    <td className="p-2 px-3 text-xs">{rowException?.type || "—"}</td>
+                    <td className="p-2 px-3 text-xs" onClick={(e) => e.stopPropagation()}>
                       <KebabMenu 
                         size="sm"
                         items={[
@@ -93,7 +93,7 @@ export function AttendanceTable({ employeeId }: { employeeId?: string }) {
                   </tr>
                   {expanded && (
                     <tr className="border-t border-border bg-secondary/30">
-                      <td className="p-3 text-xs text-muted-foreground" colSpan={12}>
+                      <td className="p-2 px-3 text-[11px] text-muted-foreground" colSpan={12}>
                         Sessions: {row.firstIn} - 13:00, 13:30 - {row.lastOut} | OT: {row.otMins} mins | Work mode: {row.workMode}
                       </td>
                     </tr>
@@ -104,11 +104,11 @@ export function AttendanceTable({ employeeId }: { employeeId?: string }) {
           </tbody>
         </table>
       </div>
-      <div className="p-3 border-t border-border flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
-        <div className="flex gap-2">
-          <button disabled={page === 1} onClick={() => setPage((value) => value - 1)} className="px-3 py-1 text-xs border border-border rounded disabled:opacity-50">Prev</button>
-          <button disabled={page === totalPages} onClick={() => setPage((value) => value + 1)} className="px-3 py-1 text-xs border border-border rounded disabled:opacity-50">Next</button>
+      <div className="p-2 px-3 border-t border-border flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">Page {page} of {totalPages}</span>
+        <div className="flex gap-1.5">
+          <button disabled={page === 1} onClick={() => setPage((value) => value - 1)} className="px-2 py-1 text-[11px] border border-border rounded disabled:opacity-50">Prev</button>
+          <button disabled={page === totalPages} onClick={() => setPage((value) => value + 1)} className="px-2 py-1 text-[11px] border border-border rounded disabled:opacity-50">Next</button>
         </div>
       </div>
     </div>

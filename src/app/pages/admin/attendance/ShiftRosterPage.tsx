@@ -14,8 +14,16 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import { SHIFT_DEFINITIONS, MOCK_DEPARTMENTS, MOCK_DESIGNATIONS, MOCK_TEAMS, MOCK_EMPLOYEES } from "../../../modules/attendance/mockData";
-import { useRosterCalendar } from "../../../modules/attendance/hooks";
+import {
+  useRosterCalendar,
+  usePublishRoster,
+  useShiftDefinitions,
+  useBulkShiftAssignment,
+  useCreateShiftAssignment,
+  useUnpublishRoster,
+  useExportRoster,
+  useMatrixCycleBounds,
+} from "../../../modules/attendance/hooks";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "../../../components/ui/utils";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, addMonths, subMonths, isWithinInterval, parseISO } from "date-fns";
@@ -35,13 +43,6 @@ export function ShiftRosterPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const month = selectedDate.getMonth() + 1;
   const year = selectedDate.getFullYear();
-  const { data: rosterFromApi = [], isLoading: rosterLoading, isError: rosterError, error: rosterErr, refetch: refetchRoster } =
-    useRosterCalendar(month, year);
-  const [rosterData, setRosterData] = useState<RosterRecord[]>([]);
-
-  useEffect(() => {
-    if (rosterFromApi.length) setRosterData(rosterFromApi);
-  }, [rosterFromApi]);
   const [filters, setFilters] = useState({
     search: "",
     department: "all",
@@ -51,7 +52,33 @@ export function ShiftRosterPage() {
     shift: "all",
     workMode: "all",
   });
+  const deptId = filters.department !== "all" ? filters.department : undefined;
+  const { data: rosterQuery, isLoading: rosterLoading, isError: rosterError, error: rosterErr, refetch: refetchRoster } =
+    useRosterCalendar(month, year, deptId);
+  const { data: shiftDefinitions = [] } = useShiftDefinitions();
+  const { data: cycleBounds } = useMatrixCycleBounds(year, month);
+  const publishRosterMutation = usePublishRoster();
+  const unpublishRosterMutation = useUnpublishRoster();
+  const bulkAssignMutation = useBulkShiftAssignment();
+  const createShiftAssignment = useCreateShiftAssignment();
+  const exportRosterMutation = useExportRoster();
+  const [rosterData, setRosterData] = useState<RosterRecord[]>([]);
 
+  const cycleId =
+    (rosterQuery?.meta as { cycle_id?: string } | undefined)?.cycle_id ??
+    (cycleBounds as { cycle_id?: string } | undefined)?.cycle_id;
+
+  useEffect(() => {
+    if (rosterQuery?.records) setRosterData(rosterQuery.records);
+    if (rosterQuery?.meta) {
+      const meta = rosterQuery.meta as { is_published?: boolean; is_locked?: boolean };
+      setPublishStatus({
+        isPublished: !!meta.is_published,
+        timestamp: new Date().toISOString(),
+        publishedBy: "Admin",
+      });
+    }
+  }, [rosterQuery]);
   // UI States
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -93,37 +120,26 @@ export function ShiftRosterPage() {
     }, 800);
   };
 
-  // EXPORT EXCEL FUNCTIONALITY
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
-    setTimeout(() => {
-      // Mock Excel Export Logic
-      const headers = ["Employee ID", "Name", "Department", "Designation", "Team", ...days.map(d => format(d, "dd MMM"))];
-      const csvContent = [
-        headers.join(","),
-        ...filteredRoster.map(r => [
-          r.employeeCode,
-          r.employeeName,
-          r.department,
-          r.designation,
-          r.team,
-          ...days.map(d => r.shifts[format(d, "yyyy-MM-dd")] || "")
-        ].join(","))
-      ].join("\n");
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Shift_Roster_${format(selectedDate, "MMMM_yyyy")}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
+    try {
+      const blob = await exportRosterMutation.mutateAsync({
+        month,
+        year,
+        format: 'csv',
+        department_id: deptId,
+      });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Shift_Roster_${format(selectedDate, 'MMMM_yyyy')}.csv`;
       link.click();
-      document.body.removeChild(link);
-
+      URL.revokeObjectURL(link.href);
+      toast.success('Export successful! Download started.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Export failed');
+    } finally {
       setIsExporting(false);
-      toast.success("Export successful! Download started.");
-    }, 1500);
+    }
   };
 
   // GENERATE ROSTER FUNCTIONALITY
@@ -163,83 +179,123 @@ export function ShiftRosterPage() {
   };
 
   // BULK ASSIGN FUNCTIONALITY
-  const handleBulkAssign = () => {
-    setIsBulkAssigning(true);
-    setTimeout(() => {
-      const { employeeIds, startDate, endDate, shiftCode } = bulkAssignForm;
-      const start = parseISO(startDate);
-      const end = parseISO(endDate);
-
-      const newRoster = rosterData.map(record => {
-        if (employeeIds.length === 0 || employeeIds.includes(record.employeeId)) {
-          const newShifts = { ...record.shifts };
-          days.forEach(day => {
-            if (isWithinInterval(day, { start, end })) {
-              newShifts[format(day, "yyyy-MM-dd")] = shiftCode;
-            }
-          });
-
-          // Recalculate stats
-          let working = 0;
-          let off = 0;
-          Object.values(newShifts).forEach(s => {
-            if (s === "OFF") off++;
-            else if (s !== "HL") working++;
-          });
-
-          return { ...record, shifts: newShifts, workingDays: working, weekOffs: off };
-        }
-        return record;
-      });
-
-      setRosterData(newRoster);
-      setIsBulkAssigning(false);
-      setShowBulkAssignModal(false);
-      toast.success(`Bulk assignment completed for ${employeeIds.length || 'all'} employees`);
-    }, 1500);
-  };
-
-  // PUBLISH SCHEDULE FUNCTIONALITY
-  const handlePublish = () => {
-    setIsPublishing(true);
-    setTimeout(() => {
-      setPublishStatus({
-        isPublished: true,
-        timestamp: new Date().toISOString(),
-        publishedBy: "Admin User"
-      });
-      setIsPublishing(false);
-      setShowPublishModal(false);
-      toast.success("Shift roster published successfully!");
-    }, 1200);
-  };
-
-  // CELL EDIT FUNCTIONALITY
-  const handleUpdateShift = (employeeId: string, date: string, shiftCode: string) => {
-    if (publishStatus.isPublished) {
-      toast.error("Roster is published and locked. Unlock to edit.");
+  const handleBulkAssign = async () => {
+    const { employeeIds, startDate, endDate, shiftCode } = bulkAssignForm;
+    const shiftDef = shiftDefinitions.find((s) => s.code === shiftCode);
+    if (!shiftDef?.id) {
+      toast.error("Select a valid shift from the roster");
+      return;
+    }
+    const targets =
+      employeeIds.length > 0
+        ? rosterData.filter((r) => employeeIds.includes(r.employeeId))
+        : rosterData;
+    if (targets.length === 0) {
+      toast.error("No employees selected for bulk assignment");
       return;
     }
 
-    const newRoster = rosterData.map(record => {
-      if (record.employeeId === employeeId) {
-        const newShifts = { ...record.shifts, [date]: shiftCode };
-        
-        // Recalculate stats
-        let working = 0;
-        let off = 0;
-        Object.values(newShifts).forEach(s => {
-          if (s === "OFF") off++;
-          else if (s !== "HL") working++;
+    setIsBulkAssigning(true);
+    try {
+      if (cycleId) {
+        await bulkAssignMutation.mutateAsync({
+          assignment_type: "date_range",
+          cycle_id: cycleId,
+          date_from: startDate,
+          date_to: endDate,
+          assignments: targets.map((r) => ({
+            employee_id: r.employeeId,
+            shift_id: shiftDef.id,
+            is_week_off: shiftCode === "OFF",
+          })),
         });
-
-        return { ...record, shifts: newShifts, workingDays: working, weekOffs: off };
+        await refetchRoster();
+        toast.success(`Bulk assignment queued for ${targets.length} employees`);
+      } else {
+        const start = parseISO(startDate);
+        const end = parseISO(endDate);
+        const newRoster = rosterData.map((record) => {
+          if (employeeIds.length === 0 || employeeIds.includes(record.employeeId)) {
+            const newShifts = { ...record.shifts };
+            days.forEach((day) => {
+              if (isWithinInterval(day, { start, end })) {
+                newShifts[format(day, "yyyy-MM-dd")] = shiftCode;
+              }
+            });
+            let working = 0;
+            let off = 0;
+            Object.values(newShifts).forEach((s) => {
+              if (s === "OFF") off++;
+              else if (s !== "HL") working++;
+            });
+            return { ...record, shifts: newShifts, workingDays: working, weekOffs: off };
+          }
+          return record;
+        });
+        setRosterData(newRoster);
+        toast.success(`Bulk assignment applied locally for ${targets.length} employees`);
       }
-      return record;
-    });
+      setShowBulkAssignModal(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Bulk assignment failed");
+    } finally {
+      setIsBulkAssigning(false);
+    }
+  };
 
-    setRosterData(newRoster);
-    toast.success("Shift updated");
+  // PUBLISH SCHEDULE FUNCTIONALITY
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    try {
+      await publishRosterMutation.mutateAsync({
+        start_date: format(monthStart, "yyyy-MM-dd"),
+        end_date: format(monthEnd, "yyyy-MM-dd"),
+        company_wide: true,
+      });
+      setPublishStatus({
+        isPublished: true,
+        timestamp: new Date().toISOString(),
+        publishedBy: "Admin User",
+      });
+      setShowPublishModal(false);
+      toast.success("Shift roster published successfully!");
+      refetchRoster();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Publish failed");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleUpdateShift = async (employeeId: string, date: string, shiftCode: string) => {
+    if (publishStatus.isPublished) {
+      toast.error('Roster is published and locked. Unpublish to edit.');
+      return;
+    }
+
+    const shiftDef = shiftDefinitions.find((s) => s.code === shiftCode);
+    if (!shiftDef?.id) {
+      toast.error('Select a valid shift');
+      return;
+    }
+    if (!cycleId) {
+      toast.error('Attendance cycle not configured for this month');
+      return;
+    }
+
+    try {
+      await createShiftAssignment.mutateAsync({
+        employee_id: employeeId,
+        shift_id: shiftDef.id,
+        roster_date: date,
+        cycle_id: cycleId,
+        is_week_off: shiftCode === 'OFF',
+      });
+      await refetchRoster();
+      toast.success('Shift updated');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update shift');
+    }
   };
 
   const filteredRoster = useMemo(() => {
@@ -298,71 +354,73 @@ export function ShiftRosterPage() {
         </div>
       )}
       {/* Top Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 space-y-4 shadow-sm sticky top-0 z-40">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              <Home className="w-3 h-3" />
-              <ChevronRight className="w-3 h-3" />
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-sm sticky top-0 z-40">
+        <div className="flex items-center justify-between gap-4">
+          {/* Left: breadcrumb + title */}
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              <Home className="w-2.5 h-2.5" />
+              <ChevronRight className="w-2.5 h-2.5" />
               <span>Attendance</span>
-              <ChevronRight className="w-3 h-3" />
+              <ChevronRight className="w-2.5 h-2.5" />
               <span className="text-emerald-500">Shift Roster</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               Shift Roster
               {publishStatus.isPublished ? (
-                <div className="px-2 py-0.5 rounded text-[10px] bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 font-bold uppercase flex items-center gap-1">
-                  <Check className="w-3 h-3" /> Published
+                <div className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 font-bold uppercase flex items-center gap-1">
+                  <Check className="w-2.5 h-2.5" /> Published
                 </div>
               ) : (
-                <div className="px-2 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 font-bold uppercase">
+                <div className="px-1.5 py-0.5 rounded text-[9px] bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 font-bold uppercase">
                   Draft
                 </div>
               )}
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right: action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={handleExport}
               disabled={isExporting}
             >
-              <Download className={cn("w-3.5 h-3.5 text-blue-500", isExporting && "animate-bounce")} /> 
-              {isExporting ? "EXPORTING..." : "EXPORT EXCEL"}
+              <Download className={cn("w-3 h-3 text-blue-500", isExporting && "animate-bounce")} /> 
+              {isExporting ? "EXPORTING..." : "EXPORT"}
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={() => setShowGenerateModal(true)}
             >
-              <RotateCw className="w-3.5 h-3.5 text-indigo-500" /> GENERATE ROSTER
+              <RotateCw className="w-3 h-3 text-indigo-500" /> GENERATE
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={() => setShowBulkAssignModal(true)}
             >
-              <Plus className="w-3.5 h-3.5 text-emerald-500" /> BULK ASSIGN
+              <Plus className="w-3 h-3 text-emerald-500" /> BULK ASSIGN
             </Button>
             <Button 
-              className="h-9 gap-2 font-bold text-[11px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+              className="h-8 gap-1.5 font-bold text-[10px] px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
               onClick={() => setShowPublishModal(true)}
               disabled={publishStatus.isPublished}
             >
-              <CheckCircle className="w-3.5 h-3.5" /> {publishStatus.isPublished ? "PUBLISHED" : "PUBLISH SCHEDULE"}
+              <CheckCircle className="w-3 h-3" /> {publishStatus.isPublished ? "PUBLISHED" : "PUBLISH"}
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-9 w-9 rounded-lg border-slate-200 dark:border-slate-800"
+              className="h-8 w-8 rounded-lg border-slate-200 dark:border-slate-800"
               onClick={handleRefresh}
             >
-              <RefreshCw className={cn("w-4 h-4 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
+              <RefreshCw className={cn("w-3 h-3 text-slate-500", isRefreshing && "animate-spin text-emerald-500")} />
             </Button>
           </div>
         </div>
@@ -377,49 +435,68 @@ export function ShiftRosterPage() {
           setSelectedDate={setSelectedDate}
         />
 
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto w-full">
+        <div className="p-4 space-y-4 max-w-[1600px] mx-auto w-full">
           {/* Analytics Section */}
           <RosterAnalytics data={analyticsData} />
 
           {/* Conflict Warning or Status Info */}
           {publishStatus.isPublished ? (
-            <div className="bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-200/50 dark:border-emerald-500/20 p-3 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Check className="w-4 h-4 text-emerald-600" />
+            <div className="bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-200/50 dark:border-emerald-500/20 p-2.5 rounded-xl flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
               </div>
               <div className="flex-1">
-                <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Schedule Live</p>
-                <p className="text-[11px] text-emerald-700 dark:text-emerald-500 font-medium">
+                <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Schedule Live</p>
+                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 font-medium">
                   This roster was published by {publishStatus.publishedBy} on {format(parseISO(publishStatus.timestamp!), "dd MMM yyyy, hh:mm a")}.
                 </p>
               </div>
-              <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/10" onClick={() => setPublishStatus({isPublished: false})}>UNPUBLISH TO EDIT</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/10"
+                onClick={async () => {
+                  try {
+                    await unpublishRosterMutation.mutateAsync({
+                      start_date: format(monthStart, 'yyyy-MM-dd'),
+                      end_date: format(monthEnd, 'yyyy-MM-dd'),
+                    });
+                    setPublishStatus({ isPublished: false });
+                    refetchRoster();
+                    toast.success('Roster unpublished');
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : 'Unpublish failed');
+                  }
+                }}
+              >
+                UNPUBLISH TO EDIT
+              </Button>
             </div>
           ) : (
-            <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200/50 dark:border-amber-500/20 p-3 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Info className="w-4 h-4 text-amber-600" />
+            <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200/50 dark:border-amber-500/20 p-2.5 rounded-xl flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Info className="w-3.5 h-3.5 text-amber-600" />
               </div>
               <div className="flex-1">
-                <p className="text-[11px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Draft Mode</p>
-                <p className="text-[11px] text-amber-700 dark:text-amber-500 font-medium">Changes are saved as draft. Click Publish to make them visible to employees.</p>
+                <p className="text-[10px] font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">Draft Mode</p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-500 font-medium">Changes are saved as draft. Click Publish to make them visible to employees.</p>
               </div>
             </div>
           )}
 
           {/* Main Roster Grid */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col">
             <RosterGrid 
               roster={filteredRoster} 
               days={days} 
-              shiftDefinitions={SHIFT_DEFINITIONS} 
+              shiftDefinitions={shiftDefinitions} 
               isPublished={publishStatus.isPublished}
               onUpdateShift={handleUpdateShift}
             />
           </div>
 
           {/* Legend Section */}
-          <RosterLegend shiftDefinitions={SHIFT_DEFINITIONS} />
+          <RosterLegend shiftDefinitions={shiftDefinitions} />
         </div>
       </div>
 
@@ -427,69 +504,69 @@ export function ShiftRosterPage() {
       <Dialog open={showGenerateModal} onOpenChange={setShowGenerateModal}>
         <DialogContent className="sm:max-w-[450px] rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <RotateCw className="w-5 h-5 text-indigo-500" /> Generate Shift Roster
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <RotateCw className="w-4 h-4 text-indigo-500" /> Generate Shift Roster
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Auto-generate shifts for the selected criteria using organizational rotation rules.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Month</Label>
+          <div className="grid gap-3 py-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Month</Label>
                 <Select defaultValue="5">
-                  <SelectTrigger className="h-10 rounded-xl">
+                  <SelectTrigger className="h-8 rounded-lg text-xs">
                     <SelectValue placeholder="Select Month" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="5">May</SelectItem>
-                    <SelectItem value="6">June</SelectItem>
+                    <SelectItem value="5" className="text-xs">May</SelectItem>
+                    <SelectItem value="6" className="text-xs">June</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Year</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Year</Label>
                 <Select defaultValue="2026">
-                  <SelectTrigger className="h-10 rounded-xl">
+                  <SelectTrigger className="h-8 rounded-lg text-xs">
                     <SelectValue placeholder="Select Year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2026">2026</SelectItem>
+                    <SelectItem value="2026" className="text-xs">2026</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rotation Type</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Rotation Type</Label>
               <Select defaultValue="weekly">
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="h-8 rounded-lg text-xs">
                   <SelectValue placeholder="Select Rotation" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="weekly">Weekly Rotation</SelectItem>
-                  <SelectItem value="monthly">Monthly Rotation</SelectItem>
-                  <SelectItem value="cyclic">Cyclic (Custom)</SelectItem>
+                  <SelectItem value="weekly" className="text-xs">Weekly Rotation</SelectItem>
+                  <SelectItem value="monthly" className="text-xs">Monthly Rotation</SelectItem>
+                  <SelectItem value="cyclic" className="text-xs">Cyclic (Custom)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shift Pattern</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Shift Pattern</Label>
               <Select defaultValue="gen-off">
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="h-8 rounded-lg text-xs">
                   <SelectValue placeholder="Select Pattern" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gen-off">5 Days GEN + 2 OFF</SelectItem>
-                  <SelectItem value="rotational">FS → SS → NS Rotation</SelectItem>
+                  <SelectItem value="gen-off" className="text-xs">5 Days GEN + 2 OFF</SelectItem>
+                  <SelectItem value="rotational" className="text-xs">FS → SS → NS Rotation</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowGenerateModal(false)} className="rounded-xl font-bold text-xs">CANCEL</Button>
+            <Button variant="ghost" onClick={() => setShowGenerateModal(false)} className="rounded-lg h-8 font-bold text-xs">CANCEL</Button>
             <Button 
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-6 font-bold text-xs"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-8 px-6 font-bold text-xs"
               onClick={handleGenerateRoster}
               disabled={isGenerating}
             >
@@ -503,55 +580,55 @@ export function ShiftRosterPage() {
       <Dialog open={showBulkAssignModal} onOpenChange={setShowBulkAssignModal}>
         <DialogContent className="sm:max-w-[500px] rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Plus className="w-5 h-5 text-emerald-500" /> Bulk Assign Shifts
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Plus className="w-4 h-4 text-emerald-500" /> Bulk Assign Shifts
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-5 py-4">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Selected Employees</Label>
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
+          <div className="grid gap-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Selected Employees</Label>
+              <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400">
                 {bulkAssignForm.employeeIds.length === 0 ? "All Filtered Employees (10)" : `${bulkAssignForm.employeeIds.length} Employees Selected`}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Start Date</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Start Date</Label>
                 <Input 
                   type="date" 
-                  className="rounded-xl h-10" 
+                  className="rounded-lg h-8 text-xs" 
                   value={bulkAssignForm.startDate}
                   onChange={(e) => setBulkAssignForm({...bulkAssignForm, startDate: e.target.value})}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">End Date</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">End Date</Label>
                 <Input 
                   type="date" 
-                  className="rounded-xl h-10" 
+                  className="rounded-lg h-8 text-xs" 
                   value={bulkAssignForm.endDate}
                   onChange={(e) => setBulkAssignForm({...bulkAssignForm, endDate: e.target.value})}
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Shift to Assign</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Shift to Assign</Label>
               <Select value={bulkAssignForm.shiftCode} onValueChange={(v) => setBulkAssignForm({...bulkAssignForm, shiftCode: v})}>
-                <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <SelectTrigger className="h-8 rounded-lg text-xs bg-slate-50 dark:bg-slate-800/50">
                   <SelectValue placeholder="Select Shift" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SHIFT_DEFINITIONS.map(s => (
-                    <SelectItem key={s.code} value={s.code}>{s.name} ({s.code})</SelectItem>
+                  {shiftDefinitions.map(s => (
+                    <SelectItem key={s.code} value={s.code} className="text-xs">{s.name} ({s.code})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setShowBulkAssignModal(false)} className="rounded-xl font-bold text-xs">CANCEL</Button>
+            <Button variant="ghost" onClick={() => setShowBulkAssignModal(false)} className="rounded-lg h-8 font-bold text-xs">CANCEL</Button>
             <Button 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-8 font-bold text-xs"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 rounded-lg px-8 font-bold text-xs"
               onClick={handleBulkAssign}
               disabled={isBulkAssigning}
             >
@@ -564,19 +641,19 @@ export function ShiftRosterPage() {
       {/* PUBLISH CONFIRMATION MODAL */}
       <Dialog open={showPublishModal} onOpenChange={setShowPublishModal}>
         <DialogContent className="sm:max-w-[400px] rounded-2xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
-          <div className="flex flex-col items-center text-center p-4 space-y-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-emerald-600" />
+          <div className="flex flex-col items-center text-center p-3 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Publish Roster Schedule?</h3>
-              <p className="text-sm text-slate-500">
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Publish Roster Schedule?</h3>
+              <p className="text-xs text-slate-500">
                 Are you sure you want to publish this roster? Once published, employees can see their schedules and rows will be locked for editing.
               </p>
             </div>
-            <div className="w-full flex flex-col gap-2 pt-4">
+            <div className="w-full flex flex-col gap-2 pt-3">
               <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11 font-bold shadow-lg shadow-emerald-500/20"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg h-9 font-bold shadow-lg shadow-emerald-500/20 text-xs"
                 onClick={handlePublish}
                 disabled={isPublishing}
               >
@@ -584,7 +661,7 @@ export function ShiftRosterPage() {
               </Button>
               <Button 
                 variant="ghost" 
-                className="w-full h-11 rounded-xl text-slate-500 font-bold"
+                className="w-full h-9 rounded-lg text-slate-500 font-bold text-xs"
                 onClick={() => setShowPublishModal(false)}
               >
                 BACK TO DRAFT
