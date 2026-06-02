@@ -93,42 +93,21 @@ export function EditableSectionCard({
                   Cancel
                 </button>
               </>
-            ) : (
-              // If the profile is locked, hide the regular Edit button and show Request Change instead
-              (onEdit && !effectiveProfileLocked) ? (
-                // Default Edit flow when not locked
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-                >
-                  {editLabel === "Add" ? (
-                    <Plus className="w-3.5 h-3.5" />
-                  ) : (
-                    <Pencil className="w-3.5 h-3.5" />
-                  )}
-                  {editLabel || "Edit"}
-                </button>
-              ) : (
-                // Profile locked — show Request Change button that dispatches a global event
-                sectionId ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        window.dispatchEvent(new CustomEvent('ess:request_change', { detail: { sectionId } }));
-                      } catch (e) {
-                        // noop
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Request Change
-                  </button>
-                ) : null
-              )
-            )}
+            ) : onEdit ? (
+              // Always show Edit button when not editing (Request Change removed)
+              <button
+                type="button"
+                onClick={onEdit}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+              >
+                {editLabel === "Add" ? (
+                  <Plus className="w-3.5 h-3.5" />
+                ) : (
+                  <Pencil className="w-3.5 h-3.5" />
+                )}
+                {editLabel || "Edit"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

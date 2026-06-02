@@ -193,21 +193,21 @@ export function AdminLeaveAllocations({ onAddAllocation }: { onAddAllocation?: (
           <div className="flex items-center gap-2 flex-wrap">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground dark:text-muted-foreground" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search employee or leave type…"
-                className="pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring w-56"
+                className="pl-9 pr-3 py-1.5 rounded-lg border border-border dark:border-border dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-400 bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring dark:focus:ring-slate-500 w-56"
               />
             </div>
             {/* Status filter */}
             <div className="relative">
-              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground dark:text-muted-foreground pointer-events-none" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as AllocationStatus | "all")}
-                className="pl-8 pr-7 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring appearance-none cursor-pointer"
+                className="pl-9 pr-7 py-1.5 rounded-lg border border-border dark:border-border dark:bg-slate-900 dark:text-white bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring dark:focus:ring-slate-500 appearance-none cursor-pointer"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>

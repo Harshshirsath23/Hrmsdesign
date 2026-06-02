@@ -158,15 +158,20 @@ const ACTION_TO_STATUS: Record<RequestAction, LeaveRequestStatus | null> = {
 export function useAdminLeaveRequestsStore() {
   const [rows, setRows] = useState<AdminLeaveRequestRow[]>(() => readRequests());
   const adminLeaveApplicationsQuery = useAdminLeaveApplications();
+  const [initialized, setInitialized] = useState(false);
 
   const refresh = useCallback(() => {
     setRows(readRequests());
     adminLeaveApplicationsQuery.refetch();
   }, [adminLeaveApplicationsQuery]);
 
+  // Initial fetch only
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!initialized) {
+      setInitialized(true);
+      adminLeaveApplicationsQuery.refetch();
+    }
+  }, []); // Empty dependency array - runs only once
 
   useEffect(() => {
     const onFocus = () => refresh();

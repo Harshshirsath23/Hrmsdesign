@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
   MapPin,
   Mail,
@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   Edit2,
   Plus,
+  Trash2,
 } from "lucide-react";
+import { useDispatch } from "react-redux";
 import {
   Employee,
 } from "../mockData";
@@ -25,12 +27,34 @@ import {
   ConfirmationDialog,
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
+import {
+  EmployeeLanguageRow,
+  LanguageMasterOption,
+  LanguageProficiencyMasterOption,
+  employeeLanguageRowsToPayload,
+  getEmployeeLanguageDetails,
+  getLanguageChoices,
+  getLanguageProficiencyChoices,
+  languageDetailsToEmployeeRows,
+  patchEmployeeLanguageDetails,
+} from "../../../api/employeeLanguageDetails";
+import {
+  employeeMedicalDetailsToPayload,
+  getEmployeeMedicalDetails,
+  medicalDetailsToEmployeePatch,
+  patchEmployeeMedicalDetails,
+} from "../../../api/employeeMedicalDetails";
+import { addNotification } from "../../../../store/slices/notificationSlice";
+import { updateAdminEmployee } from "../../../../store/slices/adminSlice";
+import type { AppDispatch } from "../../../../store";
 
 interface Props {
   employee: Employee;
+  isFinalSubmitted?: boolean;
+  showAddButtons?: boolean;
 }
 
-type LangRow = NonNullable<Employee["languages"]>[number];
+type LangRow = EmployeeLanguageRow;
 
 const YES_NO_OPTIONS = [
   { value: "Yes", label: "Yes" },
@@ -50,8 +74,9 @@ function formatDate(dateStr?: string) {
   }
 }
 
-export function EmployeeProfile({ employee }: Props) {
+export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddButtons = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const dispatch = useDispatch<AppDispatch>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditPhotoClick = () => {
@@ -114,12 +139,26 @@ export function EmployeeProfile({ employee }: Props) {
 
   const [langEdit, setLangEdit] = useState(false);
   const [languages, setLanguages] = useState<LangRow[]>(employee.languages || []);
+  const [savedLanguages, setSavedLanguages] = useState<LangRow[]>(employee.languages || []);
+  const [languageChoices, setLanguageChoices] = useState<LanguageMasterOption[]>([]);
+  const [languageProficiencyChoices, setLanguageProficiencyChoices] = useState<LanguageProficiencyMasterOption[]>([]);
+  const [languageLoading, setLanguageLoading] = useState(false);
+  const [languageSaving, setLanguageSaving] = useState(false);
+  const [languageError, setLanguageError] = useState<string | null>(null);
 
   const [emEdit, setEmEdit] = useState(false);
   const [emergency, setEmergency] = useState({
     ec: employee.emergencyContact,
     med: employee.medicalInfo,
   });
+  const [savedEmergency, setSavedEmergency] = useState({
+    ec: employee.emergencyContact,
+    med: employee.medicalInfo,
+  });
+  const [medicalDetailsLoaded, setMedicalDetailsLoaded] = useState(false);
+  const [medicalLoading, setMedicalLoading] = useState(false);
+  const [medicalSaving, setMedicalSaving] = useState(false);
+  const [medicalError, setMedicalError] = useState<string | null>(null);
 
   useEffect(() => {
     setPersonal(employee);
@@ -130,8 +169,88 @@ export function EmployeeProfile({ employee }: Props) {
     });
     setWork(employee);
     setLanguages(employee.languages || []);
-    setEmergency({ ec: employee.emergencyContact, med: employee.medicalInfo });
-  }, [employee]);
+    setSavedLanguages(employee.languages || []);
+    if (!medicalDetailsLoaded) {
+      const nextEmergency = { ec: employee.emergencyContact, med: employee.medicalInfo };
+      setEmergency(nextEmergency);
+      setSavedEmergency(nextEmergency);
+    }
+  }, [employee, medicalDetailsLoaded]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLanguageDetails() {
+      if (!employee.id) return;
+      setLanguageLoading(true);
+      setLanguageError(null);
+      try {
+        const [details, languageMaster, proficiencyMaster] = await Promise.all([
+          getEmployeeLanguageDetails(employee.id),
+          getLanguageChoices(),
+          getLanguageProficiencyChoices(),
+        ]);
+        if (cancelled) return;
+
+        const nextLanguages = languageDetailsToEmployeeRows(details);
+        setLanguageChoices(languageMaster);
+        setLanguageProficiencyChoices(proficiencyMaster);
+        setLanguages(nextLanguages);
+        setSavedLanguages(nextLanguages);
+        dispatch(updateAdminEmployee({ ...employee, languages: nextLanguages }));
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Could not load language details.";
+        setLanguageError(message);
+        dispatch(addNotification({ type: "error", message }));
+      } finally {
+        if (!cancelled) setLanguageLoading(false);
+      }
+    }
+
+    loadLanguageDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, employee.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMedicalDetails() {
+      if (!employee.id) return;
+      setMedicalLoading(true);
+      setMedicalError(null);
+      try {
+        const details = await getEmployeeMedicalDetails(employee.id);
+        if (cancelled) return;
+
+        const medicalPatch = medicalDetailsToEmployeePatch(details);
+        const nextEmergency = {
+          ec: medicalPatch.emergencyContact,
+          med: medicalPatch.medicalInfo,
+        };
+        setMedicalDetailsLoaded(true);
+        setEmergency(nextEmergency);
+        setSavedEmergency(nextEmergency);
+        dispatch(updateAdminEmployee({ ...employee, ...medicalPatch }));
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Could not load emergency and medical information.";
+        setMedicalError(message);
+        dispatch(addNotification({ type: "error", message }));
+      } finally {
+        if (!cancelled) setMedicalLoading(false);
+      }
+    }
+
+    loadMedicalDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, employee.id]);
 
   const mergeEmployee = useCallback(
     (patch: Partial<Employee>) => ({ ...employee, ...patch }),
@@ -145,6 +264,107 @@ export function EmployeeProfile({ employee }: Props) {
   };
 
   const isEditable = (id: string) => employee.editableSections?.includes(id);
+
+  const languageSelectOptions = useMemo(
+    () =>
+      languageChoices.length
+        ? languageChoices.map((choice) => ({ value: choice.label, label: choice.label }))
+        : languageOptions,
+    [languageChoices, languageOptions]
+  );
+
+  const proficiencySelectOptions = useMemo(
+    () =>
+      languageProficiencyChoices.length
+        ? languageProficiencyChoices.map((choice) => ({ value: choice.label, label: choice.label }))
+        : [],
+    [languageProficiencyChoices]
+  );
+
+  const addLanguageRow = () => {
+    const defaultProficiency = languageProficiencyChoices[0];
+    setLanguages((rows) => [
+      ...rows,
+      {
+        language: "",
+        proficiency: defaultProficiency?.label || "",
+        canRead: true,
+        canWrite: true,
+        canSpeak: true,
+        languageId: null,
+        proficiencyLevelId: defaultProficiency?.id ?? null,
+        readProficiencyId: defaultProficiency?.id ?? null,
+        writeProficiencyId: defaultProficiency?.id ?? null,
+        speakProficiencyId: defaultProficiency?.id ?? null,
+        isMotherTongue: false,
+      },
+    ]);
+    setLangEdit(true);
+  };
+
+  const saveLanguageDetails = async () => {
+    if (!languageProficiencyChoices.length) {
+      const message = "No active language proficiency masters found. Add active records in Language Proficiency master first.";
+      setLanguageError(message);
+      dispatch(addNotification({ type: "error", message }));
+      return;
+    }
+    if (languages.some((row) => !row.proficiency)) {
+      const message = "Select a proficiency level for each language row.";
+      setLanguageError(message);
+      dispatch(addNotification({ type: "warning", message }));
+      return;
+    }
+
+    setLanguageSaving(true);
+    setLanguageError(null);
+    try {
+      const payload = employeeLanguageRowsToPayload(languages, {
+        languages: languageChoices,
+        proficiencies: languageProficiencyChoices,
+      });
+      const saved = await patchEmployeeLanguageDetails(employee.id, payload);
+      const nextLanguages = languageDetailsToEmployeeRows(saved);
+      setLanguages(nextLanguages);
+      setSavedLanguages(nextLanguages);
+      setLangEdit(false);
+      dispatch(updateAdminEmployee({ ...employee, languages: nextLanguages }));
+      dispatch(addNotification({ type: "success", message: "Language details updated." }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not save language details.";
+      setLanguageError(message);
+      dispatch(addNotification({ type: "error", message }));
+    } finally {
+      setLanguageSaving(false);
+    }
+  };
+
+  const saveMedicalDetails = async () => {
+    setMedicalSaving(true);
+    setMedicalError(null);
+    try {
+      const saved = await patchEmployeeMedicalDetails(
+        employee.id,
+        employeeMedicalDetailsToPayload(emergency)
+      );
+      const medicalPatch = medicalDetailsToEmployeePatch(saved);
+      const nextEmergency = {
+        ec: medicalPatch.emergencyContact,
+        med: medicalPatch.medicalInfo,
+      };
+      setEmergency(nextEmergency);
+      setSavedEmergency(nextEmergency);
+      setEmEdit(false);
+      dispatch(updateAdminEmployee({ ...employee, ...medicalPatch }));
+      dispatch(addNotification({ type: "success", message: "Emergency and medical information updated." }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not save emergency and medical information.";
+      setMedicalError(message);
+      dispatch(addNotification({ type: "error", message }));
+    } finally {
+      setMedicalSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -169,7 +389,8 @@ export function EmployeeProfile({ employee }: Props) {
             <button
               type="button"
               onClick={handleEditPhotoClick}
-              className="absolute -bottom-2 -right-2 p-2 bg-primary text-white rounded-lg shadow-lg hover:bg-primary/95 transition-colors cursor-pointer"
+              disabled={isFinalSubmitted}
+              className={`absolute -bottom-2 -right-2 p-2 rounded-lg shadow-lg transition-colors ${isFinalSubmitted ? 'bg-surface-100 text-muted-foreground cursor-not-allowed' : 'bg-primary text-white hover:bg-primary/95'}`}
               title="Upload or change photo"
             >
               <Edit2 size={14} />
@@ -226,7 +447,7 @@ export function EmployeeProfile({ employee }: Props) {
         icon={User}
         sectionId="profile-personal"
         canEmployeeEdit={isEditable("profile-personal")}
-        profileLocked={employee.profileLocked}
+        profileLocked={employee.profileLocked || isFinalSubmitted}
         onToggleEmployeeEdit={(v) => handleToggleEditAccess(employee, "profile-personal", v)}
         requestStatus={employee.editRequestStatus}
         isEditing={personalEdit}
@@ -245,36 +466,42 @@ export function EmployeeProfile({ employee }: Props) {
             label="First Name"
             value={personal.firstName || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, firstName: v }))}
           />
           <ProfileInfoField
             label="Middle Name"
             value={personal.middleName || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, middleName: v }))}
           />
           <ProfileInfoField
             label="Last Name"
             value={personal.lastName || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, lastName: v }))}
           />
           <ProfileInfoField
             label="Father's Name"
             value={personal.fathersName || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, fathersName: v }))}
           />
           <ProfileInfoField
             label="Spouse's Name"
             value={personal.spouseName || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, spouseName: v }))}
           />
           <ProfileInfoField
             label="Date of Birth"
             value={personal.dateOfBirth}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, dateOfBirth: v }))}
             type="date"
           />
@@ -282,6 +509,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Actual DOB"
             value={personal.actualDob || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, actualDob: v }))}
             type="date"
           />
@@ -289,12 +517,14 @@ export function EmployeeProfile({ employee }: Props) {
             label="Place of Birth"
             value={personal.placeOfBirth || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, placeOfBirth: v }))}
           />
           <ProfileInfoField
             label="Gender"
             value={personal.gender}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             placeholder="Select Gender"
             onChange={(v) => setPersonal((p) => ({ ...p, gender: v }))}
             options={genderOptions}
@@ -303,6 +533,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Marital Status"
             value={personal.maritalStatus}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             placeholder="Select Marital Status"
             onChange={(v) => setPersonal((p) => ({ ...p, maritalStatus: v }))}
             options={maritalStatusOptions}
@@ -311,6 +542,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Blood Group"
             value={personal.bloodGroup}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             placeholder="Select Blood Group"
             onChange={(v) => setPersonal((p) => ({ ...p, bloodGroup: v }))}
             options={bloodGroupOptions}
@@ -319,6 +551,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Nationality"
             value={personal.nationality}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             placeholder="Select Nationality"
             onChange={(v) => setPersonal((p) => ({ ...p, nationality: v }))}
             options={nationalityOptions}
@@ -327,6 +560,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Religion"
             value={personal.religion || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             placeholder="Select Religion"
             onChange={(v) => setPersonal((p) => ({ ...p, religion: v }))}
             options={religionOptions}
@@ -335,6 +569,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Caste"
             value={personal.caste || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             placeholder="Select Caste"
             onChange={(v) => setPersonal((p) => ({ ...p, caste: v }))}
             options={casteOptions}
@@ -343,6 +578,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Caste Category"
             value={personal.casteCategory || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             placeholder="Select Caste Category"
             onChange={(v) => setPersonal((p) => ({ ...p, casteCategory: v }))}
             options={casteCategoryOptions}
@@ -351,12 +587,14 @@ export function EmployeeProfile({ employee }: Props) {
             label="Identification Mark"
             value={personal.identificationMark || ""}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, identificationMark: v }))}
           />
           <ProfileInfoField
             label="Physically Challenged"
             value={personal.isPhysicallyChallenged ? "Yes" : "No"}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             type="select"
             options={YES_NO_OPTIONS}
             placeholder="Select Physically Challenged"
@@ -368,6 +606,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="International Employee"
             value={personal.isInternationalEmployee ? "Yes" : "No"}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             type="select"
             options={YES_NO_OPTIONS}
             placeholder="Select International Employee"
@@ -379,6 +618,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Joining Date"
             value={personal.joiningDate}
             editing={personalEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setPersonal((p) => ({ ...p, joiningDate: v }))}
             type="date"
           />
@@ -450,6 +690,7 @@ export function EmployeeProfile({ employee }: Props) {
                     label={label}
                     value={(addr.current?.[key] as string) || ""}
                     editing={addressEdit}
+                    readOnly={isFinalSubmitted}
                     type={key.includes("Date") ? "date" : "text"}
                     options={options}
                     onChange={(v) =>
@@ -514,6 +755,7 @@ export function EmployeeProfile({ employee }: Props) {
                     label={label}
                     value={(addr.permanent?.[key] as string) || ""}
                     editing={addressEdit && !addr.same}
+                    readOnly={isFinalSubmitted}
                     type={key.includes("Date") ? "date" : "text"}
                     options={options}
                     onChange={(v) =>
@@ -547,13 +789,15 @@ export function EmployeeProfile({ employee }: Props) {
           const ok = await handleAdminSave("Work Details", employee, work);
           if (ok) setWorkEdit(false);
         }}
-      >
+        headerExtra={null}
+        >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <ProfileInfoField label="Employee ID" value={employee.employeeId} editing={false} />
           <ProfileInfoField
             label="Employee Category"
             value={work.employeeCategory || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, employeeCategory: v }))}
             options={employeeCategoryOptions}
           />
@@ -561,6 +805,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Department"
             value={work.department}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, department: v }))}
             options={departmentOptions}
           />
@@ -568,12 +813,14 @@ export function EmployeeProfile({ employee }: Props) {
             label="Team"
             value={work.team}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, team: v }))}
           />
           <ProfileInfoField
             label="Designation"
             value={work.designation}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, designation: v }))}
             options={designationOptions}
           />
@@ -581,6 +828,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Shift"
             value={work.shift || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, shift: v }))}
             options={shiftOptions}
           />
@@ -588,6 +836,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Work Location"
             value={work.location}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, location: v }))}
             options={workLocationOptions}
           />
@@ -595,6 +844,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Employee Type"
             value={work.employeeType || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, employeeType: v }))}
             options={employeeTypeOptions}
           />
@@ -602,6 +852,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Confirmation Date"
             value={work.confirmationDate || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, confirmationDate: v }))}
             type="date"
           />
@@ -609,6 +860,7 @@ export function EmployeeProfile({ employee }: Props) {
             label="Employment Status"
             value={work.employmentStatus || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, employmentStatus: v }))}
             options={employeeStatusOptions}
           />
@@ -616,42 +868,49 @@ export function EmployeeProfile({ employee }: Props) {
             label="Probation Period"
             value={work.probationPeriod || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, probationPeriod: v }))}
           />
           <ProfileInfoField
             label="Notice Period"
             value={work.noticePeriod || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, noticePeriod: v }))}
           />
           <ProfileInfoField
             label="Notice Period (Days)"
             value={work.noticePeriodDays || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, noticePeriodDays: v }))}
           />
           <ProfileInfoField
             label="Referred By"
             value={work.referredBy || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, referredBy: v }))}
           />
           <ProfileInfoField
             label="Reporting To"
             value={work.reportingTo || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, reportingTo: v }))}
           />
           <ProfileInfoField
             label="Functional Manager"
             value={work.functionalManager || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, functionalManager: v }))}
           />
           <ProfileInfoField
             label="HR Partner"
             value={work.hrPartner || ""}
             editing={workEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setWork((w) => ({ ...w, hrPartner: v }))}
           />
         </div>
@@ -667,16 +926,36 @@ export function EmployeeProfile({ employee }: Props) {
         isEditing={langEdit}
         onEdit={() => setLangEdit(true)}
         onCancel={() => {
-          setLanguages(employee.languages || []);
+          setLanguages(savedLanguages);
           setLangEdit(false);
         }}
-        onSave={async () => {
-          const next = mergeEmployee({ languages });
-          const ok = await handleAdminSave("Language Details", employee, next);
-          if (ok) setLangEdit(false);
-        }}
-        headerExtra={null}
+        onSave={saveLanguageDetails}
+        headerExtra={showAddButtons && langEdit ? (
+          <button
+            type="button"
+            onClick={addLanguageRow}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Language
+          </button>
+        ) : null}
       >
+        {languageLoading ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Loading saved language details...
+          </div>
+        ) : null}
+        {languageError ? (
+          <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {languageError}
+          </div>
+        ) : null}
+        {languageSaving ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Saving language details...
+          </div>
+        ) : null}
         {!languages.length ? (
           <EmptyStateCard
             icon={Languages}
@@ -692,10 +971,11 @@ export function EmployeeProfile({ employee }: Props) {
                     label="Language Name"
                     value={row.language}
                     editing={langEdit}
+                    readOnly={isFinalSubmitted}
                     onChange={(v) =>
                       setLanguages((rows) => rows.map((r, i) => (i === idx ? { ...r, language: v } : r)))
                     }
-                    options={languageOptions}
+                    options={languageSelectOptions}
                   />
                   <div className="space-y-1.5">
                     <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">
@@ -704,6 +984,7 @@ export function EmployeeProfile({ employee }: Props) {
                     {langEdit ? (
                       <select
                         value={row.proficiency}
+                        disabled={isFinalSubmitted || !langEdit}
                         onChange={(e) =>
                           setLanguages((rows) =>
                             rows.map((r, i) => (i === idx ? { ...r, proficiency: e.target.value } : r))
@@ -712,7 +993,7 @@ export function EmployeeProfile({ employee }: Props) {
                         className="w-full rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm font-medium"
                       >
                         <option value="">Select Proficiency</option>
-                        {(proficiencyOptions.length ? proficiencyOptions : ["Beginner", "Intermediate", "Advanced", "Native"].map((p) => ({ value: p, label: p }))).map((p) => (
+                        {proficiencySelectOptions.map((p) => (
                           <option key={p.value} value={p.value}>
                             {p.label}
                           </option>
@@ -737,7 +1018,7 @@ export function EmployeeProfile({ employee }: Props) {
                       <input
                         type="checkbox"
                         checked={row[key]}
-                        disabled={!langEdit}
+                        disabled={isFinalSubmitted || !langEdit}
                         onChange={() =>
                           setLanguages((rows) =>
                             rows.map((r, i) => (i === idx ? { ...r, [key]: !r[key] } : r))
@@ -747,6 +1028,16 @@ export function EmployeeProfile({ employee }: Props) {
                       {label}
                     </label>
                   ))}
+                  {langEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => setLanguages((rows) => rows.filter((_, i) => i !== idx))}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </button>
+                  ) : null}
 
                 </div>
               </div>
@@ -765,29 +1056,40 @@ export function EmployeeProfile({ employee }: Props) {
         isEditing={emEdit}
         onEdit={() => setEmEdit(true)}
         onCancel={() => {
-          setEmergency({ ec: employee.emergencyContact, med: employee.medicalInfo });
+          setEmergency(savedEmergency);
           setEmEdit(false);
         }}
-        onSave={async () => {
-          const next = mergeEmployee({
-            emergencyContact: emergency.ec,
-            medicalInfo: emergency.med,
-          });
-          const ok = await handleAdminSave("Emergency & Medical Information", employee, next);
-          if (ok) setEmEdit(false);
-        }}
+        headerExtra={null}
+        onSave={saveMedicalDetails}
       >
+        {medicalLoading ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Loading saved emergency and medical information...
+          </div>
+        ) : null}
+        {medicalError ? (
+          <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {medicalError}
+          </div>
+        ) : null}
+        {medicalSaving ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Saving emergency and medical information...
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <ProfileInfoField
             label="Emergency Contact Name"
             value={emergency.ec?.name || ""}
             editing={emEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) => setEmergency((e) => ({ ...e, ec: { ...e.ec, name: v, relationship: e.ec?.relationship || "", phone: e.ec?.phone || "" } }))}
           />
           <ProfileInfoField
             label="Emergency Contact #"
             value={emergency.ec?.phone || ""}
             editing={emEdit}
+            readOnly={isFinalSubmitted}
             onChange={(v) =>
               setEmergency((e) => ({
                 ...e,
@@ -802,8 +1104,9 @@ export function EmployeeProfile({ employee }: Props) {
           />
           <ProfileInfoField
             label="Relationship"
-            value={emergency.ec?.relationship || emergency.med?.relationship || ""}
+            value={emergency.ec?.relationship || ""}
             editing={emEdit}
+            readOnly={isFinalSubmitted}
             options={relationOptions}
             onChange={(v) =>
               setEmergency((e) => ({
@@ -812,25 +1115,108 @@ export function EmployeeProfile({ employee }: Props) {
               }))
             }
           />
-          <ProfileInfoField
-            label="Medical Conditions"
-            value={emergency.med?.conditions || ""}
-            editing={emEdit}
-            onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, conditions: v } }))}
-            type="textarea"
-          />
-          <ProfileInfoField
-            label="Allergies"
-            value={emergency.med?.allergies || ""}
-            editing={emEdit}
-            onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, allergies: v } }))}
-          />
-          <ProfileInfoField
-            label="Doctor Name"
-            value={emergency.med?.doctorName || ""}
-            editing={emEdit}
-            onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, doctorName: v } }))}
-          />
+
+          {/* Disease Details Checkbox & Textarea */}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="flex items-center gap-3 mb-3">
+              <input
+                type="checkbox"
+                checked={!!emergency.med?.hasDisease}
+                disabled={!emEdit}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEmergency((prev) => ({
+                    ...prev,
+                    med: {
+                      ...prev.med,
+                      hasDisease: checked,
+                      ...(checked ? {} : { diseaseDetails: "" }),
+                    },
+                  }));
+                }}
+              />
+              <span className="text-sm font-semibold text-foreground">Has Any Disease?</span>
+            </label>
+            {emergency.med?.hasDisease ? (
+              <ProfileInfoField
+                label="Disease Details"
+                value={emergency.med?.diseaseDetails || ""}
+                editing={emEdit && !!emergency.med?.hasDisease}
+                readOnly={isFinalSubmitted}
+                type="textarea"
+                placeholder="Enter disease name, description, medication, since when, etc."
+                onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, diseaseDetails: v } }))}
+              />
+            ) : null}
+          </div>
+
+          {/* Surgery Details Checkbox & Textarea */}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="flex items-center gap-3 mb-3">
+              <input
+                type="checkbox"
+                checked={!!emergency.med?.hasSurgery}
+                disabled={!emEdit}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEmergency((prev) => ({
+                    ...prev,
+                    med: {
+                      ...prev.med,
+                      hasSurgery: checked,
+                      ...(checked ? {} : { surgeryDetails: "" }),
+                    },
+                  }));
+                }}
+              />
+              <span className="text-sm font-semibold text-foreground">Any Surgery or Operation Done?</span>
+            </label>
+            {emergency.med?.hasSurgery ? (
+              <ProfileInfoField
+                label="Surgery / Operation Details"
+                value={emergency.med?.surgeryDetails || ""}
+                editing={emEdit && !!emergency.med?.hasSurgery}
+                readOnly={isFinalSubmitted}
+                type="textarea"
+                placeholder="Enter surgery name, hospital, date, recovery status, etc."
+                onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, surgeryDetails: v } }))}
+              />
+            ) : null}
+          </div>
+
+          {/* Allergy Details Checkbox & Textarea */}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <label className="flex items-center gap-3 mb-3">
+              <input
+                type="checkbox"
+                checked={!!emergency.med?.hasAllergies}
+                disabled={!emEdit}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEmergency((prev) => ({
+                    ...prev,
+                    med: {
+                      ...prev.med,
+                      hasAllergies: checked,
+                      ...(checked ? {} : { allergyDetails: "" }),
+                    },
+                  }));
+                }}
+              />
+              <span className="text-sm font-semibold text-foreground">Any Allergies?</span>
+            </label>
+            {emergency.med?.hasAllergies ? (
+              <ProfileInfoField
+                label="Allergy Details"
+                value={emergency.med?.allergyDetails || ""}
+                editing={emEdit && !!emergency.med?.hasAllergies}
+                readOnly={isFinalSubmitted}
+                type="textarea"
+                placeholder="Enter allergy type and description."
+                onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, allergyDetails: v } }))}
+              />
+            ) : null}
+          </div>
         </div>
       </EditableSectionCard>
 

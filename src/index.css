@@ -206,8 +206,66 @@
   }
 
   .input-base {
-    @apply w-full rounded-xl border border-surface-200 bg-surface-0 px-3 py-2.5 text-base text-surface-900 placeholder:text-surface-400 transition-all duration-150 hover:border-surface-300 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/15 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply w-full rounded-xl border border-surface-200 bg-surface-0 px-3 h-11 text-base text-surface-900 placeholder:text-surface-400 transition-all duration-150 hover:border-surface-300 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/15 disabled:cursor-not-allowed disabled:opacity-50;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     UNIFIED FORM CONTROL SYSTEM - Enterprise Grade
+  ═══════════════════════════════════════════════════════════ */
+
+  /* Base form control: 40px height, consistent padding, pixel-perfect alignment */
+  .form-control {
+    @apply w-full h-10 px-3 rounded-lg border border-border bg-card text-foreground text-sm font-medium placeholder:text-muted-foreground transition-all duration-150;
+    @apply hover:border-border/80 hover:bg-card/80 focus:outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+
+  /* Form control with left icon: add left padding for icon space */
+  .form-control--icon-left {
+    @apply pl-10;
+  }
+
+  /* Form control with right icon: add right padding for icon space */
+  .form-control--icon-right {
+    @apply pr-10;
+  }
+
+  /* Form control with both icons */
+  .form-control--icon-both {
+    @apply pl-10 pr-10;
+  }
+
+  /* Icon container wrapper - left position */
+  .form-control-icon-left {
+    @apply absolute left-0 inset-y-0 w-10 flex items-center justify-center text-muted-foreground pointer-events-none;
+  }
+
+  /* Icon container wrapper - right position */
+  .form-control-icon-right {
+    @apply absolute right-0 inset-y-0 w-10 flex items-center justify-center text-muted-foreground pointer-events-none;
+  }
+
+  /* Error state for form control */
+  .form-control--error {
+    @apply border-destructive focus:border-destructive focus:ring-destructive/20;
+  }
+
+  /* Success state for form control */
+  .form-control--success {
+    @apply border-success focus:border-success focus:ring-success/20;
+  }
+
+  /* Select-specific: hide native appearance, add chevron space */
+  .form-control--select {
+    @apply appearance-none cursor-pointer pr-10 bg-[url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e")] bg-no-repeat bg-right bg-[length:1.5em_1.5em];
+    background-position: right 0.5rem center;
+  }
+
+  /* Badge for success/error indicators - fixed 16px icon */
+  .form-control-badge {
+    @apply w-4 h-4 flex items-center justify-center;
   }
 
   .badge {

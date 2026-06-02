@@ -227,7 +227,7 @@ export function AttendanceRequestsPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-40">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-muted-foreground" />
               <Input 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 

@@ -1,22 +1,28 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import {
   Search,
   LayoutGrid,
   List,
-  Filter,
   ChevronDown,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Info,
   Users,
   X,
 } from "lucide-react";
-import { departments, teams, designations, Employee } from "./mockData";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { Employee, normalizeLegacyEmployee } from "./mockData";
+import { useDispatch } from "react-redux";
+import { setAdminEmployees } from "@/store/slices/adminSlice";
+import {
+  useEmployeeDirectoryList,
+  useOrganizationDepartments,
+  useOrganizationDesignations,
+  useOrganizationTeams,
+  type MasterOption,
+  type EmployeeDirectoryItem,
+} from "@hooks/useEmployees";
 
 type ViewMode = "card" | "list";
 
@@ -72,7 +78,7 @@ function SelectFilter({
 }: {
   value: string;
   onChange: (v: string) => void;
-  options: string[];
+  options: { value: string; label: string }[];
   placeholder: string;
 }) {
   const isActive = value !== "";
@@ -94,8 +100,8 @@ function SelectFilter({
           {placeholder.startsWith("All") ? placeholder : `All ${placeholder.split(" ").slice(1).join(" ") || "Options"}`}
         </option>
         {options.map((opt) => (
-          <option key={opt} value={opt === placeholder || opt.startsWith("All") ? "" : opt}>
-            {opt}
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
           </option>
         ))}
       </select>
@@ -110,11 +116,119 @@ function SelectFilter({
 
 import { useEmployee } from "../../context/EmployeeContext";
 
+function optionLabel(item: MasterOption) {
+  return item.name ?? item.title ?? item.label ?? item.code ?? String(item.id);
+}
+
+function masterOptions(items: MasterOption[]) {
+  return items.map((item) => ({ value: String(item.id), label: optionLabel(item) }));
+}
+
+function teamOptions(items: MasterOption[]) {
+  return items.map((item) => ({ value: String(item.id), label: optionLabel(item) }));
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts[0]?.[0] ?? "E") + (parts[1]?.[0] ?? "");
+}
+
+function employeeStatus(status: string): Employee["status"] {
+  const normalized = status.toUpperCase();
+  if (normalized === "ACTIVE") return "Active";
+  if (normalized === "ON_NOTICE") return "On Leave";
+  return "Inactive";
+}
+
+function normalizeText(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeDateValue(value: string | null | undefined) {
+  const raw = value?.trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const match = raw.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (!match) return "";
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+}
+
+function isWithinDateRange(value: string, from: string, to: string) {
+  const date = normalizeDateValue(value);
+  const normalizedFrom = normalizeDateValue(from);
+  const normalizedTo = normalizeDateValue(to);
+  const start = normalizedFrom || normalizedTo;
+  const end = normalizedTo || normalizedFrom;
+  if (!date) return false;
+  if (start && date < start) return false;
+  if (end && date > end) return false;
+  return true;
+}
+
+function toDirectoryEmployee(item: EmployeeDirectoryItem): Employee {
+  return normalizeLegacyEmployee({
+    id: String(item.id),
+    name: item.full_name || [item.first_name, item.middle_name, item.last_name].filter(Boolean).join(" "),
+    firstName: item.first_name,
+    middleName: item.middle_name,
+    lastName: item.last_name,
+    employeeId: item.employee_code,
+    designation: item.designation || "",
+    designationId: item.designation_id || "",
+    department: item.department || "",
+    departmentId: item.department_id || "",
+    team: item.team || "",
+    teamId: item.team_id || "",
+    email: item.work_email || "",
+    phone: item.phone || "",
+    joiningDate: item.date_of_joining || "",
+    location: item.location || "",
+    status: employeeStatus(item.status || item.status_display || ""),
+    avatar: item.profile_photo || undefined,
+    initials: initials(item.full_name || item.employee_code),
+    avatarColor: "#334155",
+    dateOfBirth: "",
+    gender: "",
+    maritalStatus: "",
+    bloodGroup: "",
+    nationality: "",
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    pfNumber: "",
+    esiNumber: "",
+    family: [],
+    passportNumber: "",
+    passportExpiry: "",
+    visaType: "",
+    visaExpiry: "",
+    visaCountry: "",
+    positionHistory: [],
+    basicSalary: 0,
+    hra: 0,
+    conveyance: 0,
+    medicalAllowance: 0,
+    specialAllowance: 0,
+    grossSalary: 0,
+    pf: 0,
+    tds: 0,
+    netSalary: 0,
+  });
+}
+
+function formatJoiningDate(value: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 export function EmployeeDirectory() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectEmployee } = useEmployee();
-  const employees = useSelector((state: RootState) => state.admin.employees);
+  const dispatch = useDispatch();
 
   const [filters, setFilters] = useState<DirectoryFilters>({
     search:      searchParams.get("search")      || "",
@@ -122,10 +236,30 @@ export function EmployeeDirectory() {
     team:        searchParams.get("team")        || "",
     designation: searchParams.get("designation") || "",
     statusFilter: searchParams.get("status") || "active",
-    joiningFrom: searchParams.get("joiningFrom") || "",
-    joiningTo: searchParams.get("joiningTo") || "",
+    joiningFrom: normalizeDateValue(searchParams.get("joiningFrom")) || "",
+    joiningTo: normalizeDateValue(searchParams.get("joiningTo")) || "",
   });
   const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "card");
+  const { data: apiEmployees = [], isLoading, isError } = useEmployeeDirectoryList({
+    search: filters.search,
+    departmentId: filters.department,
+    teamId: filters.team,
+    designationId: filters.designation,
+    status: filters.statusFilter,
+    joiningFrom: filters.joiningFrom,
+    joiningTo: filters.joiningTo,
+  });
+  const { data: departments = [] } = useOrganizationDepartments();
+  const { data: teams = [] } = useOrganizationTeams();
+  const { data: designations = [] } = useOrganizationDesignations();
+  const mappedEmployees = useMemo(() => apiEmployees.map(toDirectoryEmployee), [apiEmployees]);
+  const employees = mappedEmployees;
+
+  useEffect(() => {
+    if (mappedEmployees.length) {
+      dispatch(setAdminEmployees(mappedEmployees));
+    }
+  }, [dispatch, mappedEmployees]);
 
   useEffect(() => {
     const params: Record<string, string> = {};
@@ -141,10 +275,19 @@ export function EmployeeDirectory() {
   }, [filters, viewMode]);
 
   const updateFilter = (key: keyof DirectoryFilters, value: string) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => {
+      const next = { ...prev, [key]: normalizeDateValue(value) || value };
+      if (key === "joiningFrom" && next.joiningTo && next.joiningFrom > next.joiningTo) {
+        next.joiningTo = "";
+      }
+      if (key === "joiningTo" && next.joiningFrom && next.joiningTo < next.joiningFrom) {
+        next.joiningFrom = "";
+      }
+      return next;
+    });
 
   const filtered = employees.filter((emp) => {
-    const s = filters.search.toLowerCase();
+    const s = normalizeText(filters.search);
 
     // Status filtering: default show Active only
     if (filters.statusFilter === 'inactive_resigned') {
@@ -154,22 +297,23 @@ export function EmployeeDirectory() {
     }
 
     // Search and dropdown filters
-    if (filters.search && !(emp.name.toLowerCase().includes(s) || emp.employeeId.toLowerCase().includes(s) || emp.email.toLowerCase().includes(s) || emp.designation.toLowerCase().includes(s))) return false;
-    if (filters.department && emp.department !== filters.department) return false;
-    if (filters.team && emp.team !== filters.team) return false;
-    if (filters.designation && emp.designation !== filters.designation) return false;
+    if (s) {
+      const searchable = normalizeText([
+        emp.name,
+        emp.employeeId,
+        emp.email,
+        emp.designation,
+        emp.department,
+        emp.team,
+      ].join(" "));
+      if (!searchable.includes(s)) return false;
+    }
+    if (filters.department && (emp as any).departmentId !== filters.department) return false;
+    if (filters.team && (emp as any).teamId !== filters.team) return false;
+    if (filters.designation && (emp as any).designationId !== filters.designation) return false;
 
     // Joining date range filters
-    if (filters.joiningFrom) {
-      const from = new Date(filters.joiningFrom);
-      const jd = new Date(emp.joiningDate);
-      if (isNaN(from.getTime()) || jd < from) return false;
-    }
-    if (filters.joiningTo) {
-      const to = new Date(filters.joiningTo);
-      const jd = new Date(emp.joiningDate);
-      if (isNaN(to.getTime()) || jd > to) return false;
-    }
+    if ((filters.joiningFrom || filters.joiningTo) && !isWithinDateRange(emp.joiningDate, filters.joiningFrom, filters.joiningTo)) return false;
 
     return true;
   });
@@ -188,21 +332,21 @@ export function EmployeeDirectory() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background dark:bg-background">
 
       {/* ── Controls ────────────────────────────────────── */}
-      <div className="bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+      <div className="bg-card dark:bg-card border-b border-border dark:border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
         {/* Search + View Toggle + Filters (all in one row) */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
           {/* Search Box - Left side */}
           <div className="relative flex-1 max-w-lg lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search employees…"
+              placeholder="          Search employees…"
               value={filters.search}
               onChange={(e) => updateFilter("search", e.target.value)}
-              className="flat-input w-full pl-10 pr-4 py-2.5 text-sm font-medium transition-all focus:shadow-md"
+              className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 w-full pl-12 pr-4 py-2.5 text-sm font-medium transition-all focus:shadow-md dark:focus:shadow-md"
             />
           </div>
 
@@ -213,19 +357,19 @@ export function EmployeeDirectory() {
               <SelectFilter 
                 value={filters.department}  
                 onChange={(v) => updateFilter("department", v)}  
-                options={departments}  
+                options={masterOptions(departments)}
                 placeholder="All Departments" 
               />
               <SelectFilter 
                 value={filters.team}        
                 onChange={(v) => updateFilter("team", v)}        
-                options={teams}        
+                options={teamOptions(teams)}
                 placeholder="All Teams" 
               />
               <SelectFilter 
                 value={filters.designation} 
                 onChange={(v) => updateFilter("designation", v)} 
-                options={designations} 
+                options={masterOptions(designations)}
                 placeholder="All Designations" 
               />
               <div className="relative">
@@ -300,7 +444,7 @@ export function EmployeeDirectory() {
       <div className="px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between border-b border-border bg-background/50 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs sm:text-sm text-muted-foreground font-medium">
-            <span className="font-bold text-foreground">{filtered.length}</span>
+            <span className="font-bold text-foreground">{isLoading ? "..." : filtered.length}</span>
             <span className="hidden sm:inline">
               {" "}of <span className="font-bold text-foreground">{employees.length}</span> employees
             </span>
@@ -315,7 +459,21 @@ export function EmployeeDirectory() {
 
       {/* ── Employee grid / table ────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-6 pt-4 sm:pt-5">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="flex h-56 items-center justify-center rounded-xl border border-border bg-card text-sm font-semibold text-muted-foreground">
+            Loading employees...
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-56 bg-secondary/30 border border-dashed border-border rounded-xl">
+            <div className="w-14 h-14 rounded-full bg-secondary border border-border flex items-center justify-center mb-4">
+              <Users className="w-7 h-7 text-muted-foreground opacity-60" />
+            </div>
+            <p className="text-sm font-semibold text-muted-foreground">Employee API did not return data</p>
+            <p className="text-xs text-muted-foreground mt-1 text-center max-w-md">
+              Check that Django is running and the frontend /api proxy is reaching the tenant backend.
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-56 bg-secondary/30 border border-dashed border-border rounded-xl">
             <div className="w-14 h-14 rounded-full bg-secondary border border-border flex items-center justify-center mb-4">
               <Users className="w-7 h-7 text-muted-foreground opacity-60" />
@@ -360,7 +518,7 @@ export function EmployeeDirectory() {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                     <Calendar className="w-3 h-3 flex-shrink-0" />
-                    <span className="truncate">Joined {new Date(emp.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                    <span className="truncate">Joined {formatJoiningDate(emp.joiningDate)}</span>
                   </div>
                 </div>
 
@@ -413,7 +571,7 @@ export function EmployeeDirectory() {
                         </div>
                       </td>
                       <td className="px-4 sm:px-5 py-4 text-sm text-muted-foreground whitespace-nowrap">
-                        {new Date(emp.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        {formatJoiningDate(emp.joiningDate)}
                       </td>
                       <td className="px-4 sm:px-5 py-4">
                         <StatusBadge status={emp.status} />

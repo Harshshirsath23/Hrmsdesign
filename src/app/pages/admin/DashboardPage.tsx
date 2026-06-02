@@ -17,7 +17,7 @@ const CHART = {
   primary: "#6366F1",
   secondary: "#8B5CF6",
   accent: "#A855F7",
-  success: "#10B981",
+  success: "#753cd1",
   warning: "#F59E0B",
   danger: "#EF4444",
   info: "#3B82F6",
@@ -193,7 +193,7 @@ const KPI_ICON_TONES: Record<KpiTone, { background: string; boxShadow: string }>
     boxShadow: "0 10px 20px rgba(124, 58, 237, 0.28)",
   },
   orange: {
-    background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
+    background: "linear-gradient(135deg, #2f4b96 0%, #2f4b96 100%)",
     boxShadow: "0 10px 20px rgba(249, 115, 22, 0.28)",
   },
   red: {

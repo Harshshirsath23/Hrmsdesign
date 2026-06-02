@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, FileUp } from "lucide-react";
 import type { LeaveBalanceAPI } from "../../../modules/leaves/types";
 import { useApplyLeave, useLeaveTypes } from "../../../../hooks/useLeave";
-
+ 
 import { Button } from "../../ui/button";
 import { cn } from "../../ui/utils";
 import { LeaveTypePill } from "./LeaveTypePill";
-
+ 
 export function ApplyLeaveFormEnterprise({
   employee,
   balances,
@@ -30,22 +30,22 @@ export function ApplyLeaveFormEnterprise({
   // Backend uses a single is_half_day boolean, so we derive it from sessions.
   const [fromSession, setFromSession] = useState<"first_half" | "second_half">("first_half");
   const [toSession, setToSession] = useState<"first_half" | "second_half">("second_half");
-
+ 
   const [reason, setReason]                         = useState("");
   const [contactDuringLeave, setContactDuringLeave] = useState("");
   const [attachment, setAttachment]                   = useState<File | null>(null);
   const [attachmentError, setAttachmentError]         = useState<string | null>(null);
   const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
-
+ 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
+ 
   useEffect(() => {
     if (!prefillLeaveType) return;
     if (leaveTypes.some((lt) => lt.leave_type_id === prefillLeaveType)) {
       setLeaveTypeId(prefillLeaveType);
     }
   }, [prefillLeaveType, leaveTypes]);
-
+ 
   const handleAttachmentFile = (f: File | null) => {
     if (!f) {
       setAttachment(null);
@@ -61,7 +61,7 @@ export function ApplyLeaveFormEnterprise({
     setAttachmentError(null);
     setAttachment(f);
   };
-
+ 
   const totalDays = useMemo(() => {
     if (!fromDate || !toDate) return 0;
     const from = new Date(fromDate);
@@ -69,13 +69,13 @@ export function ApplyLeaveFormEnterprise({
     if (to < from) return 0;
     return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   }, [fromDate, toDate]);
-
+ 
   // Match balance using leave_type_id (backend field)
   const selectedBalance = useMemo(
     () => balances.find((b) => b.leave_type_id === leaveTypeId) ?? null,
     [leaveTypeId, balances],
   );
-
+ 
   // available is the normalised alias for balance
   const availableDays  = Number(selectedBalance?.available ?? selectedBalance?.balance ?? 0);
   const exceedsBalance = selectedBalance ? totalDays > availableDays : false;
@@ -84,10 +84,10 @@ export function ApplyLeaveFormEnterprise({
     [leaveTypeId, leaveTypes],
   );
   const remainingAfterApproval = Math.max(0, availableDays - totalDays);
-
+ 
   // is_half_day: true when the leave spans exactly one day and one session is not "FULL"
   // const isHalfDay = fromDate === toDate && (fromSession !== "1" || toSession !== "2") && totalDays === 1;
-
+ 
   const canSubmit =
     !!leaveTypeId &&
     !!fromDate &&
@@ -95,7 +95,7 @@ export function ApplyLeaveFormEnterprise({
     !!reason.trim() &&
     totalDays > 0 &&
     !exceedsBalance;
-
+ 
   const resetForm = () => {
     setLeaveTypeId("");
     setFromDate("");
@@ -107,7 +107,7 @@ export function ApplyLeaveFormEnterprise({
     setAttachment(null);
     setAttachmentError(null);
   };
-
+ 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -121,7 +121,7 @@ export function ApplyLeaveFormEnterprise({
       leave_type_id: leaveTypeId,
       from_date: fromDate,
       to_date: toDate,
-
+ 
       from_session: fromSession,
       to_session: toSession,
       contact_during_leave: contactDuringLeave.trim(),
@@ -136,7 +136,7 @@ export function ApplyLeaveFormEnterprise({
       },
     );
   };
-
+ 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-3">
@@ -153,7 +153,7 @@ export function ApplyLeaveFormEnterprise({
                 All fields marked <span className="text-red-500">*</span> are required
               </p>
             </div>
-
+ 
             <form onSubmit={handleSubmit} className="space-y-6 p-6">
               {/* Leave Type */}
               <div>
@@ -177,7 +177,7 @@ export function ApplyLeaveFormEnterprise({
                   <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 </div>
               </div>
-
+ 
               {/* Dates + Sessions */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* From */}
@@ -206,7 +206,7 @@ export function ApplyLeaveFormEnterprise({
                       <option value="first_half">
                         First Half
                       </option>
-
+ 
                       <option value="second_half">
                         Second Half
                       </option>
@@ -214,7 +214,7 @@ export function ApplyLeaveFormEnterprise({
                     <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   </div>
                 </div>
-
+ 
                 {/* To */}
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -242,7 +242,7 @@ export function ApplyLeaveFormEnterprise({
                       <option value="first_half">
                         First Half
                       </option>
-
+ 
                       <option value="second_half">
                         Second Half
                       </option>
@@ -251,7 +251,7 @@ export function ApplyLeaveFormEnterprise({
                   </div>
                 </div>
               </div>
-
+ 
               {/* Applying To + CC
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
@@ -268,7 +268,7 @@ export function ApplyLeaveFormEnterprise({
                     <ChevronDown className="ml-auto h-4 w-4 text-slate-500" />
                   </div>
                 </div>
-
+ 
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
                     CC To
@@ -300,7 +300,7 @@ export function ApplyLeaveFormEnterprise({
                   </div>
                 </div>
               </div> */}
-
+ 
               {/* Contact During Leave */}
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -314,7 +314,7 @@ export function ApplyLeaveFormEnterprise({
                   className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
                 />
               </div>
-
+ 
               {/* Reason */}
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -329,7 +329,7 @@ export function ApplyLeaveFormEnterprise({
                   required
                 />
               </div>
-
+ 
               {/* Attachment */}
               <div>
                 <div className="mb-3 flex items-center gap-2">
@@ -338,7 +338,7 @@ export function ApplyLeaveFormEnterprise({
                     Attachment
                   </label>
                 </div>
-
+ 
                 <div
                   role="button"
                   tabIndex={0}
@@ -384,7 +384,7 @@ export function ApplyLeaveFormEnterprise({
                     </>
                   )}
                 </div>
-
+ 
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -392,19 +392,19 @@ export function ApplyLeaveFormEnterprise({
                   accept=".pdf,.xls,.xlsx,.doc,.docx,.txt,.ppt,.pptx,.gif,.jpg,.jpeg,.png"
                   onChange={(e) => handleAttachmentFile(e.target.files?.[0] ?? null)}
                 />
-
+ 
                 {attachmentError && (
                   <p className="mt-2 text-sm text-red-600">{attachmentError}</p>
                 )}
               </div>
-
+ 
               {/* API error */}
               {applyLeave.isError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   {(applyLeave.error as Error)?.message || "Failed to submit leave application."}
                 </div>
               )}
-
+ 
               {/* Footer */}
               <div className="flex justify-end gap-3 border-t border-slate-200 pt-6">
                 <Button
@@ -427,7 +427,7 @@ export function ApplyLeaveFormEnterprise({
             </form>
           </div>
         </div>
-
+ 
         {/* ── Sidebar ───────────────────────────────────────────────────── */}
         <div className="space-y-4 xl:col-span-1">
           {/* Balance card */}
@@ -440,7 +440,7 @@ export function ApplyLeaveFormEnterprise({
                 {selectedBalance?.leave_type_detail?.name ?? selectedBalance?.leave_type ?? "Select a leave type"}
               </h3>
             </div>
-
+ 
             <div className="p-5">
               {selectedBalance && (
                 <div className="space-y-5">
@@ -458,21 +458,21 @@ export function ApplyLeaveFormEnterprise({
                       </span>
                     </div>
                   </div>
-
+ 
                   <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
                     <span className="text-sm text-slate-500">After this request</span>
                     <span className="text-lg font-semibold text-slate-900">
                       {Math.max(0, availableDays - totalDays)} days
                     </span>
                   </div>
-
+ 
                   {totalDays > 0 && (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                       Applying for <span className="font-semibold">{totalDays}</span>{" "}
                       {totalDays === 1 ? "day" : "days"}
                     </div>
                   )}
-
+ 
                   {exceedsBalance && (
                     <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                       Insufficient balance. Only {availableDays} days available.
@@ -492,7 +492,7 @@ export function ApplyLeaveFormEnterprise({
                 )}
             </div>
           </div>
-
+ 
           {/* Heads Up */}
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <h4 className="text-xs font-bold uppercase tracking-wide text-amber-700">Heads Up</h4>
@@ -507,3 +507,5 @@ export function ApplyLeaveFormEnterprise({
     </div>
   );
 }
+ 
+ 

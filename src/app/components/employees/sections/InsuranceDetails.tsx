@@ -12,6 +12,7 @@ import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
 function emptyPolicy(): InsuranceEntry {
@@ -26,7 +27,7 @@ function emptyPolicy(): InsuranceEntry {
   };
 }
 
-export function InsuranceDetails({ employee }: Props) {
+export function InsuranceDetails({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const insuranceCompanyOptions = useMasterOptions("InsuranceCompany");
   const insuranceTypeOptions = useMasterOptions("InsuranceType");
@@ -90,7 +91,7 @@ export function InsuranceDetails({ employee }: Props) {
         onEdit={startEdit}
         onCancel={handleCancel}
         onSave={handleSave}
-        headerExtra={addButton}
+        headerExtra={showAddButton ? addButton : null}
       >
         {!display.length ? (
           <EmptyStateCard icon={ShieldCheck} title="No insurance policies" description="Use Add Policy to add a policy." />

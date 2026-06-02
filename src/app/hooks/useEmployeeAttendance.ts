@@ -5,13 +5,18 @@ import {
   fetchEmployeeAttendanceList,
   fetchEmployeeAttendanceSummary,
   fetchEmployeePunchDetails,
+  fetchEmployeeRegularizationHistory,
   submitEmployeeRegularization,
   type PunchDetailsResponse,
   type RegularizationBulkPayload,
 } from '../../api/employeeAttendanceClient';
-import { mapEmployeeListRecordToDaily, mapSummaryToMetrics } from '../modules/employee-attendance/mappers';
+import {
+  mapEmployeeListRecordToDaily,
+  mapRegularizationHistoryToRequest,
+  mapSummaryToMetrics,
+} from '../modules/employee-attendance/mappers';
 import type { AttendanceMetrics } from '../components/attendance/my-attendance/utils';
-import type { DailyAttendance } from '../modules/attendance/types';
+import type { AttendanceRequest, DailyAttendance } from '../modules/attendance/types';
 
 export interface UseEmployeeAttendanceOptions {
   monthDate: Date;
@@ -29,6 +34,7 @@ export function useEmployeeAttendance({
   designation = '',
 }: UseEmployeeAttendanceOptions) {
   const [records, setRecords] = useState<DailyAttendance[]>([]);
+  const [regularizationRequests, setRegularizationRequests] = useState<AttendanceRequest[]>([]);
   const [metrics, setMetrics] = useState<AttendanceMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,9 +45,10 @@ export function useEmployeeAttendance({
     setLoading(true);
     setError(null);
     try {
-      const [listData, summaryData] = await Promise.all([
+      const [listData, summaryData, historyData] = await Promise.all([
         fetchEmployeeAttendanceList({ month: monthKey, per_page: 50, sort: 'date_desc' }),
         fetchEmployeeAttendanceSummary(monthKey),
+        fetchEmployeeRegularizationHistory({ month: monthKey }),
       ]);
 
       const mapped = listData.records.map((record) =>
@@ -54,6 +61,11 @@ export function useEmployeeAttendance({
       );
       setRecords(mapped);
       setMetrics(mapSummaryToMetrics(summaryData, mapped));
+      setRegularizationRequests(
+        historyData.records.map((record) =>
+          mapRegularizationHistoryToRequest(record, employeeId, employeeName),
+        ),
+      );
     } catch (err) {
       const message =
         err instanceof EmployeeAttendanceApiError
@@ -61,6 +73,7 @@ export function useEmployeeAttendance({
           : 'Failed to load attendance. Please try again.';
       setError(message);
       setRecords([]);
+      setRegularizationRequests([]);
       setMetrics(null);
     } finally {
       setLoading(false);
@@ -85,6 +98,7 @@ export function useEmployeeAttendance({
 
   return {
     records,
+    regularizationRequests,
     metrics,
     loading,
     error,
