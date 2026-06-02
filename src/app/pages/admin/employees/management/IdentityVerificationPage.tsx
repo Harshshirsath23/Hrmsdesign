@@ -487,26 +487,14 @@ export function IdentityVerificationPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
+      <div>
+        {/* <div className="space-y-1">
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-emerald-500" />
             Identity Verification
           </h2>
           <p className="text-sm text-muted-foreground">Review and verify employee government identity documents.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input 
-              type="text" 
-              placeholder="Search employee..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-card border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none w-64"
-            />
-          </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Advanced Filters Section */}
@@ -522,6 +510,19 @@ export function IdentityVerificationPage() {
           >
             Reset Filters
           </button>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input 
+              type="text" 
+              placeholder="Search employee..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none w-full"
+            />
+          </div>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">

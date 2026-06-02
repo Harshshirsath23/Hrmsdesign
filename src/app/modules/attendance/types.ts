@@ -74,14 +74,24 @@ export interface AttendanceException {
 export interface AttendanceRequest {
   id: string;
   employeeId: string;
+  employeeName?: string;
   type: RequestType;
   date: string;
   reason: string;
-  status: RequestStatus;
+  status: "Pending" | "Approved" | "Rejected" | "Cancelled" | "Under Review";
   oldValue?: string;
   newValue?: string;
   comments?: string;
   workflowStep?: string;
+  attendanceDate?: string;
+  requestedStatus?: string;
+  submittedDate?: string;
+  lastUpdated?: string;
+  approvedBy?: string;
+  approvedDate?: string;
+  rejectedBy?: string;
+  rejectionReason?: string;
+  rejectionDate?: string;
 }
 
 export interface AttendanceSession {

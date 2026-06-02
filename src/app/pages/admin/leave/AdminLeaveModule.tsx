@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
   BarChart3,
@@ -6,25 +6,17 @@ import {
   FileText,
   ListChecks,
   Network,
-  ShieldCheck,
   SlidersHorizontal,
-  Tag,
   BookOpen,
 } from "lucide-react";
 import { AdminLeaveRequests } from "./sections/AdminLeaveRequests";
 import { AdminHolidayCalendarManagement } from "./sections/AdminHolidayCalendarManagement";
-import { AdminLeavePolicies } from "./sections/AdminLeavePolicies";
 import { SuperadminLeaveDashboard } from "./sections/SuperadminLeaveDashboard";
 import { SuperadminLeaveRequests } from "./sections/SuperadminLeaveRequests";
 import { SuperadminAuditLogs } from "./sections/SuperadminAuditLogs";
 import { SuperadminReportsAnalytics } from "./sections/SuperadminReportsAnalytics";
 import { SuperadminWorkflowSettings } from "./sections/SuperadminWorkflowSettings";
-import { AdminLeaveTypeMaster } from "./sections/AdminLeaveTypeMaster";
 import { AdminLeaveAllocations } from "./sections/AdminLeaveAllocations";
-import {
-  AdminNavRail,
-  type AdminNavGroupSchema,
-} from "../../../components/navigation/AdminNavRail";
 
 type SectionId =
   | "dashboard"
@@ -93,76 +85,62 @@ const SECTIONS: { id: SectionId; label: string; icon: React.ElementType }[] = [
 
 export function AdminLeaveModule() {
   const [active, setActive] = useState<SectionId>("dashboard");
-
-  const header = useMemo(() => {
-    const s = SECTIONS.find((x) => x.id === active) ?? SECTIONS[0];
-    return s;
-  }, [active]);
-
   const navigate = useNavigate();
 
-  const navGroups = useMemo<AdminNavGroupSchema<SectionId>[]>(() => {
-    const byId = new Map(SECTIONS.map((s) => [s.id, s]));
-    const item = (id: SectionId) => {
-      const section = byId.get(id)!;
-      return { id: section.id, label: section.label, icon: section.icon };
-    };
-    return [
-      {
-        id: "leave-management",
-        label: "Leave Management",
-        items: [
-          item("dashboard"),
-          item("applications"),
-          // item("policies"),
-          // item("leave-types"),
-          item("leave-allocations"),
-          item("legacy-requests"),
-        ],
-      },
-      {
-        id: "workflows",
-        label: "Workflows",
-        items: [item("workflow"), item("holidays")],
-      },
-      {
-        id: "insights",
-        label: "Insights",
-        items: [item("reports"), item("audit")],
-      },
-    ];
-  }, []);
+  const handleTabClick = (id: SectionId) => {
+    setActive(id);
+  };
 
   return (
-    <div className="p-8 space-y-8 bg-background min-h-full">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-black text-foreground tracking-tight">{header.label}</h1>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Sub-header with tabs */}
+      <div className="bg-card border-b border-border px-6 flex items-center justify-between h-14 flex-shrink-0 z-10">
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {SECTIONS.map((section) => {
+            const Icon = section.icon;
+            return (
+              <button
+                key={section.id}
+                onClick={() => handleTabClick(section.id)}
+                className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-150 font-medium whitespace-nowrap ${
+                  active === section.id
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {section.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <span className="text-xs font-medium text-muted-foreground bg-secondary border border-border px-3 py-1.5 rounded-lg flex-shrink-0 ml-4">
+          {new Date().toLocaleDateString("en-IN", {
+            weekday: "short",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}
+        </span>
       </div>
 
-      {/* Top Navigation Rail */}
-      <AdminNavRail groups={navGroups} active={active} onSelect={setActive} />
-
       {/* Content */}
-      <div>
-        {active === "dashboard" && <SuperadminLeaveDashboard />}
-        {active === "applications" && <SuperadminLeaveRequests title="Leave Applications" />}
-        {/* {active === "policies" && (
-          <AdminLeavePolicies onAddNewPolicy={() => navigate("/superadmin/masters/attendance-leave/leave-policy")} />
-        )}
-        {active === "leave-types" && (
-          <AdminLeaveTypeMaster onAddNewLeaveType={() => navigate("/superadmin/masters/attendance-leave/leave-type")} />
-        )} */}
-        {active === "leave-allocations" && (
-          <AdminLeaveAllocations onAddAllocation={() => navigate("/superadmin/masters/attendance-leave/leave-allocation")} />
-        )}
-        {active === "holidays" && (
-          <AdminHolidayCalendarManagement onAddHoliday={() => navigate("/superadmin/masters/core-hr-setup/holiday")} />
-        )}
-        {active === "audit" && <SuperadminAuditLogs />}
-        {active === "reports" && <SuperadminReportsAnalytics />}
-        {active === "workflow" && <SuperadminWorkflowSettings />}
-        {active === "legacy-requests" && <AdminLeaveRequests />}
+      <div className="flex-1 overflow-hidden bg-background">
+        <div className="p-8 h-full overflow-y-auto">
+          {active === "dashboard" && <SuperadminLeaveDashboard />}
+          {active === "applications" && <SuperadminLeaveRequests title="Leave Applications" />}
+          {active === "leave-allocations" && (
+            <AdminLeaveAllocations onAddAllocation={() => navigate("/superadmin/masters/attendance-leave/leave-allocation")} />
+          )}
+          {active === "holidays" && (
+            <AdminHolidayCalendarManagement onAddHoliday={() => navigate("/superadmin/masters/core-hr-setup/holiday")} />
+          )}
+          {active === "audit" && <SuperadminAuditLogs />}
+          {active === "reports" && <SuperadminReportsAnalytics />}
+          {active === "workflow" && <SuperadminWorkflowSettings />}
+          {active === "legacy-requests" && <AdminLeaveRequests />}
+        </div>
       </div>
     </div>
   );

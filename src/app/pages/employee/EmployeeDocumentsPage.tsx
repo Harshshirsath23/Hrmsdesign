@@ -24,18 +24,6 @@ export function EmployeeDocumentsPage() {
   return (
     <div className="p-6 space-y-6">
 
-      {/* ── Header ──────────────────────────────────────── */}
-      <div className="flat-card bg-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">My Documents</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your personal and professional documents</p>
-        </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-foreground text-primary-foreground text-sm font-medium rounded-lg
-          hover:bg-accent transition-colors self-start md:self-auto">
-          <UploadCloud className="w-4 h-4" /> Upload New
-        </button>
-      </div>
-
       {/* ── Category Stats ──────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {STATS.map(({ label, count, icon: Icon }) => (
@@ -99,6 +87,14 @@ export function EmployeeDocumentsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── Upload Button ──────────────────────────────── */}
+      <div className="flex justify-end">
+        <button className="flex items-center gap-2 px-4 py-2.5 bg-foreground text-primary-foreground text-sm font-medium rounded-lg
+          hover:bg-accent transition-colors">
+          <UploadCloud className="w-4 h-4" /> Upload New
+        </button>
       </div>
     </div>
   );

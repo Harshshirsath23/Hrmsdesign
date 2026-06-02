@@ -8,6 +8,7 @@ const API_BASE_URL =
   'http://acme.localhost:8000';
 const EMP_STORAGE_KEY = 'hrms-demo-employees';
 
+
 const DEMO_EMPLOYEES: EmployeeListItem[] = [
   {
     id: 'emp-1',
@@ -510,6 +511,14 @@ export function useShiftTypes() {
   return useQuery({
     queryKey: ['masters-shift-types'],
     queryFn: () => fetchMaster('shift-types'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useAccountTypes() {
+  return useQuery({
+    queryKey: ['masters-account-types'],
+    queryFn: () => fetchMaster('account-types'),
     staleTime: 10 * 60_000,
   });
 }

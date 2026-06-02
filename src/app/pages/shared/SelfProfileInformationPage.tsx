@@ -33,6 +33,7 @@ import { ContentSection } from "../../components/employees/ContentSection";
 import { EmployeeFormProvider } from "../../components/employees/employee-details/EmployeeFormContext";
 import { SidebarSection } from "../../components/employees/SidebarMenu";
 import { Employee } from "../../components/employees/mockData";
+import { EssEmployeeProfile } from "../../components/employees/sections/EssEmployeeProfile";
 import { useAuth } from "../../context/AuthContext";
 import {
   ensureProfile,
@@ -1674,6 +1675,8 @@ export function SelfProfileInformationPage() {
                 This section is managed by your administrator and cannot be updated via My Request.
               </p>
             </div>
+          ) : activeSection === "profile" ? (
+            <EssEmployeeProfile employee={employee} />
           ) : (
             <div className="space-y-4">
               {isProfileFinalSubmitted && (

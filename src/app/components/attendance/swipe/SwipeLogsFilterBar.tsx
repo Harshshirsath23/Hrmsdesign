@@ -23,7 +23,7 @@ export function SwipeLogsFilterBar({ filters, setFilters }: SwipeLogsFilterBarPr
       <div className="flex flex-wrap items-center gap-3">
         {/* Search Input */}
         <div className="relative w-[200px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
           <Input 
             className="pl-8 h-8 bg-slate-100/50 dark:bg-slate-800/50 border-transparent focus:bg-white dark:focus:bg-slate-800 rounded-lg text-[11px] font-medium shadow-inner transition-all" 
             placeholder="Search Employee..." 

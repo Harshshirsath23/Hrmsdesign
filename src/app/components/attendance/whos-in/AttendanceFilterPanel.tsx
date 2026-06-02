@@ -56,7 +56,7 @@ export function AttendanceFilterPanel({ filters, setFilters, onRefresh, isRefres
           <div className="space-y-1.5">
             <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-1">Search Employee</label>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground dark:text-muted-foreground" />
               <Input 
                 className="pl-8 h-8 bg-black/5 dark:bg-white/5 border-transparent focus:bg-transparent focus:border-primary/30 rounded-lg text-xs" 
                 placeholder="Name or ID..." 
