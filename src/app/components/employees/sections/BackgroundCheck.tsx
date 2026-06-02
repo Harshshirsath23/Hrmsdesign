@@ -9,6 +9,7 @@ import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -43,7 +44,7 @@ const formatDate = (dateStr?: string) => {
   try { return format(new Date(dateStr), "dd MMM yyyy"); } catch { return "—"; }
 };
 
-export function BackgroundCheck({ employee }: Props) {
+export function BackgroundCheck({ employee, showAddButton = true }: Props) {
   const verificationStatusOptions = useMasterOptions("VerificationStatus");
   const statusOptions = verificationStatusOptions.length ? verificationStatusOptions : STATUS_OPTIONS;
 
@@ -105,13 +106,15 @@ export function BackgroundCheck({ employee }: Props) {
             Verification and compliance for {employee.name}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
-        >
-          <Plus size={13} /> Add Background Check
-        </button>
+        {showAddButton ? (
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-all"
+          >
+            <Plus size={13} /> Add Background Check
+          </button>
+        ) : null}
       </div>
 
       {records.length === 0 ? (

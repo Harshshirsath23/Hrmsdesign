@@ -1,6 +1,17 @@
 import { createBrowserRouter, Navigate, useParams } from "react-router";
 import { lazy, Suspense } from "react";
 
+function LeaveRouteError() {
+  return (
+    <div className="p-8 mx-auto max-w-3xl text-center rounded-2xl border border-border bg-card shadow-sm">
+      <h1 className="text-xl font-semibold text-foreground">Unable to open leave portal</h1>
+      <p className="mt-3 text-sm text-muted-foreground">
+        There was a problem loading the leave page. Please refresh the page or contact support if this keeps happening.
+      </p>
+    </div>
+  );
+}
+
 // Auth
 import { LoginPage } from "./pages/LoginPage";
 
@@ -247,6 +258,7 @@ export const router = createBrowserRouter([
       {
         path: "leaves",
         Component: EmployeeLeavesLayout,
+        errorElement: <LeaveRouteError />,
         children: [
           { index: true, element: <Navigate to="apply" replace /> },
           { path: "dashboard", element: <Navigate to="/employee/leaves/apply" replace /> },

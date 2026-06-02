@@ -2,15 +2,16 @@ import { format } from "date-fns";
 import { 
   Calendar as CalendarIcon, 
   List, 
-  ClipboardCheck, 
+  ClipboardCheck,
+  History,
   ChevronLeft, 
   ChevronRight, 
   Search,
 } from "lucide-react";
 
 interface FiltersProps {
-  view: "calendar" | "list" | "regularization";
-  onViewChange: (view: "calendar" | "list" | "regularization") => void;
+  view: "calendar" | "list" | "regularization" | "regularization-history";
+  onViewChange: (view: "calendar" | "list" | "regularization" | "regularization-history") => void;
   currentDate: Date;
   onDateChange: (date: Date) => void;
   searchTerm: string;
@@ -35,7 +36,7 @@ export function Filters({
   };
 
   const handleToday = () => {
-    onDateChange(new Date(2026, 4, 12)); // Mock today
+    onDateChange(new Date());
   };
 
   return (
@@ -47,6 +48,7 @@ export function Filters({
             { id: "calendar", icon: CalendarIcon, label: "Calendar" },
             { id: "list", icon: List, label: "List" },
             { id: "regularization", icon: ClipboardCheck, label: "Regularization" },
+            { id: "regularization-history", icon: History, label: "History" },
           ].map((v) => (
             <button
               key={v.id}
@@ -64,7 +66,7 @@ export function Filters({
         </div>
 
         {/* Date Navigator */}
-        {view !== "regularization" && (
+        {view !== "regularization" && view !== "regularization-history" && (
           <div className="attendance-month-nav flex items-center gap-2 p-1">
             <button 
               onClick={handlePrevMonth}
@@ -98,7 +100,7 @@ export function Filters({
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input 
             type="text" 
-            placeholder="Search date, status, shift..."
+            placeholder={view === "regularization-history" ? "Search date, status, reason..." : "        Search date, status, shift..."}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="attendance-search-input w-full md:w-64 pl-12 pr-4 py-3 text-xs font-medium"

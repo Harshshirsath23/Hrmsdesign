@@ -260,7 +260,31 @@ export const MOCK_EXCEPTIONS: AttendanceException[] = [
 ];
 
 export const MOCK_REQUESTS: AttendanceRequest[] = [
-  { id: "REQ1", employeeId: "EMP002", type: "Regularization", date: "2026-05-07", reason: "Forgot to punch out", status: "Pending" },
+  // EMP001 - Amit Sharma
+  { id: "REQ1", employeeId: "EMP001", employeeName: "Amit Sharma", type: "Regularization", date: "2026-05-07", attendanceDate: "2026-05-05", requestedStatus: "Present", reason: "Forgot to punch out during system maintenance", status: "Approved", submittedDate: "2026-05-07 09:15 AM", lastUpdated: "2026-05-08 02:30 PM", approvedBy: "Rajesh Kumar", approvedDate: "2026-05-08 02:30 PM" },
+  { id: "REQ2", employeeId: "EMP001", employeeName: "Amit Sharma", type: "Regularization", date: "2026-05-03", attendanceDate: "2026-05-01", requestedStatus: "Present", reason: "Office access card issue, worked from home", status: "Approved", submittedDate: "2026-05-03 10:45 AM", lastUpdated: "2026-05-04 11:00 AM", approvedBy: "Rajesh Kumar", approvedDate: "2026-05-04 11:00 AM" },
+  { id: "REQ3", employeeId: "EMP001", employeeName: "Amit Sharma", type: "Regularization", date: "2026-04-28", attendanceDate: "2026-04-26", requestedStatus: "Present", reason: "Attended client meeting, forgot morning punch", status: "Rejected", submittedDate: "2026-04-28 03:45 PM", lastUpdated: "2026-04-29 01:15 PM", rejectedBy: "Rajesh Kumar", rejectionReason: "Supporting documents not provided for client visit", rejectionDate: "2026-04-29 01:15 PM" },
+
+  // EMP002 - Priya Patel
+  { id: "REQ4", employeeId: "EMP002", employeeName: "Priya Patel", type: "Regularization", date: "2026-05-10", attendanceDate: "2026-05-08", requestedStatus: "Present", reason: "Forgot to punch out", status: "Pending", submittedDate: "2026-05-10 04:20 PM", lastUpdated: "2026-05-10 04:20 PM" },
+  { id: "REQ5", employeeId: "EMP002", employeeName: "Priya Patel", type: "Regularization", date: "2026-05-06", attendanceDate: "2026-05-04", requestedStatus: "Present", reason: "Early exit - attended training session", status: "Approved", submittedDate: "2026-05-06 05:00 PM", lastUpdated: "2026-05-07 09:30 AM", approvedBy: "Rajesh Kumar", approvedDate: "2026-05-07 09:30 AM" },
+  { id: "REQ6", employeeId: "EMP002", employeeName: "Priya Patel", type: "Regularization", date: "2026-04-30", attendanceDate: "2026-04-29", requestedStatus: "Half Day", reason: "Doctor appointment - left early", status: "Approved", submittedDate: "2026-04-30 01:00 PM", lastUpdated: "2026-05-01 10:15 AM", approvedBy: "Rajesh Kumar", approvedDate: "2026-05-01 10:15 AM" },
+
+  // EMP003 - Rahul Verma
+  { id: "REQ7", employeeId: "EMP003", employeeName: "Rahul Verma", type: "Regularization", date: "2026-05-09", attendanceDate: "2026-05-07", requestedStatus: "Present", reason: "Network issue prevented punch recording", status: "Under Review", submittedDate: "2026-05-09 02:15 PM", lastUpdated: "2026-05-09 02:15 PM" },
+  { id: "REQ8", employeeId: "EMP003", employeeName: "Rahul Verma", type: "Regularization", date: "2026-05-02", attendanceDate: "2026-04-30", requestedStatus: "Present", reason: "Attended emergency client presentation", status: "Approved", submittedDate: "2026-05-02 06:00 PM", lastUpdated: "2026-05-03 11:45 AM", approvedBy: "Sonia Mehra", approvedDate: "2026-05-03 11:45 AM" },
+  { id: "REQ9", employeeId: "EMP003", employeeName: "Rahul Verma", type: "Regularization", date: "2026-04-25", attendanceDate: "2026-04-23", requestedStatus: "Present", reason: "Forgot to punch in", status: "Rejected", submittedDate: "2026-04-25 10:30 AM", lastUpdated: "2026-04-26 03:00 PM", rejectedBy: "Sonia Mehra", rejectionReason: "Repeated violation - previous warning on file", rejectionDate: "2026-04-26 03:00 PM" },
+
+  // EMP004 - Ananya Iyer  
+  { id: "REQ10", employeeId: "EMP004", employeeName: "Ananya Iyer", type: "Regularization", date: "2026-05-11", attendanceDate: "2026-05-09", requestedStatus: "Present", reason: "Mobile app crash, worked on desktop instead", status: "Pending", submittedDate: "2026-05-11 03:30 PM", lastUpdated: "2026-05-11 03:30 PM" },
+  { id: "REQ11", employeeId: "EMP004", employeeName: "Ananya Iyer", type: "Regularization", date: "2026-05-05", attendanceDate: "2026-05-03", requestedStatus: "Half Day", reason: "Medical emergency", status: "Approved", submittedDate: "2026-05-05 02:00 PM", lastUpdated: "2026-05-06 08:30 AM", approvedBy: "Amit Sharma", approvedDate: "2026-05-06 08:30 AM" },
+
+  // EMP005 - Siddharth Malhotra
+  { id: "REQ12", employeeId: "EMP005", employeeName: "Siddharth Malhotra", type: "Regularization", date: "2026-05-08", attendanceDate: "2026-05-06", requestedStatus: "Present", reason: "Attended HR conference, field work", status: "Approved", submittedDate: "2026-05-08 04:45 PM", lastUpdated: "2026-05-09 09:00 AM", approvedBy: "Sonia Mehra", approvedDate: "2026-05-09 09:00 AM" },
+  { id: "REQ13", employeeId: "EMP005", employeeName: "Siddharth Malhotra", type: "Regularization", date: "2026-04-29", attendanceDate: "2026-04-27", requestedStatus: "Present", reason: "Biometric reader malfunction", status: "Cancelled", submittedDate: "2026-04-29 11:00 AM", lastUpdated: "2026-04-29 02:15 PM" },
+
+  // EMP006 - Sneha Reddy
+  { id: "REQ14", employeeId: "EMP006", employeeName: "Sneha Reddy", type: "Regularization", date: "2026-05-04", attendanceDate: "2026-05-02", requestedStatus: "Present", reason: "Client visit - spent entire day offsite", status: "Approved", submittedDate: "2026-05-04 06:15 PM", lastUpdated: "2026-05-05 10:30 AM", approvedBy: "Vikram Singh", approvedDate: "2026-05-05 10:30 AM" },
 ];
 
 export const MOCK_ATTENDANCE_DATA: DailyAttendance[] = generateAttendance(5, 2026);

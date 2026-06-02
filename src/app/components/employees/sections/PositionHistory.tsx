@@ -7,14 +7,16 @@ import {
   EditableSectionCard,
   ProfileInfoField,
   ConfirmationDialog,
+  validateDateOrder,
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
 
 interface Props {
   employee: Employee;
+  showAddButton?: boolean;
 }
 
-export function PositionHistory({ employee }: Props) {
+export function PositionHistory({ employee, showAddButton = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
   const designationOptions = useMasterOptions("Designation");
   const departmentOptions = useMasterOptions("Department");
@@ -87,7 +89,7 @@ export function PositionHistory({ employee }: Props) {
           setIsEditing(false);
         }}
         onSave={handleSave}
-        headerExtra={
+        headerExtra={showAddButton ? (
           <button
             type="button"
             onClick={startAdding}
@@ -96,7 +98,7 @@ export function PositionHistory({ employee }: Props) {
             <Plus className="w-3.5 h-3.5" />
             Add Position
           </button>
-        }
+        ) : null}
       >
         <div className="space-y-4">
           {rows.map((pos, index) => (

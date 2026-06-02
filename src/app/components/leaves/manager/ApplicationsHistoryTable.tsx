@@ -160,7 +160,7 @@ export function ApplicationsHistoryTable({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search type, code, reason, status…"
-              className="flat-input h-10 w-full rounded-xl pl-9 pr-3 text-sm"
+              className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 h-10 w-full rounded-xl pl-12 pr-3 text-sm"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">

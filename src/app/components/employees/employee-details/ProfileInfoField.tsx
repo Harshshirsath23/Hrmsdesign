@@ -6,7 +6,7 @@ interface ProfileInfoFieldProps {
   editing?: boolean;
   onChange?: (v: string) => void;
   type?: "text" | "date" | "email" | "tel" | "number" | "textarea" | "select";
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<{ value: string; label: string; disabled?: boolean }>;
   readOnly?: boolean;
   placeholder?: string;
   className?: string;
@@ -45,7 +45,7 @@ export function ProfileInfoField({
             >
               <option value="">{placeholder ?? `Select ${label}`}</option>
               {selectOptions.map((option) => (
-                <option key={option.value} value={option.value}>
+                <option key={option.value} value={option.value} disabled={(option as any).disabled}>
                   {option.label}
                 </option>
               ))}

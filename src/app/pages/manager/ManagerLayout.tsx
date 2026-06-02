@@ -69,13 +69,13 @@ export function ManagerLayout() {
       const titles: Record<string, string> = {
         leaves: "Leave center",
         dashboard: "Leave · Dashboard",
-        apply: "Leave · Apply",
-        applications: "Leave · Applications",
-        balance: "Leave · Balance",
-        holidays: "Leave · Holidays",
+        apply: "Leave",
+        applications: "Leave",
+        balance: "Leave",
+        holidays: "Leave",
         team: "Leave · Team",
-        policy: "Leave · Policy",
-        notifications: "Leave · Notifications",
+        policy: "Leave",
+        notifications: "Leave",
       };
 
       return titles[seg] ?? "Leave center";

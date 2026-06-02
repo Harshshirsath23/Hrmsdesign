@@ -45,8 +45,12 @@ const adminSlice = createSlice({
       state.employees = [...action.payload, ...state.employees];
       saveAdminEmployees(state.employees);
     },
+    setAdminEmployees: (state, action: PayloadAction<Employee[]>) => {
+      state.employees = action.payload;
+      saveAdminEmployees(state.employees);
+    },
   },
 });
 
-export const { updateAdminEmployee, addAdminEmployee, addAdminEmployees } = adminSlice.actions;
+export const { updateAdminEmployee, addAdminEmployee, addAdminEmployees, setAdminEmployees } = adminSlice.actions;
 export default adminSlice.reducer;

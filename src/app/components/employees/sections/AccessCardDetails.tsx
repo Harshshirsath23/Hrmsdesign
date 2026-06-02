@@ -2,11 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Key, Plus } from "lucide-react";
 import { AccessCardEntry, Employee } from "../mockData";
 import { useAdminSync } from "../../admin/useAdminSync";
-import {
-  EditableSectionCard,
-  ProfileInfoField,
-  EmptyStateCard,
-} from "../employee-details";
+import { EditableSectionCard, ProfileInfoField, EmptyStateCard } from "../employee-details";
 
 interface Props {
   employee: Employee;

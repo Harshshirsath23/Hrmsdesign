@@ -19,6 +19,10 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store";
 import { addAdminEmployees } from "@/store/slices/adminSlice";
 import { normalizeLegacyEmployee } from "@/app/components/employees/mockData";
+import {
+  bulkImportEmployees,
+  downloadBulkImportTemplate,
+} from "@/api/addEmployeeApi";
 
 interface BulkImportTabProps {
   onImportComplete: (employees: any[]) => void;
@@ -96,12 +100,24 @@ export function BulkImportTab({ onImportComplete }: BulkImportTabProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const downloadTemplate = () => {
-    const ws = XLSX.utils.json_to_sheet(SAMPLE_DATA, { header: REQUIRED_COLUMNS });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "Employee_Import_Template.xlsx");
-    dispatch(addNotification({ type: "success", message: "Template downloaded successfully" }));
+  const downloadTemplate = async () => {
+    try {
+      const blob = await downloadBulkImportTemplate();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'employee_import_template_v1.2.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+      dispatch(addNotification({ type: "success", message: "Template downloaded successfully" }));
+    } catch {
+      // Fallback: generate client-side template if backend unreachable
+      const ws = XLSX.utils.json_to_sheet(SAMPLE_DATA, { header: REQUIRED_COLUMNS });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Template");
+      XLSX.writeFile(wb, "Employee_Import_Template.xlsx");
+      dispatch(addNotification({ type: "success", message: "Template downloaded (offline mode)" }));
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,27 +207,41 @@ export function BulkImportTab({ onImportComplete }: BulkImportTabProps) {
       dispatch(addNotification({ type: "error", message: "Please fix validation errors before importing." }));
       return;
     }
+    if (!file) return;
 
     setLoading(true);
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Map data to Employee interface
-    const employeesToImport = previewData
-      .filter(row => row.isValid)
-      .map(row => normalizeLegacyEmployee({
-        ...row,
-        id: row["Employee No"],
-        name: `${row["First Name"]} ${row["Last Name"]}`,
-        phone: row["Mobile Number"],
-        status: row["Status"] || "Active",
-      }));
+    try {
+      const result = await bulkImportEmployees(file);
 
-    dispatch(addAdminEmployees(employeesToImport));
-    
-    onImportComplete(employeesToImport);
-    dispatch(addNotification({ type: "success", message: `Successfully imported ${employeesToImport.length} employees` }));
-    setLoading(false);
+      // Mirror created rows into local Redux store so the directory updates immediately
+      const created = result.rows
+        .filter((r) => r.status === 'created')
+        .map((r) =>
+          normalizeLegacyEmployee({
+            id: r.employee_code ?? `imp-${Date.now()}`,
+            name: r.full_name ?? '',
+            status: 'Active',
+          }),
+        );
+      if (created.length) dispatch(addAdminEmployees(created));
+
+      onImportComplete(created);
+      dispatch(
+        addNotification({
+          type: result.errors > 0 ? 'error' : 'success',
+          message: `Imported ${result.created} of ${result.total_rows} rows.${
+            result.errors > 0 ? ` ${result.errors} rows had errors.` : ''
+          }`,
+        }),
+      );
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ??
+        'Bulk import failed. Please check your file and try again.';
+      dispatch(addNotification({ type: 'error', message: msg }));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const removeFile = () => {

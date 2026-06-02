@@ -26,6 +26,7 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => {
   const manager = emp ? emp.manager : "Vikram Nair";
 
   return {
+    profileLocked: false,
     employeeId,
     profile: {
       firstName,
@@ -123,7 +124,8 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => {
       specialization: "Computer Science",
       institutionName: "ABC Institute of Technology",
       university: "VTU",
-      yearOfPassing: "2014",
+      fromDate: "2010-07-01",
+      toDate: "2014-06-30",
       percentageCgpa: "8.2",
       grade: "A",
     },
@@ -152,7 +154,7 @@ export const getSeedProfile = (employeeId: string): EmployeeProfile => {
       name: "Priya Sharma",
       relation: "Spouse",
       dateOfBirth: "1994-03-10",
-      sharePercentage: "100",
+      epfPercentage: "100",
       phone: "+91 9876001111",
       address: "",
     },

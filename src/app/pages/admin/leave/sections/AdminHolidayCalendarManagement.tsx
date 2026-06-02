@@ -2,18 +2,37 @@ import { useMemo, useState } from "react";
 import { CalendarDays, Plus } from "lucide-react";
 import { cn } from "../../../../components/ui/utils";
 import { HolidayCalendarView } from "../../../../components/leaves/HolidayCalendarView";
-import { useUpcomingHolidays } from "../../../../modules/leaves/useLeaves";
+import { useAdminLeaveHolidays } from "../../../../modules/adminLeave/useAdminLeave";
 
 export function AdminHolidayCalendarManagement({ onAddHoliday }: { onAddHoliday?: () => void }) {
   const [view, setView] = useState<"list" | "calendar">("calendar");
   const year = new Date().getFullYear();
-  const holidaysQ = useUpcomingHolidays(year);
+  const holidaysQ = useAdminLeaveHolidays(year);
+
+  if (holidaysQ.error) {
+    return (
+      <div className="flat-card bg-card p-6 text-center">
+        <p className="text-sm text-rose-600 font-semibold">Failed to load holidays</p>
+        <p className="text-xs text-muted-foreground mt-1">{holidaysQ.error}</p>
+      </div>
+    );
+  }
+
+  const holidays = useMemo(() => {
+    return (holidaysQ.data ?? []).map((holiday) => ({
+      id: holiday.id,
+      name: holiday.name,
+      date: holiday.holiday_date,
+      holiday_type: holiday.holiday_type,
+      is_optional: holiday.holiday_type === "OPTIONAL",
+    }));
+  }, [holidaysQ.data]);
 
   const stats = useMemo(() => {
-    const total = holidaysQ.data.length;
-    const optional = holidaysQ.data.filter((h) => h.is_optional).length;
+    const total = holidays.length;
+    const optional = holidays.filter((h) => h.is_optional).length;
     return { total, optional };
-  }, [holidaysQ.data]);
+  }, [holidays]);
 
   return (
     <div className="space-y-5">
@@ -67,17 +86,17 @@ export function AdminHolidayCalendarManagement({ onAddHoliday }: { onAddHoliday?
       </div>
 
       {view === "calendar" ? (
-        <HolidayCalendarView holidays={holidaysQ.data} initialYear={year} />
+        <HolidayCalendarView holidays={holidays} initialYear={year} />
       ) : (
         <div className="flat-card bg-card overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
             <p className="text-sm font-semibold text-foreground">Yearly List</p>
             <span className="text-[11px] font-semibold text-muted-foreground bg-secondary border border-border px-2 py-0.5 rounded-md">
-              {holidaysQ.data.length}
+              {holidays.length}
             </span>
           </div>
           <div className="divide-y divide-border">
-            {holidaysQ.data
+            {holidays
               .slice()
               .sort((a, b) => a.date.localeCompare(b.date))
               .map((h) => (

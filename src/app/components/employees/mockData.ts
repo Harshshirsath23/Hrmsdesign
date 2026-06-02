@@ -3,7 +3,8 @@ export interface EducationEntry {
   specialization: string;
   institutionName: string;
   university: string;
-  yearOfPassing: string;
+  fromDate?: string;
+  toDate?: string;
   percentageCgpa: string;
   grade: string;
 }
@@ -27,11 +28,27 @@ export interface WorkExperienceEntry {
 export interface NomineeEntry {
   id: string;
   nomineeName: string;
+  nomineeEmail?: string;
   relationship: string;
   dateOfBirth: string;
   contactNumber: string;
   address: string;
-  sharePercentage: string;
+  // Percentage allocations per nominee type (strings to keep form inputs simple)
+  nomineeType?: string;
+  epfPercentage?: string;
+  epsPercentage?: string;
+  gratuityPercentage?: string;
+  customPercentage?: string;
+  isMinor?: boolean;
+  guardian?: {
+    guardianName?: string;
+    relationshipWithMinor?: string;
+    contactNumber?: string;
+    address?: string;
+    dateOfBirth?: string;
+    idProofFileName?: string;
+    idProofDataUrl?: string;
+  };
   idProofFileName?: string;
   idProofDataUrl?: string;
 }
@@ -166,8 +183,11 @@ export interface Employee {
   lastName?: string;
   employeeId: string;
   designation: string;
+  designationId?: string;
   department: string;
+  departmentId?: string;
   team: string;
+  teamId?: string;
   email: string;
   phone: string;
   joiningDate: string;
@@ -330,6 +350,12 @@ export interface Employee {
   medicalInfo?: {
     relationship?: string;
     conditions?: string;
+    hasDisease?: boolean;
+    diseaseDetails?: string;
+    hasSurgery?: boolean;
+    surgeryDetails?: string;
+    hasAllergies?: boolean;
+    allergyDetails?: string;
     allergies?: string;
     bloodGroup?: string;
     doctorName?: string;
@@ -365,6 +391,8 @@ export interface Employee {
 
   // Selective Editing for ESS
   editableSections?: string[]; // IDs of sections/subsections employee can edit
+  /** When true the profile is locked for direct edits; changes must go through PROFILE_EDIT_REQUEST workflow */
+  profileLocked?: boolean;
   editRequestStatus?: 'None' | 'Pending' | 'Updated';
 }
 
@@ -1251,7 +1279,8 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
           specialization: String(ed.specialization ?? ""),
           institutionName: String(ed.institutionName ?? ""),
           university: String(ed.university ?? ""),
-          yearOfPassing: String(ed.yearOfPassing ?? yearFromDate(ed.endDate as string | undefined)),
+          fromDate: String(ed.fromDate ?? ed.startDate ?? ""),
+          toDate: String(ed.toDate ?? ed.endDate ?? (ed.yearOfPassing ? `${ed.yearOfPassing}-12-31` : "")),
           percentageCgpa,
           grade,
         };
@@ -1263,11 +1292,18 @@ export function normalizeLegacyEmployee(raw: Record<string, unknown>): Employee 
     ? nomRaw.map((n, i) => ({
         id: String(n.id ?? `nom-${e.id}-${i}`),
         nomineeName: String(n.nomineeName ?? n.name ?? ""),
+        nomineeEmail: String(n.nomineeEmail ?? n.email ?? ""),
         relationship: String(n.relationship ?? ""),
         dateOfBirth: String(n.dateOfBirth ?? n.dob ?? ""),
         contactNumber: String(n.contactNumber ?? n.phone ?? ""),
         address: String(n.address ?? ""),
-        sharePercentage: String(n.sharePercentage ?? ""),
+        nomineeType: String(n.nomineeType ?? 'EPF'),
+        epfPercentage: String(n.epfPercentage ?? n.sharePercentage ?? ""),
+        epsPercentage: String(n.epsPercentage ?? ""),
+        gratuityPercentage: String(n.gratuityPercentage ?? ""),
+        customPercentage: String(n.customPercentage ?? ""),
+        isMinor: Boolean(n.isMinor ?? false),
+        guardian: n.guardian as any,
         idProofFileName: n.idProofFileName as string | undefined,
         idProofDataUrl: n.idProofDataUrl as string | undefined,
       }))

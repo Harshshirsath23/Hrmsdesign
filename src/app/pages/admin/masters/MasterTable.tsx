@@ -141,7 +141,7 @@ export function MasterTable({ config }: { config: MasterConfig }) {
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground dark:text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
