@@ -1,6 +1,6 @@
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
-const LOGIN_PATH = `${BASE_URL}/api/employees/login/`;
+const LOGIN_PATH = `${BASE_URL}/api/employee/login/`;
 const REFRESH_PATH = `${BASE_URL}/api/employees/login/refresh/`;
 
 export function getTenantSchema(): string {
