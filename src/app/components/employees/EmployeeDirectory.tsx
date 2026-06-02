@@ -332,21 +332,21 @@ export function EmployeeDirectory() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background dark:bg-background">
 
       {/* ── Controls ────────────────────────────────────── */}
-      <div className="bg-card border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+      <div className="bg-card dark:bg-card border-b border-border dark:border-border px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
         {/* Search + View Toggle + Filters (all in one row) */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
           {/* Search Box - Left side */}
           <div className="relative flex-1 max-w-lg lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search employees…"
+              placeholder="          Search employees…"
               value={filters.search}
               onChange={(e) => updateFilter("search", e.target.value)}
-              className="flat-input w-full pl-10 pr-4 py-2.5 text-sm font-medium transition-all focus:shadow-md"
+              className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 w-full pl-12 pr-4 py-2.5 text-sm font-medium transition-all focus:shadow-md dark:focus:shadow-md"
             />
           </div>
 

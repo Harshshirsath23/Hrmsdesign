@@ -1,5 +1,5 @@
 import type { Employee, NomineeEntry as AdminNominee } from "../../components/employees/mockData";
-import type { EmployeeProfile, LanguageDetail as EssLanguage, NomineeDetail } from "./types";
+import type { EmployeeProfile, LanguageDetail as EssLanguage, NomineeDetail, SectionKey } from "./types";
 
 const splitName = (full: string) => {
   const p = full.trim().split(/\s+/);
@@ -262,4 +262,61 @@ export function writeEssProfileToStorage(employeeId: string, profile: EmployeePr
   const profiles = JSON.parse(raw) as Record<string, EmployeeProfile>;
   profiles[employeeId] = profile;
   localStorage.setItem("hrms_ess_profiles", JSON.stringify(profiles));
+}
+
+/** Apply an approved My Request section payload onto the admin Employee row. */
+export function applyApprovedSectionToAdmin(
+  admin: Employee,
+  section: SectionKey,
+  newValue: unknown,
+): Employee {
+  const v = newValue as Record<string, unknown>;
+
+  switch (section) {
+    case "personalDetails": {
+      const patch = { ...(v as Partial<Employee>) };
+      if (patch._profilePhoto && typeof patch._profilePhoto === "object" && (patch._profilePhoto as { dataUrl?: string }).dataUrl) {
+        patch.avatar = (patch._profilePhoto as { dataUrl: string }).dataUrl;
+      }
+      delete (patch as Record<string, unknown>)._profilePhoto;
+      const next: Employee = { ...admin, ...patch };
+      if (!patch.name && (patch.firstName || patch.lastName)) {
+        next.name = [patch.firstName, patch.middleName, patch.lastName].filter(Boolean).join(" ").trim() || admin.name;
+      }
+      if (v.emergencyContact) {
+        next.emergencyContact = { ...admin.emergencyContact, ...(v.emergencyContact as Employee["emergencyContact"]) };
+      }
+      if (v.medicalInfo) {
+        next.medicalInfo = { ...admin.medicalInfo, ...(v.medicalInfo as Employee["medicalInfo"]) };
+      }
+      if (v.currentAddress) {
+        next.currentAddress = { ...admin.currentAddress, ...(v.currentAddress as Employee["currentAddress"]) };
+      }
+      if (v.permanentAddress) {
+        next.permanentAddress = { ...admin.permanentAddress, ...(v.permanentAddress as Employee["permanentAddress"]) };
+      }
+      if (Array.isArray(v.languages)) {
+        next.languages = v.languages as Employee["languages"];
+      }
+      return next;
+    }
+    case "familyDetails":
+      return { ...admin, family: newValue as Employee["family"] };
+    case "educationDetails":
+      return { ...admin, education: newValue as Employee["education"] };
+    case "previousEmployment":
+      return { ...admin, workExperience: newValue as Employee["workExperience"] };
+    case "nomineeDetails":
+      return { ...admin, nominees: newValue as Employee["nominees"] };
+    case "insuranceDetails":
+      return { ...admin, insurance: newValue as Employee["insurance"] };
+    case "bankAndStatutoryDetails":
+      return { ...admin, ...(newValue as Partial<Employee>) };
+    case "passportAndVisa":
+      return { ...admin, ...(newValue as Partial<Employee>) };
+    case "documentsRepository":
+      return { ...admin, employeeDocuments: newValue as Employee["employeeDocuments"] };
+    default:
+      return admin;
+  }
 }

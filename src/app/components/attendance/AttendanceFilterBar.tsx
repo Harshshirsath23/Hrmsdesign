@@ -114,11 +114,11 @@ export function AttendanceFilterBar({ filters, setFilters }: AttendanceFilterBar
 
       {/* Employee Search */}
       <div className="space-y-1 flex-[1.5] min-w-[180px]">
-        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">Employee Search</label>
+        <label className="text-[10px] font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-wider px-1">Employee Search</label>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground dark:text-muted-foreground" />
           <Input 
-            className="pl-8 h-8 text-xs" 
+            className="pl-9 h-8 text-xs dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400" 
             placeholder="Search by name or ID..." 
             value={filters.search}
             onChange={(e) => updateFilter("search", e.target.value)}

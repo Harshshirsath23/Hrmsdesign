@@ -14,6 +14,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Attach JWT token from localStorage on every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('hrms_access_token');
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export default api;
 
 export function unwrap<T>(response: { data: { data: T } | T }): T {

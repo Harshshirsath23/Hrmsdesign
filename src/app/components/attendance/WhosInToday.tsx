@@ -79,7 +79,7 @@ export function WhosInToday({ data, filters, setFilters }: WhosInTodayProps) {
           
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative group flex-1 min-w-[150px]">
-               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground dark:text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
                <Input 
                 placeholder="Search..." 
                 value={filters.search}

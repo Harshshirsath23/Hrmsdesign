@@ -169,3 +169,21 @@ export interface ApproveRejectPayload {
 export interface OTApprovePayload extends ApproveRejectPayload {
   approved_ot_mins?: number | null;
 }
+
+export interface TeamAttendanceOverrideRequest {
+  date: string;
+  status: string;
+  punch_in?: string | null;
+  punch_out?: string | null;
+}
+
+export interface TeamAttendanceOverrideResponse {
+  id: string;
+  employee_id: string;
+  date: string;
+  status: string;
+  punch_in: string | null;
+  punch_out: string | null;
+  created_at: string;
+  updated_at: string;
+}

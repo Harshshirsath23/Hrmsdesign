@@ -133,6 +133,25 @@ export interface RegularizationBulkPayload {
   corrected_out_time?: string | null;
 }
 
+export interface RegularizationHistoryRecord {
+  regularization_id: string;
+  date: string;
+  request_type: string;
+  requested_status: string;
+  corrected_in_time: string | null;
+  corrected_out_time: string | null;
+  reason: string | null;
+  status: string;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  reviewer_comment: string | null;
+}
+
+export interface RegularizationHistoryResponse {
+  records: RegularizationHistoryRecord[];
+  total: number;
+}
+
 export interface ClockStatusResponse {
   status: string;
   first_in: string | null;
@@ -186,6 +205,17 @@ export async function submitEmployeeRegularization(
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  return unwrapEnvelope(raw);
+}
+
+export async function fetchEmployeeRegularizationHistory(params: {
+  month?: string;
+  status?: string;
+} = {}): Promise<RegularizationHistoryResponse> {
+  const raw = await employeeAttendanceRequest<ApiEnvelope<RegularizationHistoryResponse>>(
+    '/regularization/',
+    { query: params },
+  );
   return unwrapEnvelope(raw);
 }
 

@@ -54,6 +54,7 @@ function EditableField({
         <select
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
+          title={label}
           className="text-xs font-bold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30"
         >
           <option value="">Select {label}</option>
@@ -65,6 +66,7 @@ function EditableField({
         </select>
       ) : isEditing ? (
         <input type="text" value={value} onChange={e => onChange?.(e.target.value)}
+          placeholder={label}
           className="text-xs font-bold text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30" />
       ) : (
         <span className="text-xs font-bold text-foreground truncate">{value || "—"}</span>
@@ -189,6 +191,7 @@ export function FamilyDetails({ employee, showAddButton = true }: Props) {
                       <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Name</span>
                       {isEditing ? (
                         <input type="text" value={member.name} onChange={e => updateMember(index, 'name', e.target.value)}
+                          placeholder="Enter family member name"
                           className="w-full text-base font-black text-foreground bg-secondary/50 border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 mb-2" />
                       ) : (
                         <h4 className="text-base font-black text-foreground">{member.name || "—"}</h4>

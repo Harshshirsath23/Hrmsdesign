@@ -8,8 +8,9 @@ export function useMasterOptions(masterName: string) {
   return useMemo(
     () =>
       (data?.results ?? []).map((item) => {
-        const label = String(item.label ?? item.name ?? item.title ?? item.code ?? item.id);
-        return { value: label, label };
+        const id = String(item.id ?? "");
+        const label = String(item.label ?? item.name ?? item.title ?? item.code ?? id);
+        return { value: id, label };
       }),
     [data?.results],
   );

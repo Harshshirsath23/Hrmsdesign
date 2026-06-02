@@ -56,7 +56,7 @@ export function RosterFilterBar({ filters, setFilters, selectedDate, setSelected
         <div className="flex-1 flex flex-wrap items-center gap-2">
           {/* Employee Search */}
           <div className="relative w-[160px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
             <Input 
               className="pl-8 h-8 bg-slate-100/50 dark:bg-slate-800/50 border-transparent focus:bg-white dark:focus:bg-slate-800 rounded-lg text-[11px] font-medium" 
               placeholder="Employee ID or Name..." 

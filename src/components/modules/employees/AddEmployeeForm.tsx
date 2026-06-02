@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckCircle2, Copy, Link2, UserPlus, X } from 'lucide-react';
 import { FormField } from '@components/forms/FormField';
 import {
@@ -13,6 +13,7 @@ import {
   useShiftTypes,
   useSourceOfHire,
   useTransportTypes,
+  useAccountTypes,
 } from '@hooks/useEmployees';
 
 interface AddEmployeeFormProps {
@@ -63,6 +64,7 @@ type AddEmployeeFormState = {
   allow_employee_fill_info: boolean;
   pan_number: string;
   bank_account_number: string;
+  bank_account_type: string;
   ifsc_code: string;
   onboarding_policy: string;
   employment_type: string;
@@ -115,6 +117,7 @@ const initialFormState: AddEmployeeFormState = {
   allow_employee_fill_info: false,
   pan_number: '',
   bank_account_number: '',
+  bank_account_type: '',
   ifsc_code: '',
   onboarding_policy: '',
   employment_type: '',
@@ -162,6 +165,7 @@ export function AddEmployeeForm({ onClose, onSuccess }: AddEmployeeFormProps) {
   const { data: costCenters = [] } = useCostCenters();
   const { data: shiftTypes = [] } = useShiftTypes();
   const { data: employees = [] } = useEmployeeList();
+  const { data: accountTypes = [] } = useAccountTypes();
   const invite = useInviteEmployee();
 
   const [form, setForm] = useState<AddEmployeeFormState>(initialFormState);
@@ -263,6 +267,7 @@ export function AddEmployeeForm({ onClose, onSuccess }: AddEmployeeFormProps) {
       'employment_type',
       'pan_number',
       'bank_account_number',
+      'bank_account_type',
       'ifsc_code',
     ];
 
@@ -334,44 +339,44 @@ export function AddEmployeeForm({ onClose, onSuccess }: AddEmployeeFormProps) {
   };
 
   const buildPayload = () => ({
+    employee_code: form.employee_number,
     first_name: form.first_name,
     last_name: form.last_name,
     middle_name: form.middle_name || undefined,
-    work_email: form.email,
-    alternate_email: form.alternate_email || undefined,
-    personal_mobile: form.personal_mobile,
-    alternate_mobile: form.alternate_mobile || undefined,
+    official_email: form.email,
+    personal_email: form.alternate_email || undefined,
+    mobile_number: form.personal_mobile,
+    alternate_mobile_number: form.alternate_mobile || undefined,
+    emergency_contact_name: form.emergency_contact_name || undefined,
+    emergency_contact_number: form.emergency_contact_number || undefined,
+    father_name: form.father_name || undefined,
+    spouse_name: form.spouse_name || undefined,
     gender: form.gender,
-    department: form.department,
-    designation: form.designation,
-    employment_type: form.employment_type || (form.series === 'Temporary Employees' ? 'CONTRACT' : 'PERMANENT'),
-    date_of_joining: form.date_of_joining,
     date_of_birth: form.date_of_birth || undefined,
-    branch: form.branch || form.location || undefined,
+    marital_status: form.marital_status || undefined,
+    blood_group: form.blood_group || undefined,
+    department: form.department || undefined,
+    designation: form.designation || undefined,
+    employment_type: form.employment_type || undefined,
+    joining_date: form.date_of_joining,
+    date_of_confirmation: form.confirmation_date || undefined,
+    employee_status: form.status === 'Confirmed' ? 'ACTIVE' : form.status === 'Contract' ? 'CONTRACT' : form.status === 'Probation' ? 'PROBATION' : 'TRAINEE',
+    work_location: form.location || undefined,
     grade: form.grade || undefined,
-    employee_category: form.employee_category || employeeCategories[0]?.name || undefined,
-    source_of_hire: form.referred_by || sourceOfHire[0]?.name || undefined,
-    referral_name: form.referral_name || undefined,
-    payroll_status: form.status || undefined,
-    transport_type: transportTypes[0]?.name || undefined,
-    cost_center: costCenters[0]?.name || undefined,
-    shift_type: shiftTypes[0]?.name || undefined,
-    payment_mode: 'BANK_TRANSFER',
-    notice_period_days: '30',
-    allow_employee_to_fill_info: form.allow_employee_fill_info,
-    total_experience: form.total_experience || undefined,
-    relevant_experience: form.relevant_experience || undefined,
-    other_experience: form.other_experience || undefined,
-    experience_history: form.experience_history.filter((entry) => Object.values(entry).some((value) => value.trim())),
-    documents: {
-      offer_letter: form.offer_letter?.name,
-      id_proof: form.id_proof?.name,
-      resume: form.resume?.name,
-      other_docs: form.other_docs.map((file) => file.name),
-    },
-    card_number: form.card_number || undefined,
-    access_valid_from: form.access_valid_from || undefined,
-    access_valid_to: form.access_valid_to || undefined,
+    reporting_manager: form.reporting_manager || undefined,
+    referred_by: form.referred_by || undefined,
+    onboarding_policy: form.onboarding_policy || undefined,
+    allow_employee_to_fill_information: form.allow_employee_fill_info,
+    probation_period: form.probation_period ? parseInt(form.probation_period) : undefined,
+    employee_number_series: form.series || undefined,
+    pan_number: form.pan_number || undefined,
+    aadhaar_number: form.aadhaar_number || undefined,
+    bank_account: form.bank_account_number && form.ifsc_code && form.bank_account_type ? {
+      account_number: form.bank_account_number,
+      ifsc_code: form.ifsc_code,
+      account_type: form.bank_account_type,
+      account_holder_name: `${form.first_name} ${form.last_name}`,
+    } : undefined,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -647,7 +652,7 @@ export function AddEmployeeForm({ onClose, onSuccess }: AddEmployeeFormProps) {
               <select value={form.reporting_manager} onChange={(e) => update('reporting_manager', e.target.value)} className={inputClass}>
                 <option value="">Select manager</option>
                 {managerOptions.map((manager) => (
-                  <option key={manager.id} value={manager.name}>{manager.name}</option>
+                  <option key={manager.id} value={manager.id}>{manager.name}</option>
                 ))}
               </select>
             ), 'reporting_manager')}

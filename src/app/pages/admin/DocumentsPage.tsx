@@ -145,7 +145,7 @@ export function DocumentsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search documents…"
-                className="flat-input pl-9 pr-4 py-2 text-sm w-52"
+                className="flat-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder:text-slate-400 pl-12 pr-4 py-2 text-sm w-52"
               />
             </div>
             {/* View toggle */}

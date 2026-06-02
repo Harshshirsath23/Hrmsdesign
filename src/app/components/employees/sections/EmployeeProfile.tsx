@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
   MapPin,
   Mail,
@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   Edit2,
   Plus,
+  Trash2,
 } from "lucide-react";
+import { useDispatch } from "react-redux";
 import {
   Employee,
 } from "../mockData";
@@ -25,6 +27,26 @@ import {
   ConfirmationDialog,
 } from "../employee-details";
 import { useMasterOptions } from "./useMasterOptions";
+import {
+  EmployeeLanguageRow,
+  LanguageMasterOption,
+  LanguageProficiencyMasterOption,
+  employeeLanguageRowsToPayload,
+  getEmployeeLanguageDetails,
+  getLanguageChoices,
+  getLanguageProficiencyChoices,
+  languageDetailsToEmployeeRows,
+  patchEmployeeLanguageDetails,
+} from "../../../api/employeeLanguageDetails";
+import {
+  employeeMedicalDetailsToPayload,
+  getEmployeeMedicalDetails,
+  medicalDetailsToEmployeePatch,
+  patchEmployeeMedicalDetails,
+} from "../../../api/employeeMedicalDetails";
+import { addNotification } from "../../../../store/slices/notificationSlice";
+import { updateAdminEmployee } from "../../../../store/slices/adminSlice";
+import type { AppDispatch } from "../../../../store";
 
 interface Props {
   employee: Employee;
@@ -32,7 +54,7 @@ interface Props {
   showAddButtons?: boolean;
 }
 
-type LangRow = NonNullable<Employee["languages"]>[number];
+type LangRow = EmployeeLanguageRow;
 
 const YES_NO_OPTIONS = [
   { value: "Yes", label: "Yes" },
@@ -54,6 +76,7 @@ function formatDate(dateStr?: string) {
 
 export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddButtons = true }: Props) {
   const { handleAdminSave, handleToggleEditAccess } = useAdminSync();
+  const dispatch = useDispatch<AppDispatch>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleEditPhotoClick = () => {
@@ -116,18 +139,26 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
 
   const [langEdit, setLangEdit] = useState(false);
   const [languages, setLanguages] = useState<LangRow[]>(employee.languages || []);
-
-  const emptyLang = () => ({ language: "", proficiency: "", canRead: false, canWrite: false, canSpeak: false });
-  const addLang = () => {
-    setLanguages((rows) => [...rows, emptyLang()]);
-    setLangEdit(true);
-  };
+  const [savedLanguages, setSavedLanguages] = useState<LangRow[]>(employee.languages || []);
+  const [languageChoices, setLanguageChoices] = useState<LanguageMasterOption[]>([]);
+  const [languageProficiencyChoices, setLanguageProficiencyChoices] = useState<LanguageProficiencyMasterOption[]>([]);
+  const [languageLoading, setLanguageLoading] = useState(false);
+  const [languageSaving, setLanguageSaving] = useState(false);
+  const [languageError, setLanguageError] = useState<string | null>(null);
 
   const [emEdit, setEmEdit] = useState(false);
   const [emergency, setEmergency] = useState({
     ec: employee.emergencyContact,
     med: employee.medicalInfo,
   });
+  const [savedEmergency, setSavedEmergency] = useState({
+    ec: employee.emergencyContact,
+    med: employee.medicalInfo,
+  });
+  const [medicalDetailsLoaded, setMedicalDetailsLoaded] = useState(false);
+  const [medicalLoading, setMedicalLoading] = useState(false);
+  const [medicalSaving, setMedicalSaving] = useState(false);
+  const [medicalError, setMedicalError] = useState<string | null>(null);
 
   useEffect(() => {
     setPersonal(employee);
@@ -138,8 +169,88 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
     });
     setWork(employee);
     setLanguages(employee.languages || []);
-    setEmergency({ ec: employee.emergencyContact, med: employee.medicalInfo });
-  }, [employee]);
+    setSavedLanguages(employee.languages || []);
+    if (!medicalDetailsLoaded) {
+      const nextEmergency = { ec: employee.emergencyContact, med: employee.medicalInfo };
+      setEmergency(nextEmergency);
+      setSavedEmergency(nextEmergency);
+    }
+  }, [employee, medicalDetailsLoaded]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLanguageDetails() {
+      if (!employee.id) return;
+      setLanguageLoading(true);
+      setLanguageError(null);
+      try {
+        const [details, languageMaster, proficiencyMaster] = await Promise.all([
+          getEmployeeLanguageDetails(employee.id),
+          getLanguageChoices(),
+          getLanguageProficiencyChoices(),
+        ]);
+        if (cancelled) return;
+
+        const nextLanguages = languageDetailsToEmployeeRows(details);
+        setLanguageChoices(languageMaster);
+        setLanguageProficiencyChoices(proficiencyMaster);
+        setLanguages(nextLanguages);
+        setSavedLanguages(nextLanguages);
+        dispatch(updateAdminEmployee({ ...employee, languages: nextLanguages }));
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Could not load language details.";
+        setLanguageError(message);
+        dispatch(addNotification({ type: "error", message }));
+      } finally {
+        if (!cancelled) setLanguageLoading(false);
+      }
+    }
+
+    loadLanguageDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, employee.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMedicalDetails() {
+      if (!employee.id) return;
+      setMedicalLoading(true);
+      setMedicalError(null);
+      try {
+        const details = await getEmployeeMedicalDetails(employee.id);
+        if (cancelled) return;
+
+        const medicalPatch = medicalDetailsToEmployeePatch(details);
+        const nextEmergency = {
+          ec: medicalPatch.emergencyContact,
+          med: medicalPatch.medicalInfo,
+        };
+        setMedicalDetailsLoaded(true);
+        setEmergency(nextEmergency);
+        setSavedEmergency(nextEmergency);
+        dispatch(updateAdminEmployee({ ...employee, ...medicalPatch }));
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Could not load emergency and medical information.";
+        setMedicalError(message);
+        dispatch(addNotification({ type: "error", message }));
+      } finally {
+        if (!cancelled) setMedicalLoading(false);
+      }
+    }
+
+    loadMedicalDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, employee.id]);
 
   const mergeEmployee = useCallback(
     (patch: Partial<Employee>) => ({ ...employee, ...patch }),
@@ -154,17 +265,106 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
 
   const isEditable = (id: string) => employee.editableSections?.includes(id);
 
-  // Simple collapse helper for smooth expand/collapse
-  function Collapse({ open, children }: { open: boolean; children: React.ReactNode }) {
-    return (
-      <div
-        className="overflow-hidden transition-all duration-200"
-        style={{ maxHeight: open ? 800 : 0 }}
-      >
-        <div className={`${open ? "py-3" : "py-0"}`}>{children}</div>
-      </div>
-    );
-  }
+  const languageSelectOptions = useMemo(
+    () =>
+      languageChoices.length
+        ? languageChoices.map((choice) => ({ value: choice.label, label: choice.label }))
+        : languageOptions,
+    [languageChoices, languageOptions]
+  );
+
+  const proficiencySelectOptions = useMemo(
+    () =>
+      languageProficiencyChoices.length
+        ? languageProficiencyChoices.map((choice) => ({ value: choice.label, label: choice.label }))
+        : [],
+    [languageProficiencyChoices]
+  );
+
+  const addLanguageRow = () => {
+    const defaultProficiency = languageProficiencyChoices[0];
+    setLanguages((rows) => [
+      ...rows,
+      {
+        language: "",
+        proficiency: defaultProficiency?.label || "",
+        canRead: true,
+        canWrite: true,
+        canSpeak: true,
+        languageId: null,
+        proficiencyLevelId: defaultProficiency?.id ?? null,
+        readProficiencyId: defaultProficiency?.id ?? null,
+        writeProficiencyId: defaultProficiency?.id ?? null,
+        speakProficiencyId: defaultProficiency?.id ?? null,
+        isMotherTongue: false,
+      },
+    ]);
+    setLangEdit(true);
+  };
+
+  const saveLanguageDetails = async () => {
+    if (!languageProficiencyChoices.length) {
+      const message = "No active language proficiency masters found. Add active records in Language Proficiency master first.";
+      setLanguageError(message);
+      dispatch(addNotification({ type: "error", message }));
+      return;
+    }
+    if (languages.some((row) => !row.proficiency)) {
+      const message = "Select a proficiency level for each language row.";
+      setLanguageError(message);
+      dispatch(addNotification({ type: "warning", message }));
+      return;
+    }
+
+    setLanguageSaving(true);
+    setLanguageError(null);
+    try {
+      const payload = employeeLanguageRowsToPayload(languages, {
+        languages: languageChoices,
+        proficiencies: languageProficiencyChoices,
+      });
+      const saved = await patchEmployeeLanguageDetails(employee.id, payload);
+      const nextLanguages = languageDetailsToEmployeeRows(saved);
+      setLanguages(nextLanguages);
+      setSavedLanguages(nextLanguages);
+      setLangEdit(false);
+      dispatch(updateAdminEmployee({ ...employee, languages: nextLanguages }));
+      dispatch(addNotification({ type: "success", message: "Language details updated." }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not save language details.";
+      setLanguageError(message);
+      dispatch(addNotification({ type: "error", message }));
+    } finally {
+      setLanguageSaving(false);
+    }
+  };
+
+  const saveMedicalDetails = async () => {
+    setMedicalSaving(true);
+    setMedicalError(null);
+    try {
+      const saved = await patchEmployeeMedicalDetails(
+        employee.id,
+        employeeMedicalDetailsToPayload(emergency)
+      );
+      const medicalPatch = medicalDetailsToEmployeePatch(saved);
+      const nextEmergency = {
+        ec: medicalPatch.emergencyContact,
+        med: medicalPatch.medicalInfo,
+      };
+      setEmergency(nextEmergency);
+      setSavedEmergency(nextEmergency);
+      setEmEdit(false);
+      dispatch(updateAdminEmployee({ ...employee, ...medicalPatch }));
+      dispatch(addNotification({ type: "success", message: "Emergency and medical information updated." }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not save emergency and medical information.";
+      setMedicalError(message);
+      dispatch(addNotification({ type: "error", message }));
+    } finally {
+      setMedicalSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -726,25 +926,36 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
         isEditing={langEdit}
         onEdit={() => setLangEdit(true)}
         onCancel={() => {
-          setLanguages(employee.languages || []);
+          setLanguages(savedLanguages);
           setLangEdit(false);
         }}
-        onSave={async () => {
-          const next = mergeEmployee({ languages });
-          const ok = await handleAdminSave("Language Details", employee, next);
-          if (ok) setLangEdit(false);
-        }}
-        headerExtra={showAddButtons ? (
+        onSave={saveLanguageDetails}
+        headerExtra={showAddButtons && langEdit ? (
           <button
             type="button"
-            onClick={addLang}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-secondary"
+            onClick={addLanguageRow}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-bold hover:bg-secondary transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
-            Add New
+            Add Language
           </button>
         ) : null}
       >
+        {languageLoading ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Loading saved language details...
+          </div>
+        ) : null}
+        {languageError ? (
+          <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {languageError}
+          </div>
+        ) : null}
+        {languageSaving ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Saving language details...
+          </div>
+        ) : null}
         {!languages.length ? (
           <EmptyStateCard
             icon={Languages}
@@ -764,7 +975,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
                     onChange={(v) =>
                       setLanguages((rows) => rows.map((r, i) => (i === idx ? { ...r, language: v } : r)))
                     }
-                    options={languageOptions}
+                    options={languageSelectOptions}
                   />
                   <div className="space-y-1.5">
                     <span className="block text-[11px] font-semibold text-muted-foreground tracking-wide">
@@ -782,7 +993,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
                         className="w-full rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm font-medium"
                       >
                         <option value="">Select Proficiency</option>
-                        {(proficiencyOptions.length ? proficiencyOptions : ["Beginner", "Intermediate", "Advanced", "Native"].map((p) => ({ value: p, label: p }))).map((p) => (
+                        {proficiencySelectOptions.map((p) => (
                           <option key={p.value} value={p.value}>
                             {p.label}
                           </option>
@@ -817,6 +1028,16 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
                       {label}
                     </label>
                   ))}
+                  {langEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => setLanguages((rows) => rows.filter((_, i) => i !== idx))}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </button>
+                  ) : null}
 
                 </div>
               </div>
@@ -835,19 +1056,27 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
         isEditing={emEdit}
         onEdit={() => setEmEdit(true)}
         onCancel={() => {
-          setEmergency({ ec: employee.emergencyContact, med: employee.medicalInfo });
+          setEmergency(savedEmergency);
           setEmEdit(false);
         }}
-        onSave={async () => {
-          const next = mergeEmployee({
-            emergencyContact: emergency.ec,
-            medicalInfo: emergency.med,
-          });
-          const ok = await handleAdminSave("Emergency & Medical Information", employee, next);
-          if (ok) setEmEdit(false);
-        }}
         headerExtra={null}
+        onSave={saveMedicalDetails}
       >
+        {medicalLoading ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Loading saved emergency and medical information...
+          </div>
+        ) : null}
+        {medicalError ? (
+          <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {medicalError}
+          </div>
+        ) : null}
+        {medicalSaving ? (
+          <div className="mb-4 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            Saving emergency and medical information...
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <ProfileInfoField
             label="Emergency Contact Name"
@@ -908,7 +1137,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
               />
               <span className="text-sm font-semibold text-foreground">Has Any Disease?</span>
             </label>
-            <Collapse open={!!emergency.med?.hasDisease}>
+            {emergency.med?.hasDisease ? (
               <ProfileInfoField
                 label="Disease Details"
                 value={emergency.med?.diseaseDetails || ""}
@@ -918,7 +1147,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
                 placeholder="Enter disease name, description, medication, since when, etc."
                 onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, diseaseDetails: v } }))}
               />
-            </Collapse>
+            ) : null}
           </div>
 
           {/* Surgery Details Checkbox & Textarea */}
@@ -942,7 +1171,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
               />
               <span className="text-sm font-semibold text-foreground">Any Surgery or Operation Done?</span>
             </label>
-            <Collapse open={!!emergency.med?.hasSurgery}>
+            {emergency.med?.hasSurgery ? (
               <ProfileInfoField
                 label="Surgery / Operation Details"
                 value={emergency.med?.surgeryDetails || ""}
@@ -952,7 +1181,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
                 placeholder="Enter surgery name, hospital, date, recovery status, etc."
                 onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, surgeryDetails: v } }))}
               />
-            </Collapse>
+            ) : null}
           </div>
 
           {/* Allergy Details Checkbox & Textarea */}
@@ -976,7 +1205,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
               />
               <span className="text-sm font-semibold text-foreground">Any Allergies?</span>
             </label>
-            <Collapse open={!!emergency.med?.hasAllergies}>
+            {emergency.med?.hasAllergies ? (
               <ProfileInfoField
                 label="Allergy Details"
                 value={emergency.med?.allergyDetails || ""}
@@ -986,7 +1215,7 @@ export function EmployeeProfile({ employee, isFinalSubmitted = false, showAddBut
                 placeholder="Enter allergy type and description."
                 onChange={(v) => setEmergency((e) => ({ ...e, med: { ...e.med, allergyDetails: v } }))}
               />
-            </Collapse>
+            ) : null}
           </div>
         </div>
       </EditableSectionCard>

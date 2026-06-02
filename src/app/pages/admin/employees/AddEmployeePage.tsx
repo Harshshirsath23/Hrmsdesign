@@ -14,6 +14,12 @@ import { useDispatch } from "react-redux";
 import { addAdminEmployee } from "@/store/slices/adminSlice";
 import { Employee, normalizeLegacyEmployee } from "@/app/components/employees/mockData";
 import {
+  createEmployee,
+  saveDraft,
+  type AddEmployeePayload,
+  type AddEmployeeResponse,
+} from "@/api/addEmployeeApi";
+import {
   User,
   Briefcase,
   Clock,
@@ -48,6 +54,11 @@ import {
 } from "lucide-react";
 import { MasterSelect } from "@/app/components/ui/MasterSelect";
 import { SearchableSelect } from "@/app/components/ui/SearchableSelect";
+import {
+  MasterDropdown,
+  MasterMultiDropdown,
+  MasterSearchableDropdown,
+} from "@/app/components/ui/MasterDropdown";
 import { BulkImportTab } from "./BulkImportTab";
 
 // ═══════════════════════════════════════════════════════════
@@ -98,6 +109,7 @@ interface FormState {
   basicSalary: string;
   bankName: string;
   accountNumber: string;
+  accountType: string;
   ifscCode: string;
   taxId: string;
   leavePolicy: string;
@@ -265,6 +277,7 @@ const INIT: FormState = {
   basicSalary: "",
   bankName: "",
   accountNumber: "",
+  accountType: "",
   ifscCode: "",
   taxId: "",
   leavePolicy: "",
@@ -305,6 +318,7 @@ const INIT: FormState = {
 
 function FF({
   label,
+  icon,
   required,
   error,
   ok,
@@ -313,6 +327,7 @@ function FF({
   span2,
 }: {
   label: string;
+  icon?: ReactNode;
   required?: boolean;
   error?: string;
   ok?: boolean;
@@ -322,9 +337,12 @@ function FF({
 }) {
   return (
     <div className={span2 ? "sm:col-span-2" : ""}>
-      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-        {label}
-        {required && <span className="text-destructive ml-1">*</span>}
+      <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+        {icon && <span className="shrink-0 text-muted-foreground/80">{icon}</span>}
+        <span>
+          {label}
+          {required && <span className="text-destructive ml-1">*</span>}
+        </span>
       </label>
       {children}
       {error ? (
@@ -613,12 +631,12 @@ function SearchSel({
         />
       </button>
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-          <div className="p-2 border-b border-border">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card dark:bg-slate-900 border border-border dark:border-slate-700 rounded-lg shadow-lg z-50 overflow-hidden">
+          <div className="p-2 border-b border-border dark:border-slate-700">
             <div className="relative">
               <Search
                 size={13}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground dark:text-slate-400 pointer-events-none"
               />
               <input
                 ref={inputRef}
@@ -626,13 +644,13 @@ function SearchSel({
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search managers…"
-                className="w-full h-8 pl-8 pr-3 text-xs bg-background rounded-md border border-border focus:outline-none focus:border-foreground/40 text-foreground placeholder:text-muted-foreground"
+                className="w-full h-8 pl-9 pr-3 text-xs bg-background dark:bg-slate-800 rounded-md border border-border dark:border-slate-700 focus:outline-none focus:border-foreground/40 dark:focus:border-slate-500 text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-slate-400"
               />
             </div>
           </div>
           <div className="max-h-44 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <p className="px-3 py-2.5 text-xs text-muted-foreground">No results</p>
+              <p className="px-3 py-2.5 text-xs text-muted-foreground dark:text-slate-400">No results</p>
             ) : (
               filtered.map((o) => (
                 <button
@@ -1196,7 +1214,6 @@ export function AddEmployeePage() {
         "employmentType",
         "joiningDate",
         "aadhaarNumber",
-        "reportingManager",
       ];
       if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1235,7 +1252,6 @@ export function AddEmployeePage() {
       "employmentType",
       "joiningDate",
       "aadhaarNumber",
-      "reportingManager",
     ];
     if (form.activeTab === "rehire") REQ.push("rehireDate");
 
@@ -1267,46 +1283,126 @@ export function AddEmployeePage() {
     e.preventDefault();
     if (!validateAll()) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1800));
 
-    // Create the structured assets array if filled
-    const assets = form.assetId && form.assetName
-      ? [
-          {
-            id: `ast-${Date.now()}`,
-            assetName: form.assetName,
-            assetId: form.assetId,
-            assetCategory: form.assetCategory,
-            serialNumber: form.serialNumber,
-            assignedDate: form.assignDate,
-            returnDate: form.returnDate || undefined,
-            assetCondition: form.assetCondition,
-            status: form.assetStatus || "Assigned",
-            remarks: form.assetRemarks || undefined,
-          },
-        ]
-      : [];
+    const assets =
+      form.assetId && form.assetName
+        ? [
+            {
+              asset_name: form.assetName,
+              asset_id: form.assetId,
+              asset_category: form.assetCategory || undefined,
+              asset_condition: form.assetCondition || undefined,
+              serial_number: form.serialNumber || undefined,
+              asset_assign_date: form.assignDate,
+              asset_return_date: form.returnDate || undefined,
+              asset_status: form.assetStatus || "ASSIGNED",
+              asset_remarks: form.assetRemarks || undefined,
+            },
+          ]
+        : [];
 
-    // Create the employee object
-    const newEmp = normalizeLegacyEmployee({
-      ...form,
-      id: form.employeeId,
-      name: `${form.firstName} ${form.lastName}`,
-      phone: `${form.phoneCode} ${form.phone}`,
-      status: "Active", // Initial status
+    const masterValue = (value: string) =>
+      value && !value.includes("-demo-") ? value : null;
+
+    const payload: AddEmployeePayload = {
+      employee_code: form.employeeId,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      date_of_birth: form.dob,
+      joining_date: form.joiningDate,
+      official_email: form.email,
+      mobile_number: `${form.phoneCode}${form.phone}`,
+      emergency_contact_name: form.emergencyName,
+      emergency_contact_number: form.emergencyPhone,
+      gender: masterValue(form.gender),
+      salutation: masterValue(form.salutation),
+      marital_status: null,
+      blood_group: null,
+      personal_email: null,
+      date_of_confirmation: form.confirmationDate || null,
+      employee_status: "ACTIVE",
+      referred_by: masterValue(form.referredBy),
+      allow_employee_to_fill_information: form.allowSelfFill,
+      probation_period: form.probationPeriod ? parseInt(form.probationPeriod) : null,
+      father_name: form.fathersName || null,
+      spouse_name: form.spouseName || null,
+      employment_type: masterValue(form.employmentType),
+      department: masterValue(form.department),
+      designation: masterValue(form.designation),
+      work_location: masterValue(form.workLocation),
+      reporting_manager: masterValue(form.reportingManager),
+      working_hours_start: form.workStart || null,
+      working_hours_end: form.workEnd || null,
+      weekly_off_days: form.weeklyOff,
+      attendance_tracking_mode: masterValue(form.trackingMode),
+      salary_structure: masterValue(form.salaryStructure),
+      basic_salary: form.basicSalary ? parseFloat(form.basicSalary) : null,
+      bank_account:
+        form.accountNumber && form.accountType
+          ? {
+              bank_name: masterValue(form.bankName) || undefined,
+              account_number: form.accountNumber,
+              account_type: form.accountType,
+              ifsc_code: form.ifscCode || undefined,
+              account_holder_name: `${form.firstName} ${form.lastName}`,
+            }
+          : null,
+      pan_number: form.taxId || null,
+      leave_policy: masterValue(form.leavePolicy),
+      annual_leave_balance: form.annualLeave ? parseInt(form.annualLeave) : null,
+      sick_leave_balance: form.sickLeave ? parseInt(form.sickLeave) : null,
+      verification_status: masterValue(form.bgcStatus),
+      agency_name: form.bgcAgency || null,
+      background_remarks: form.bgcRemarks || null,
       assets,
-    });
+      username: form.username || null,
+      temporary_password: form.password || null,
+      system_role: form.role || null,
+      is_draft: false,
+      is_active: true,
+    };
 
-    dispatch(addAdminEmployee(newEmp));
-    
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      const response: AddEmployeeResponse = await createEmployee(payload);
+
+      // Also keep local Redux store in sync so the directory updates immediately
+      const newEmp = normalizeLegacyEmployee({
+        ...form,
+        id: response.employee_id,
+        name: response.full_name,
+        phone: `${form.phoneCode}${form.phone}`,
+        status: "Active",
+      });
+      dispatch(addAdminEmployee(newEmp));
+
+      setSubmitting(false);
+      setSubmitted(true);
+    } catch (err: any) {
+      setSubmitting(false);
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.errors ||
+        "Failed to create employee. Please check your inputs and try again.";
+      alert(typeof detail === "string" ? detail : JSON.stringify(detail));
+    }
   };
 
   const handleDraft = async () => {
     setDraftSaving(true);
-    await new Promise((r) => setTimeout(r, 700));
-    setDraftSaving(false);
+    try {
+      await saveDraft(
+        {
+          ...form,
+          // strip File objects — not serialisable
+          photo: null,
+        },
+        "new",
+      );
+    } catch {
+      // draft save is best-effort; silently ignore network errors
+    } finally {
+      setDraftSaving(false);
+    }
   };
 
   const ok = (k: keyof FormState) => !!(touched[k] && !errors[k] && form[k]);
@@ -1544,11 +1640,10 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Employee No" required hint="Based on selected series">
+                <FF label="Employee No" icon={<Hash size={13} />} required hint="Based on selected series">
                   <Inp
                     value={form.employeeId}
                     onChange={(e) => set("employeeId", e.target.value)}
-                    icon={<Hash size={13} />}
                     placeholder="EMP-001"
                   />
                 </FF>
@@ -1587,12 +1682,11 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Aadhaar Number" required error={errors.aadhaarNumber} ok={ok("aadhaarNumber")}>
+                <FF label="Aadhaar Number" icon={<FileText size={13} />} required error={errors.aadhaarNumber} ok={ok("aadhaarNumber")}>
                   <Inp
                     value={form.aadhaarNumber}
                     onChange={(e) => set("aadhaarNumber", e.target.value)}
                     placeholder="XXXX XXXX XXXX"
-                    icon={<FileText size={13} />}
                     err={!!errors.aadhaarNumber}
                     success={ok("aadhaarNumber")}
                   />
@@ -1606,11 +1700,12 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Reporting Manager" required hint="Searchable — type to filter">
-                  <SearchableSelect
+                <FF label="Reporting Manager" hint="Optional — Select if applicable">
+                  <MasterSearchableDropdown
+                    masterName="Employee"
                     value={form.reportingManager}
                     onChange={(v) => set("reportingManager", v)}
-                    options={MANAGERS.map(m => ({ value: m.v, label: m.l }))}
+                    placeholder="Search Manager..."
                   />
                 </FF>
 
@@ -1644,11 +1739,11 @@ export function AddEmployeePage() {
                 </div>
 
                 <FF label="Referred By">
-                  <Sel
+                  <MasterSearchableDropdown
+                    masterName="Employee"
                     value={form.referredBy}
-                    onChange={(e) => set("referredBy", e.target.value)}
-                    ph="Select referral"
-                    opts={MANAGERS.map((m) => ({ v: m.v, l: m.l }))}
+                    onChange={(v) => set("referredBy", v)}
+                    placeholder="Search referrer..."
                   />
                 </FF>
 
@@ -1688,7 +1783,7 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Email" required error={errors.email} ok={ok("email")}>
+                <FF label="Email" icon={<Mail size={13} />} required error={errors.email} ok={ok("email")}>
                   <Inp
                     name="email"
                     type="email"
@@ -1696,7 +1791,6 @@ export function AddEmployeePage() {
                     onChange={(e) => set("email", e.target.value)}
                     onBlur={() => blur("email")}
                     placeholder="official@company.com"
-                    icon={<Mail size={13} />}
                     err={!!errors.email}
                     success={ok("email")}
                   />
@@ -1711,39 +1805,35 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Emergency Contact Name">
+                <FF label="Emergency Contact Name" icon={<UserPlus size={13} />}>
                   <Inp
                     value={form.emergencyName}
                     onChange={(e) => set("emergencyName", e.target.value)}
                     placeholder="Contact Name"
-                    icon={<UserPlus size={13} />}
                   />
                 </FF>
 
-                <FF label="Emergency Contact Number">
+                <FF label="Emergency Contact Number" icon={<Phone size={13} />}>
                   <Inp
                     value={form.emergencyPhone}
                     onChange={(e) => set("emergencyPhone", e.target.value)}
                     placeholder="Contact Number"
-                    icon={<Phone size={13} />}
                   />
                 </FF>
 
-                <FF label="Father's Name">
+                <FF label="Father's Name" icon={<User size={13} />}>
                   <Inp
                     value={form.fathersName}
                     onChange={(e) => set("fathersName", e.target.value)}
                     placeholder="Full Name"
-                    icon={<User size={13} />}
                   />
                 </FF>
 
-                <FF label="Spouse Name">
+                <FF label="Spouse Name" icon={<User size={13} />}>
                   <Inp
                     value={form.spouseName}
                     onChange={(e) => set("spouseName", e.target.value)}
                     placeholder="Full Name"
-                    icon={<User size={13} />}
                   />
                 </FF>
 
@@ -1766,63 +1856,49 @@ export function AddEmployeePage() {
               Icon={Briefcase}
             >
               <FF label="Department" required error={errors.department} ok={ok("department")}>
-                <Sel
+                <MasterDropdown
+                  masterName="Department"
                   value={form.department}
-                  onChange={(e) => {
-                    set("department", e.target.value);
+                  onChange={(v) => {
+                    set("department", v);
                     setTouched((t) => ({ ...t, department: true }));
                   }}
-                  onBlur={() => blur("department")}
-                  ph="Select department"
-                  err={!!errors.department}
-                  success={ok("department")}
-                  opts={DEPTS.map((d) => ({ v: d.toLowerCase().replace(/\s+/g, "-"), l: d }))}
+                  placeholder="Select department"
+                  required
                 />
               </FF>
 
               <FF label="Designation / Role" required error={errors.designation} ok={ok("designation")}>
-                <Sel
+                <MasterDropdown
+                  masterName="Designation"
                   value={form.designation}
-                  onChange={(e) => {
-                    set("designation", e.target.value);
+                  onChange={(v) => {
+                    set("designation", v);
                     setTouched((t) => ({ ...t, designation: true }));
                   }}
-                  onBlur={() => blur("designation")}
-                  ph="Select role"
-                  err={!!errors.designation}
-                  success={ok("designation")}
-                  opts={ROLES.map((r) => ({
-                    v: r.toLowerCase().replace(/\s+\/\s+|\s+/g, "-"),
-                    l: r,
-                  }))}
+                  placeholder="Select role"
+                  required
                 />
               </FF>
 
               <FF label="Employment Type" required error={errors.employmentType} ok={ok("employmentType")}>
-                <Sel
+                <MasterDropdown
+                  masterName="EmployeeType"
                   value={form.employmentType}
-                  onChange={(e) => {
-                    set("employmentType", e.target.value);
+                  onChange={(v) => {
+                    set("employmentType", v);
                     setTouched((t) => ({ ...t, employmentType: true }));
                   }}
-                  onBlur={() => blur("employmentType")}
-                  ph="Select type"
-                  err={!!errors.employmentType}
-                  success={ok("employmentType")}
-                  opts={[
-                    { v: "full-time", l: "Full-time" },
-                    { v: "part-time", l: "Part-time" },
-                    { v: "contract", l: "Contract" },
-                  ]}
+                  placeholder="Select type"
+                  required
                 />
               </FF>
 
-              <FF label="Work Location">
+              <FF label="Work Location" icon={<MapPin size={13} />}>
                 <Inp
                   value={form.workLocation}
                   onChange={(e) => set("workLocation", e.target.value)}
                   placeholder="New York HQ / Remote"
-                  icon={<MapPin size={13} />}
                 />
               </FF>
             </SC>
@@ -1856,23 +1932,19 @@ export function AddEmployeePage() {
               </FF>
 
               <FF label="Weekly Off Days">
-                <MultiSel
-                  opts={DAYS}
-                  sel={form.weeklyOff}
+                <MasterMultiDropdown
+                  masterName="WeeklyOffDays"
+                  values={form.weeklyOff}
                   onChange={(v) => set("weeklyOff", v)}
-                  ph="Select days off…"
                 />
               </FF>
 
               <FF label="Attendance Tracking Mode">
-                <Sel
+                <MasterDropdown
+                  masterName="AttendanceTrackingMode"
                   value={form.trackingMode}
-                  onChange={(e) => set("trackingMode", e.target.value)}
-                  opts={[
-                    { v: "biometric", l: "Biometric" },
-                    { v: "manual", l: "Manual" },
-                    { v: "hybrid", l: "Hybrid" },
-                  ]}
+                  onChange={(v) => set("trackingMode", v)}
+                  placeholder="Select mode"
                 />
               </FF>
             </SC>
@@ -1888,14 +1960,11 @@ export function AddEmployeePage() {
               Icon={CreditCard}
             >
               <FF label="Salary Structure">
-                <Sel
+                <MasterDropdown
+                  masterName="SalaryStructure"
                   value={form.salaryStructure}
-                  onChange={(e) => set("salaryStructure", e.target.value)}
-                  ph="Select structure"
-                  opts={SALARY_STRUCTS.map((s) => ({
-                    v: s.toLowerCase().replace(/\s+\/\s+|\s+/g, "-"),
-                    l: s,
-                  }))}
+                  onChange={(v) => set("salaryStructure", v)}
+                  placeholder="Select structure"
                 />
               </FF>
 
@@ -1914,11 +1983,20 @@ export function AddEmployeePage() {
               </FF>
 
               <FF label="Bank Name">
-                <Inp
+                <MasterDropdown
+                  masterName="Bank"
                   value={form.bankName}
-                  onChange={(e) => set("bankName", e.target.value)}
-                  placeholder="Chase Bank"
-                  icon={<Building2 size={13} />}
+                  onChange={(v) => set("bankName", v)}
+                  placeholder="Select bank"
+                />
+              </FF>
+
+              <FF label="Account Type" required hint="Required for bank account">
+                <MasterDropdown
+                  masterName="AccountType"
+                  value={form.accountType}
+                  onChange={(v) => set("accountType", v)}
+                  placeholder="Select account type"
                 />
               </FF>
 
@@ -1960,11 +2038,11 @@ export function AddEmployeePage() {
               Icon={Calendar}
             >
               <FF label="Leave Policy" span2>
-                <Sel
+                <MasterDropdown
+                  masterName="LeavePolicy"
                   value={form.leavePolicy}
-                  onChange={(e) => set("leavePolicy", e.target.value)}
-                  ph="Select leave policy"
-                  opts={LEAVE_POLICIES}
+                  onChange={(v) => set("leavePolicy", v)}
+                  placeholder="Select policy"
                 />
               </FF>
               
@@ -1983,16 +2061,11 @@ export function AddEmployeePage() {
               Icon={Shield}
             >
               <FF label="Verification Status">
-                <Sel 
-                  value={form.bgcStatus} 
-                  onChange={(e) => set("bgcStatus", e.target.value)}
-                  opts={[
-                    { v: "Pending", l: "Pending" },
-                    { v: "In Progress", l: "In Progress" },
-                    { v: "Verified", l: "Verified" },
-                    { v: "Failed", l: "Failed" },
-                    { v: "Not Required", l: "Not Required" }
-                  ]}
+                <MasterDropdown
+                  masterName="VerificationStatus"
+                  value={form.bgcStatus}
+                  onChange={(v) => set("bgcStatus", v)}
+                  placeholder="Select status"
                 />
               </FF>
               <FF label="Agency Name">
@@ -2041,12 +2114,11 @@ export function AddEmployeePage() {
                 />
               </FF>
 
-              <FF label="Asset ID" error={errors.assetId}>
+              <FF label="Asset ID" icon={<Hash size={13} />} error={errors.assetId}>
                 <Inp
                   value={form.assetId}
                   onChange={(e) => set("assetId", e.target.value)}
                   placeholder="E.g. AST-2024-001"
-                  icon={<Hash size={13} />}
                 />
               </FF>
 
@@ -2139,12 +2211,11 @@ export function AddEmployeePage() {
               desc="System credentials and role-based access permissions"
               Icon={Shield}
             >
-              <FF label="Username" hint="Auto-generated from name · Can be edited manually">
+              <FF label="Username" icon={<User size={13} />} hint="Auto-generated from name · Can be edited manually">
                 <Inp
                   value={form.username}
                   onChange={(e) => set("username", e.target.value)}
                   placeholder="james.anderson"
-                  icon={<User size={13} />}
                 />
               </FF>
 

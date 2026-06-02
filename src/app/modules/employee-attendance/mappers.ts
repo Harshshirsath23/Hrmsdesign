@@ -1,6 +1,8 @@
 import type { ManagerAttendanceListRecord } from '../../../api/managerAttendanceTypes';
 import type { ManagerAttendanceSummaryResponse } from '../../../api/managerAttendanceTypes';
+import type { RegularizationHistoryRecord } from '../../../api/employeeAttendanceClient';
 import type { AttendanceStatus, DailyAttendance, WorkMode } from '../attendance/types';
+import type { AttendanceRequest } from '../attendance/types';
 import type { AttendanceMetrics } from '../../components/attendance/my-attendance/utils';
 
 function formatTime12h(value: string | null | undefined): string {
@@ -129,5 +131,35 @@ export function mapSummaryToMetrics(
       leaveTaken: formatDelta(summary.deltas?.leave_taken),
       lateIn: formatDelta(summary.deltas?.late_in),
     },
+  };
+}
+
+function mapRequestStatus(status: string): AttendanceRequest['status'] {
+  const normalized = status.toUpperCase();
+  if (normalized === 'APPROVED' || normalized === 'FULLY_APPROVED') return 'Approved';
+  if (normalized === 'REJECTED') return 'Rejected';
+  if (normalized === 'CANCELLED') return 'Cancelled';
+  if (normalized === 'IN_REVIEW' || normalized === 'UNDER_REVIEW') return 'Under Review';
+  return 'Pending';
+}
+
+export function mapRegularizationHistoryToRequest(
+  record: RegularizationHistoryRecord,
+  employeeId: string,
+  employeeName: string,
+): AttendanceRequest {
+  return {
+    id: record.regularization_id,
+    employeeId,
+    employeeName,
+    type: 'Regularization',
+    date: record.date,
+    reason: record.reason || '',
+    status: mapRequestStatus(record.status),
+    attendanceDate: record.date,
+    requestedStatus: record.requested_status,
+    submittedDate: record.submitted_at || undefined,
+    lastUpdated: record.reviewed_at || record.submitted_at || undefined,
+    comments: record.reviewer_comment || undefined,
   };
 }

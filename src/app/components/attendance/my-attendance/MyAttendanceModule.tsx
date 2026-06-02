@@ -5,11 +5,12 @@ import { Filters } from "./Filters";
 import { CalendarView } from "./CalendarView";
 import { ListView } from "./ListView";
 import { RegularizationTab } from "./RegularizationTab";
+import { RegularizationHistoryTab } from "./RegularizationHistoryTab";
 import { SwipeDetailsDrawer } from "./SwipeDetailsDrawer";
 import { AttendanceCharts } from "./AttendanceCharts";
 import { Legend } from "./Legend";
 import { calculateMetrics, AttendanceMetrics } from "./utils";
-import { DailyAttendance } from "../../../modules/attendance/types";
+import { AttendanceRequest, DailyAttendance } from "../../../modules/attendance/types";
 import { attendanceDataset } from "../../../modules/attendance/store";
 import { motion, AnimatePresence } from "motion/react";
 import type { PunchDetailsResponse, RegularizationBulkPayload } from "../../../../api/employeeAttendanceClient";
@@ -22,6 +23,7 @@ interface MyAttendanceModuleProps {
   showTitle?: boolean;
   /** When set, uses API-backed records instead of the local mock dataset. */
   externalRecords?: DailyAttendance[];
+  externalRegularizationRequests?: AttendanceRequest[];
   externalMetrics?: AttendanceMetrics;
   externalLoading?: boolean;
   externalError?: string | null;
@@ -37,6 +39,7 @@ export function MyAttendanceModule({
   readOnly = false,
   showTitle = true,
   externalRecords,
+  externalRegularizationRequests,
   externalMetrics,
   externalLoading = false,
   externalError = null,
@@ -44,7 +47,7 @@ export function MyAttendanceModule({
   onFetchPunchDetails,
   onSubmitRegularization,
 }: MyAttendanceModuleProps) {
-  const [view, setView] = useState<"calendar" | "list" | "regularization">("calendar");
+  const [view, setView] = useState<"calendar" | "list" | "regularization" | "regularization-history">("calendar");
   const [currentDate, setCurrentDate] = useState(() =>
     externalRecords !== undefined ? new Date() : new Date(2026, 4, 1),
   );
@@ -66,8 +69,8 @@ export function MyAttendanceModule({
       ? (externalRecords ?? [])
       : attendanceDataset.records.filter(r => r.employeeId === employeeId);
 
-    // Filter by month/year unless in regularization tab where we might need historical data
-    if (view !== "regularization") {
+    // Filter by month/year unless in regularization/history tab where we might need historical data
+    if (view !== "regularization" && view !== "regularization-history") {
       records = records.filter(r => isSameMonth(parseISO(r.date), currentDate));
     }
 
@@ -103,15 +106,6 @@ export function MyAttendanceModule({
 
   return (
     <div className="attendance-workspace space-y-7 pb-12">
-      {showTitle ? (
-        <div className="attendance-hero flex items-center justify-between">
-          <div>
-            <p className="attendance-kicker">Attendance intelligence</p>
-            <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight">{title}</h1>
-            <p className="text-sm text-muted-foreground font-medium mt-2 max-w-2xl">{subtitle}</p>
-          </div>
-        </div>
-      ) : null}
 
       {externalError ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
@@ -125,16 +119,13 @@ export function MyAttendanceModule({
         </div>
       ) : null}
 
-      {/* Summary Cards */}
-      <SummaryCards metrics={metrics} />
-
-      {/* Filters & View Switcher */}
+       {/* Filters & View Switcher */}
       <div className="sticky top-4 z-50 attendance-sticky-tools">
         <Filters
           view={view}
           onViewChange={(newView) => {
             setView(newView);
-            if (newView !== "regularization") setSelectedDateForRegularize(null);
+            if (newView !== "regularization" && newView !== "regularization-history") setSelectedDateForRegularize(null);
           }}
           currentDate={currentDate}
           onDateChange={setCurrentDate}
@@ -143,10 +134,15 @@ export function MyAttendanceModule({
         />
       </div>
 
+
+      {/* Summary Cards */}
+      <SummaryCards metrics={metrics} />
+
+     
       {/* Main Content Area */}
       <div className="relative">
         <AnimatePresence mode="wait">
-          {externalLoading ? null : employeeRecords.length > 0 || view === "regularization" ? (
+          {externalLoading ? null : employeeRecords.length > 0 || view === "regularization" || view === "regularization-history" ? (
             <motion.div
               key={view + currentDate.getTime()}
               initial={{ opacity: 0, y: 20 }}
@@ -185,12 +181,17 @@ export function MyAttendanceModule({
                   onRegularize={handleRegularize}
                   readOnly={readOnly}
                 />
-              ) : (
+              ) : view === "regularization" ? (
                 <RegularizationTab
                   records={usesExternalData ? employeeRecords : attendanceDataset.records.filter(r => r.employeeId === employeeId)}
                   initialDate={selectedDateForRegularize}
                   readOnly={readOnly}
                   onSubmitRegularization={onSubmitRegularization}
+                />
+              ) : (
+                <RegularizationHistoryTab
+                  requests={externalRegularizationRequests ?? attendanceDataset.requests}
+                  employeeId={employeeId}
                 />
               )}
             </motion.div>

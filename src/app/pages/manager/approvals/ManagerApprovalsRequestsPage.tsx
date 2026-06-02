@@ -426,15 +426,33 @@ export default function ManagerApprovalsRequestsPage() {
   const [showOnlyPending, setShowOnlyPending] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [pageNum, setPageNum] = useState(1);
+  const [perPage, setPerPage] = useState(50);
+
+  // Helper to convert humanized request type back to reg_type code
+  const getRawRegType = (humanizedType: string): string | undefined => {
+    if (!humanizedType || humanizedType === "ALL") return undefined;
+    const regTypes: Record<string, string> = {
+      "Missing Punch": "MISSING_PUNCH",
+      "Wrong Punch": "WRONG_PUNCH",
+      "Late Login": "LATE_LOGIN",
+      "Early Exit": "EARLY_EXIT",
+    };
+    return regTypes[humanizedType];
+  };
 
   const attendanceFilters = useMemo(
     () => ({
       status: showOnlyPending ? "PENDING" : status !== "ALL" ? status.toUpperCase() : undefined,
+      reg_type: getRawRegType(requestType),
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
       search: query.trim() || undefined,
+      department: department !== "ALL" ? department : undefined,
+      page: pageNum,
+      per_page: perPage,
     }),
-    [showOnlyPending, status, dateFrom, dateTo, query],
+    [showOnlyPending, status, requestType, dateFrom, dateTo, query, department, pageNum, perPage],
   );
 
   const {
@@ -745,6 +763,7 @@ export default function ManagerApprovalsRequestsPage() {
     setDepartment("ALL");
     setDateFrom("");
     setDateTo("");
+    setPageNum(1);
     setShowOnlyPending(false);
   };
 
@@ -773,9 +792,9 @@ export default function ManagerApprovalsRequestsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Approvals Inbox</h1>
+          <p className="text-sm text-muted-foreground">Manage your approval requests here.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           {/* <select
             value={workflowType}
             onChange={(e) => {
@@ -794,6 +813,9 @@ export default function ManagerApprovalsRequestsPage() {
             <option value="Delegate Approval Authority">Delegate Approval Authority</option>
             <option value="Approval Workflow Configuration">Approval Workflow Configuration</option>
           </select> */}
+          <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90">
+            Requests
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { setLocalRows(MOCK_REQUESTS.map((r) => ({ ...r, source: "local" as RowSource }))); refreshTeam(); reloadAttendance(); }}>
             <RefreshCw className={cn("mr-2 h-4 w-4", attendanceLoading && "animate-spin")} />
             Refresh

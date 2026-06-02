@@ -193,7 +193,7 @@ export interface ApplyLeavePayload {
   to_session:
     | "first_half"
     | "second_half";
-
+  contact_during_leave: string;
   reason: string;
 
   attachment?: File | null;
@@ -379,7 +379,10 @@ async function applyLeave(payload: ApplyLeavePayload) {
     "to_session",
     payload.to_session
   );
-
+ formData.append(
+    "contact_during_leave",
+    payload.contact_during_leave
+  );
   formData.append(
     "reason",
     payload.reason
