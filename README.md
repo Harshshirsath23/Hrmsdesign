@@ -1,7 +1,7 @@
 
-  # HRMS Design
+  # HRMS UI Redesign Proposal
 
-  This is a code bundle for HRMS Design. The original project is available at https://www.figma.com/design/6yeahPh31jDt3hnBkdb9xT/HRMS-Design.
+  This is a code bundle for HRMS UI Redesign Proposal. The original project is available at https://www.figma.com/design/KwOmF8pqf0PkB9fohxyBXb/HRMS-UI-Redesign-Proposal.
 
   ## Running the code
 
