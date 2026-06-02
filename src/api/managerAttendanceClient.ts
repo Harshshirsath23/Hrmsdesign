@@ -22,6 +22,8 @@ import type {
   ManagerRegularizationListItem,
   OTApprovePayload,
   TeamAttendanceMember,
+  TeamAttendanceOverrideRequest,
+  TeamAttendanceOverrideResponse,
   TeamMemberAttendanceResponse,
   TeamMemberProfileResponse,
   TeamMemberStatsResponse,
@@ -204,12 +206,15 @@ export async function fetchTeamMemberProfile(employeeId: string): Promise<TeamMe
 
 // ─── Approvals (regularization + overtime) ───────────────────────────────────
 
-export interface ManagerApprovalListParams {
+export interface ManagerApprovalListParams extends Record<string, string | number | boolean | undefined> {
   status?: string;
   reg_type?: string;
   date_from?: string;
   date_to?: string;
   search?: string;
+  department?: string;
+  page?: number;
+  per_page?: number;
 }
 
 function extractList<T>(payload: T[] | { results: T[] }): T[] {
@@ -286,4 +291,19 @@ export async function rejectManagerOvertime(
     method: 'POST',
     body: JSON.stringify(body ?? {}),
   });
+}
+
+// ─── Team Attendance Override ─────────────────────────────────────────────
+
+export async function overrideTeamAttendance(
+  employeeId: string,
+  body: TeamAttendanceOverrideRequest,
+): Promise<TeamAttendanceOverrideResponse> {
+  return managerAttendanceRequest<TeamAttendanceOverrideResponse>(
+    `/team/${employeeId}/attendance/`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }
+  );
 }
