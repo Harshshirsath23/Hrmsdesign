@@ -318,6 +318,7 @@ const INIT: FormState = {
 
 function FF({
   label,
+  icon,
   required,
   error,
   ok,
@@ -326,6 +327,7 @@ function FF({
   span2,
 }: {
   label: string;
+  icon?: ReactNode;
   required?: boolean;
   error?: string;
   ok?: boolean;
@@ -335,9 +337,12 @@ function FF({
 }) {
   return (
     <div className={span2 ? "sm:col-span-2" : ""}>
-      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-        {label}
-        {required && <span className="text-destructive ml-1">*</span>}
+      <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+        {icon && <span className="shrink-0 text-muted-foreground/80">{icon}</span>}
+        <span>
+          {label}
+          {required && <span className="text-destructive ml-1">*</span>}
+        </span>
       </label>
       {children}
       {error ? (
@@ -1635,11 +1640,10 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Employee No" required hint="Based on selected series">
+                <FF label="Employee No" icon={<Hash size={13} />} required hint="Based on selected series">
                   <Inp
                     value={form.employeeId}
                     onChange={(e) => set("employeeId", e.target.value)}
-                    icon={<Hash size={13} />}
                     placeholder="EMP-001"
                   />
                 </FF>
@@ -1678,12 +1682,11 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Aadhaar Number" required error={errors.aadhaarNumber} ok={ok("aadhaarNumber")}>
+                <FF label="Aadhaar Number" icon={<FileText size={13} />} required error={errors.aadhaarNumber} ok={ok("aadhaarNumber")}>
                   <Inp
                     value={form.aadhaarNumber}
                     onChange={(e) => set("aadhaarNumber", e.target.value)}
                     placeholder="XXXX XXXX XXXX"
-                    icon={<FileText size={13} />}
                     err={!!errors.aadhaarNumber}
                     success={ok("aadhaarNumber")}
                   />
@@ -1780,7 +1783,7 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Email" required error={errors.email} ok={ok("email")}>
+                <FF label="Email" icon={<Mail size={13} />} required error={errors.email} ok={ok("email")}>
                   <Inp
                     name="email"
                     type="email"
@@ -1788,7 +1791,6 @@ export function AddEmployeePage() {
                     onChange={(e) => set("email", e.target.value)}
                     onBlur={() => blur("email")}
                     placeholder="official@company.com"
-                    icon={<Mail size={13} />}
                     err={!!errors.email}
                     success={ok("email")}
                   />
@@ -1803,39 +1805,35 @@ export function AddEmployeePage() {
                   />
                 </FF>
 
-                <FF label="Emergency Contact Name">
+                <FF label="Emergency Contact Name" icon={<UserPlus size={13} />}>
                   <Inp
                     value={form.emergencyName}
                     onChange={(e) => set("emergencyName", e.target.value)}
                     placeholder="Contact Name"
-                    icon={<UserPlus size={13} />}
                   />
                 </FF>
 
-                <FF label="Emergency Contact Number">
+                <FF label="Emergency Contact Number" icon={<Phone size={13} />}>
                   <Inp
                     value={form.emergencyPhone}
                     onChange={(e) => set("emergencyPhone", e.target.value)}
                     placeholder="Contact Number"
-                    icon={<Phone size={13} />}
                   />
                 </FF>
 
-                <FF label="Father's Name">
+                <FF label="Father's Name" icon={<User size={13} />}>
                   <Inp
                     value={form.fathersName}
                     onChange={(e) => set("fathersName", e.target.value)}
                     placeholder="Full Name"
-                    icon={<User size={13} />}
                   />
                 </FF>
 
-                <FF label="Spouse Name">
+                <FF label="Spouse Name" icon={<User size={13} />}>
                   <Inp
                     value={form.spouseName}
                     onChange={(e) => set("spouseName", e.target.value)}
                     placeholder="Full Name"
-                    icon={<User size={13} />}
                   />
                 </FF>
 
@@ -1896,12 +1894,11 @@ export function AddEmployeePage() {
                 />
               </FF>
 
-              <FF label="Work Location">
-                <MasterDropdown
-                  masterName="OfficeLocation"
+              <FF label="Work Location" icon={<MapPin size={13} />}>
+                <Inp
                   value={form.workLocation}
-                  onChange={(v) => set("workLocation", v)}
-                  placeholder="Select location"
+                  onChange={(e) => set("workLocation", e.target.value)}
+                  placeholder="New York HQ / Remote"
                 />
               </FF>
             </SC>
@@ -2117,12 +2114,11 @@ export function AddEmployeePage() {
                 />
               </FF>
 
-              <FF label="Asset ID" error={errors.assetId}>
+              <FF label="Asset ID" icon={<Hash size={13} />} error={errors.assetId}>
                 <Inp
                   value={form.assetId}
                   onChange={(e) => set("assetId", e.target.value)}
                   placeholder="E.g. AST-2024-001"
-                  icon={<Hash size={13} />}
                 />
               </FF>
 
@@ -2215,12 +2211,11 @@ export function AddEmployeePage() {
               desc="System credentials and role-based access permissions"
               Icon={Shield}
             >
-              <FF label="Username" hint="Auto-generated from name · Can be edited manually">
+              <FF label="Username" icon={<User size={13} />} hint="Auto-generated from name · Can be edited manually">
                 <Inp
                   value={form.username}
                   onChange={(e) => set("username", e.target.value)}
                   placeholder="james.anderson"
-                  icon={<User size={13} />}
                 />
               </FF>
 

@@ -2,21 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AlertCircle, Edit2, Plus, Save, ShieldCheck, User, Users, X } from "lucide-react";
 import { Employee } from "../mockData";
-import { useMasterList } from "../../../modules/masters/hooks";
-import type { MasterRecord } from "../../../modules/masters/types";
-import {
-  EmployeeFamilyMember,
-  employeeFamilyToSubmitRows,
-  familyDetailsToEmployeeFamily,
-  getFamilyOccupationChoices,
-  getFamilyRelationChoices,
-  getMyFamilyDetails,
-  patchMyFamilyDetails,
-  postMyFamilyDetails,
-} from "../../../api/employeeFamilyDetails";
-import { addNotification } from "../../../../store/slices/notificationSlice";
-import { updateAdminEmployee } from "../../../../store/slices/adminSlice";
-import type { AppDispatch } from "../../../../store";
+import { Users, User, AlertCircle, ShieldCheck, Edit2, Save, X, Plus, Send } from "lucide-react";
+import { useAdminSync } from "../../admin/useAdminSync";
+import { useMasterOptions } from "./useMasterOptions";
+import { useEmployeeFormContext } from "../employee-details/EmployeeFormContext";
 
 interface Props {
   employee: Employee;
@@ -153,6 +142,10 @@ function calculateAge(dob?: string) {
 }
 
 export function FamilyDetails({ employee, showAddButton = true }: Props) {
+  const relationOptions = useMasterOptions("Relation");
+  const genderOptions = useMasterOptions("Gender");
+  const bloodGroupOptions = useMasterOptions("BloodGroup");
+  const essReadOnly = useEmployeeFormContext()?.essReadOnly;
   const dispatch = useDispatch<AppDispatch>();
   const masterQuery = useMemo(() => ({ is_active: "true" as const, page: 1 }), []);
   const genderRecords = useMasterList("Gender", masterQuery).data?.results ?? [];
@@ -320,34 +313,35 @@ export function FamilyDetails({ employee, showAddButton = true }: Props) {
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90">
+                  <Save size={12} /> Save Changes
+                </button>
+                <button onClick={() => { setEditedFamily(employee.family || []); setIsEditing(false); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                  <X size={12} /> Cancel
+                </button>
+              </>
+            ) : essReadOnly ? (
               <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold transition-all hover:bg-primary/90 disabled:opacity-60"
-              >
-                <Save size={12} />
-                {isSaving ? "Submitting..." : "Save Changes"}
-              </button>
-              <button
-                onClick={handleCancel}
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("ess:request_change", { detail: { sectionId: "family-details" } }))}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
               >
-                <X size={12} />
-                Cancel
+                <Send size={12} /> Request Change
               </button>
-            </>
-          ) : (
-            <>
-              {showAddButton ? (
-                <button
-                  onClick={addFamilyMember}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary"
-                >
-                  <Plus size={12} />
-                  Add New
+            ) : (
+              <>
+                {showAddButton ? (
+                  <button onClick={addFamilyMember} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                    <Plus size={12} /> Add New
+                  </button>
+                ) : null}
+                <button onClick={() => setIsEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-xs font-bold transition-all hover:bg-secondary">
+                  <Edit2 size={12} /> Edit Section
                 </button>
               ) : null}
               <button

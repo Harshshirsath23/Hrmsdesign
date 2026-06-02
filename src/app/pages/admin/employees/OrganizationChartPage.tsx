@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Background,
@@ -38,11 +38,19 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "@/store";
-import { updateAdminEmployee } from "@/store/slices/adminSlice";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "@/store";
+import { addNotification } from "@/store/slices/notificationSlice";
 import type { Employee } from "../../../components/employees/mockData";
 import { cn } from "../../../components/ui/utils";
+import {
+  useDirectReportees,
+  useOrgChartEmployeeSearch,
+  useOrgChartMutations,
+  useOrgChartTree,
+  useOrgChartUnassigned,
+} from "@/hooks/useOrgChart";
+import { downloadBlob, extractOrgChartApiError, fetchDirectReportees } from "@/app/modules/org-chart/orgChartApi";
  
 type ModalType = "top" | "mass" | "assign" | null;
 type ViewMode = "vertical" | "horizontal";
@@ -57,11 +65,25 @@ type OrgNodeData = Record<string, unknown> & {
   onToggle: (id: string) => void;
   onOpen: (employee: Employee) => void;
   onDropReportee: (reporteeId: string, managerId: string) => void;
-  onRemoveFromTree: (employeeId: string) => void;
+  onRemoveFromTree: (employee: Employee) => void;
 };
  
 type OrgFlowNode = Node<OrgNodeData, "orgNode">;
  
+function readDraggedEmployeeId(dataTransfer: DataTransfer): string {
+  return (
+    dataTransfer.getData("text/plain") ||
+    dataTransfer.getData("application/x-employee-id") ||
+    dataTransfer.getData("employee/id")
+  ).trim();
+}
+
+function setDraggedEmployeeId(dataTransfer: DataTransfer, employeeId: string) {
+  dataTransfer.setData("text/plain", employeeId);
+  dataTransfer.setData("application/x-employee-id", employeeId);
+  dataTransfer.effectAllowed = "move";
+}
+
 function EmployeeAvatar({ employee, size = "md" }: { employee: Employee; size?: "sm" | "md" }) {
   const sizeClass = size === "sm" ? "h-9 w-9" : "h-11 w-11";
  
@@ -70,6 +92,7 @@ function EmployeeAvatar({ employee, size = "md" }: { employee: Employee; size?: 
       <img
         src={employee.avatar}
         alt={employee.name}
+        draggable={false}
         className={cn(sizeClass, "rounded-full border border-white object-cover shadow-sm")}
       />
     );
@@ -91,22 +114,32 @@ function OrgNode({ data }: NodeProps) {
  
   return (
     <div
-      onClick={() => node.onOpen(node.employee)}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const reporteeId = event.dataTransfer.getData("employee/id");
-        if (reporteeId && reporteeId !== node.employee.id) {
-          node.onDropReportee(reporteeId, node.employee.id);
-        }
-      }}
       className={cn(
+        "org-chart-node pointer-events-auto",
         "group relative flex cursor-pointer items-center gap-3 rounded-md border bg-card pr-8 shadow-xs transition",
         node.isCompact ? "h-[66px] w-[198px] pl-4" : "h-[78px] w-[232px] pl-5",
         node.isRoot ? "border-foreground bg-secondary" : "border-border bg-card",
         node.isHighlighted && "ring-2 ring-foreground ring-offset-2",
-        "hover:-translate-y-0.5 hover:shadow-md"
+        "hover:-translate-y-0.5 hover:shadow-md",
       )}
+      onClick={() => node.onOpen(node.employee)}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = "move";
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const reporteeId = readDraggedEmployeeId(event.dataTransfer);
+        if (reporteeId && !sameEmployeeId(reporteeId, node.employee.id)) {
+          node.onDropReportee(reporteeId, node.employee.id);
+        }
+      }}
     >
       <div className={cn("absolute inset-y-0 left-0 w-2 rounded-l-md", accent)} />
       <EmployeeAvatar employee={node.employee} size={node.isCompact ? "sm" : "md"} />
@@ -119,24 +152,26 @@ function OrgNode({ data }: NodeProps) {
  
       <button
         type="button"
+        onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation();
-          node.onRemoveFromTree(node.employee.id);
+          node.onRemoveFromTree(node.employee);
         }}
-        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
+        className="nodrag nopan nowheel absolute right-2 top-2 z-30 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/70 hover:bg-rose-50 hover:text-rose-600"
         title="Remove from organization chart"
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <Trash2 className="h-3.5 w-3.5 pointer-events-none" />
       </button>
- 
+
       {node.childCount > 0 && (
         <button
           type="button"
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
             node.onToggle(node.employee.id);
           }}
-          className="absolute -bottom-8 left-1/2 z-10 flex h-6 min-w-6 -translate-x-1/2 items-center justify-center rounded-md border border-border bg-background px-1.5 text-[11px] font-semibold text-muted-foreground shadow-sm hover:bg-secondary"
+          className="nodrag nopan nowheel absolute -bottom-8 left-1/2 z-30 flex h-6 min-w-6 -translate-x-1/2 items-center justify-center rounded-md border border-border bg-background px-1.5 text-[11px] font-semibold text-muted-foreground shadow-sm hover:bg-secondary"
           title={node.isExpanded ? "Collapse reportees" : "Expand reportees"}
         >
           {node.isExpanded ? node.childCount : "+"}
@@ -150,29 +185,35 @@ function OrgNode({ data }: NodeProps) {
 }
  
 const nodeTypes = { orgNode: OrgNode };
- 
-function getDirectReportCount(employees: Employee[], managerId: string) {
-  return employees.filter((employee) => employee.reportingManagerId === managerId).length;
+
+function sameEmployeeId(a?: string | null, b?: string | null): boolean {
+  return (a ?? "").toLowerCase() === (b ?? "").toLowerCase();
 }
- 
+
+function getDirectReportCount(employees: Employee[], managerId: string) {
+  return employees.filter((employee) => sameEmployeeId(employee.reportingManagerId, managerId)).length;
+}
+
 function getReporteeIds(employees: Employee[], managerId: string) {
-  const direct = employees.filter((employee) => employee.reportingManagerId === managerId);
+  const direct = employees.filter((employee) => sameEmployeeId(employee.reportingManagerId, managerId));
   return direct.flatMap((employee) => [employee.id, ...getReporteeIds(employees, employee.id)]);
 }
  
 function filterVisibleEmployees(employees: Employee[], expanded: Set<string>) {
   const byId = new Map(employees.map((employee) => [employee.id, employee]));
- 
+
   return employees.filter((employee) => {
     let managerId = employee.reportingManagerId;
     while (managerId) {
-      if (!expanded.has(managerId)) return false;
-      managerId = byId.get(managerId)?.reportingManagerId;
+      const manager = [...byId.values()].find((item) => sameEmployeeId(item.id, managerId));
+      if (!manager) break;
+      if (![...expanded].some((id) => sameEmployeeId(id, managerId))) return false;
+      managerId = manager.reportingManagerId;
     }
     return true;
   });
 }
- 
+
 function layoutEmployees(
   allEmployees: Employee[],
   visibleEmployees: Employee[],
@@ -182,19 +223,44 @@ function layoutEmployees(
   expanded: Set<string>,
   handlers: Pick<OrgNodeData, "onToggle" | "onOpen" | "onDropReportee" | "onRemoveFromTree">,
 ) {
+  if (visibleEmployees.length === 0) {
+    return { nodes: [] as OrgFlowNode[], edges: [] as Edge[] };
+  }
+
   const virtualRootId = "virtual-root";
+  const visibleIds = new Set(visibleEmployees.map((employee) => employee.id.toLowerCase()));
   const rows = [
-    { id: virtualRootId, reportingManagerId: undefined },
-    ...visibleEmployees.map((employee) => ({
-      ...employee,
-      reportingManagerId: employee.reportingManagerId || virtualRootId,
-    })),
+    { id: virtualRootId, reportingManagerId: undefined as string | undefined },
+    ...visibleEmployees.map((employee) => {
+      const managerId = employee.reportingManagerId;
+      const parentId =
+        managerId && visibleIds.has(managerId.toLowerCase()) ? managerId : virtualRootId;
+      return {
+        ...employee,
+        reportingManagerId: parentId === virtualRootId ? virtualRootId : parentId,
+      };
+    }),
   ];
- 
-  const root = d3
-    .stratify<any>()
-    .id((row) => row.id)
-    .parentId((row) => row.reportingManagerId)(rows);
+
+  let root;
+  try {
+    root = d3
+      .stratify<{ id: string; reportingManagerId?: string }>()
+      .id((row) => row.id)
+      .parentId((row) => row.reportingManagerId)(rows);
+  } catch {
+    const fallbackRows = [
+      { id: virtualRootId, reportingManagerId: undefined as string | undefined },
+      ...visibleEmployees.map((employee) => ({
+        ...employee,
+        reportingManagerId: virtualRootId,
+      })),
+    ];
+    root = d3
+      .stratify<{ id: string; reportingManagerId?: string }>()
+      .id((row) => row.id)
+      .parentId((row) => row.reportingManagerId)(fallbackRows);
+  }
  
   const nodeWidth = isCompact ? 198 : 232;
   const nodeHeight = isCompact ? 66 : 78;
@@ -226,7 +292,7 @@ function layoutEmployees(
         isRoot: item.parent?.data.id === virtualRootId,
         isCompact,
         isHighlighted: employee.id === highlightedId,
-        isExpanded: expanded.has(employee.id),
+        isExpanded: [...expanded].some((entry) => sameEmployeeId(entry, employee.id)),
         ...handlers,
       },
     });
@@ -511,30 +577,44 @@ function OrgModal({
   employees,
   unassigned,
   reportees,
+  reporteesLoading,
+  selectedReporteeIds,
+  onToggleReportee,
+  onToggleAllReportees,
   values,
   onChange,
   onClose,
   onSave,
+  isSaving = false,
 }: {
   type: ModalType;
   employees: Employee[];
   unassigned: Employee[];
   reportees: Employee[];
+  reporteesLoading?: boolean;
+  selectedReporteeIds: Set<string>;
+  onToggleReportee: (id: string) => void;
+  onToggleAllReportees: (selectAll: boolean) => void;
   values: { managerId: string; reporteeId: string; transferFromId: string; transferToId: string };
   onChange: (next: Partial<{ managerId: string; reporteeId: string; transferFromId: string; transferToId: string }>) => void;
   onClose: () => void;
   onSave: () => void;
+  isSaving?: boolean;
 }) {
   if (!type) return null;
- 
+
   const title = type === "top" ? "Set Top Level Manager" : type === "mass" ? "Mass Transfer" : "Assign Manager";
+  const saveDisabled =
+    isSaving ||
+    (type === "mass" &&
+      (!values.transferFromId || !values.transferToId || selectedReporteeIds.size === 0 || reporteesLoading));
  
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10 pt-20">
       <div
         className={cn(
           "rounded-lg border border-border bg-card shadow-2xl",
-          type === "mass" ? "w-[420px]" : "w-[420px]"
+          type === "mass" ? "w-[480px]" : "w-[420px]"
         )}
       >
         <div className="flex h-12 items-center justify-between border-b border-border px-4">
@@ -588,30 +668,72 @@ function OrgModal({
                 />
               </div>
               <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">All Reportees</p>
-                <div className="flex h-[292px] flex-col items-center justify-center rounded-sm border border-border bg-background text-center">
-                  {reportees.length ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    All Reportees {reportees.length > 0 && `(${selectedReporteeIds.size}/${reportees.length})`}
+                  </p>
+                  {reportees.length > 0 && (
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-foreground hover:underline"
+                      onClick={() =>
+                        onToggleAllReportees(selectedReporteeIds.size !== reportees.length)
+                      }
+                    >
+                      {selectedReporteeIds.size === reportees.length ? "Deselect all" : "Select all"}
+                    </button>
+                  )}
+                </div>
+                <div className="flex h-[292px] flex-col rounded-sm border border-border bg-background text-center">
+                  {reporteesLoading ? (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
+                      <RefreshCw className="h-6 w-6 animate-spin" />
+                      <p className="text-sm font-medium">Loading reportees…</p>
+                    </div>
+                  ) : reportees.length ? (
                     <div className="w-full divide-y divide-border overflow-auto text-left">
-                      {reportees.map((employee) => (
-                        <div key={employee.id} className="flex items-center gap-3 px-4 py-3">
-                          <EmployeeAvatar employee={employee} size="sm" />
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">{employee.name}</p>
-                            <p className="text-xs text-muted-foreground">{employee.employeeId}</p>
-                          </div>
-                        </div>
-                      ))}
+                      {reportees.map((employee) => {
+                        const checked = selectedReporteeIds.has(employee.id);
+                        return (
+                          <label
+                            key={employee.id}
+                            className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-secondary/50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => onToggleReportee(employee.id)}
+                              className="h-4 w-4 rounded border-border"
+                            />
+                            <EmployeeAvatar employee={employee} size="sm" />
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="text-sm font-semibold text-foreground">{employee.name}</p>
+                              <p className="text-xs text-muted-foreground">{employee.employeeId}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : values.transferFromId ? (
+                    <div className="flex flex-1 flex-col items-center justify-center px-4">
+                      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-border bg-secondary">
+                        <CircleAlert className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground">No direct reportees</p>
+                      <p className="mt-2 max-w-[320px] text-xs font-medium leading-5 text-muted-foreground">
+                        This manager has no employees reporting directly to them.
+                      </p>
                     </div>
                   ) : (
-                    <>
+                    <div className="flex flex-1 flex-col items-center justify-center px-4">
                       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-border bg-secondary">
                         <CircleAlert className="h-8 w-8 text-muted-foreground" />
                       </div>
                       <p className="text-sm font-semibold text-foreground">Nothing to show!</p>
-                      <p className="mt-2 max-w-[260px] text-xs font-medium leading-5 text-muted-foreground">
+                      <p className="mt-2 max-w-[320px] text-xs font-medium leading-5 text-muted-foreground">
                         All reportee(s) will show up here once you select the manager.
                       </p>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
@@ -635,8 +757,12 @@ function OrgModal({
           <button className="h-8 rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="h-8 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90" onClick={onSave}>
-            Save
+          <button
+            className="h-8 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90 disabled:opacity-60"
+            onClick={() => void onSave()}
+            disabled={saveDisabled}
+          >
+            {isSaving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -646,7 +772,6 @@ function OrgModal({
  
 export function OrganizationChartPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const employees = useSelector((state: RootState) => state.admin.employees);
   const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState<OrgFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -659,7 +784,7 @@ export function OrganizationChartPage() {
   const [isCompact, setIsCompact] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
-  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+  const [pendingRemoveEmployee, setPendingRemoveEmployee] = useState<Employee | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [form, setForm] = useState({
     managerId: "",
@@ -667,38 +792,101 @@ export function OrganizationChartPage() {
     transferFromId: "",
     transferToId: "",
   });
- 
-  const [topLevelIds, setTopLevelIds] = useState<Set<string>>(() => {
-    const roots = employees.filter((employee) => !employee.reportingManagerId);
-    const rootsWithTeams = roots.filter((employee) => getDirectReportCount(employees, employee.id) > 0);
-    return new Set((rootsWithTeams.length ? rootsWithTeams : roots.slice(0, 1)).map((employee) => employee.id));
-  });
- 
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedReporteeIds, setSelectedReporteeIds] = useState<Set<string>>(new Set());
+  const [isRemoving, setIsRemoving] = useState(false);
+  const expandedInitialized = useRef(false);
+
+  const {
+    data: treeData,
+    isLoading: treeLoading,
+    isError: treeError,
+    refetch: refetchTree,
+  } = useOrgChartTree(department);
+
+  const {
+    data: unassigned = [],
+    isLoading: unassignedLoading,
+    refetch: refetchUnassigned,
+  } = useOrgChartUnassigned(unassignedQuery);
+
+  const { data: modalEmployees = [] } = useOrgChartEmployeeSearch(
+    undefined,
+    department,
+    modal !== null,
+  );
+
+  const { data: transferReportees = [], isLoading: reporteesLoading } = useDirectReportees(
+    form.transferFromId,
+    modal === "mass",
+  );
+
   useEffect(() => {
-    setTopLevelIds((prev) => {
-      const next = new Set(Array.from(prev).filter((id) => employees.some((employee) => employee.id === id)));
-      const rootsWithTeams = employees.filter(
-        (employee) => !employee.reportingManagerId && getDirectReportCount(employees, employee.id) > 0,
-      );
-      rootsWithTeams.forEach((employee) => next.add(employee.id));
-      if (!next.size) {
-        const firstRoot = employees.find((employee) => !employee.reportingManagerId);
-        if (firstRoot) next.add(firstRoot.id);
+    if (modal !== "mass" || !form.transferFromId) {
+      setSelectedReporteeIds(new Set());
+      return;
+    }
+    setSelectedReporteeIds(new Set(transferReportees.map((employee) => employee.id)));
+  }, [modal, form.transferFromId, transferReportees]);
+
+  const {
+    assignManagerMutation,
+    setTopLevelMutation,
+    massTransferMutation,
+    exportMutation,
+    invalidate,
+  } = useOrgChartMutations();
+
+  const employees = treeData?.employees ?? [];
+  const isSaving =
+    assignManagerMutation.isPending ||
+    setTopLevelMutation.isPending ||
+    massTransferMutation.isPending;
+
+  useEffect(() => {
+    if (!employees.length) return;
+    setExpanded((prev) => {
+      if (!expandedInitialized.current) {
+        expandedInitialized.current = true;
+        return new Set(employees.map((employee) => employee.id));
+      }
+      const next = new Set(prev);
+      employees.forEach((employee) => {
+        if (![...next].some((id) => sameEmployeeId(id, employee.id))) {
+          next.add(employee.id);
+        }
+      });
+      for (const id of [...next]) {
+        if (!employees.some((employee) => sameEmployeeId(employee.id, id))) {
+          next.delete(id);
+        }
       }
       return next;
     });
   }, [employees]);
+
+  useEffect(() => {
+    expandedInitialized.current = false;
+  }, [department]);
  
-  const chartEmployees = useMemo(
-    () => employees.filter((employee) => employee.reportingManagerId || topLevelIds.has(employee.id)),
-    [employees, topLevelIds],
-  );
-  const unassigned = useMemo(
-    () => employees.filter((employee) => !employee.reportingManagerId && !topLevelIds.has(employee.id)),
-    [employees, topLevelIds],
-  );
-  const departments = useMemo(() => ["All", ...Array.from(new Set(employees.map((employee) => employee.department)))], [employees]);
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.map((employee) => employee.id)));
+  const chartEmployees = useMemo(() => employees, [employees]);
+  const allEmployees = useMemo(() => {
+    const byId = new Map<string, Employee>();
+    [...employees, ...unassigned, ...modalEmployees].forEach((employee) => {
+      byId.set(employee.id, employee);
+    });
+    return Array.from(byId.values());
+  }, [employees, unassigned, modalEmployees]);
+
+  const departments = useMemo(() => {
+    const values = new Set<string>();
+    allEmployees.forEach((employee) => {
+      if (employee.team?.trim()) values.add(employee.team.trim());
+      if (employee.department?.trim()) values.add(employee.department.trim());
+    });
+    return ["All", ...Array.from(values).sort((a, b) => a.localeCompare(b))];
+  }, [allEmployees]);
  
   const filteredUnassigned = useMemo(() => {
     const text = unassignedQuery.trim().toLowerCase();
@@ -739,6 +927,8 @@ export function OrganizationChartPage() {
  
   const filteredEmployees = useMemo(() => {
     const text = query.trim().toLowerCase();
+    if (!text && department === "All") return chartEmployees;
+
     const matchedIds = new Set<string>();
  
     chartEmployees.forEach((employee) => {
@@ -769,75 +959,118 @@ export function OrganizationChartPage() {
   }, [chartEmployees, department, query]);
  
   const visibleEmployees = useMemo(() => filterVisibleEmployees(filteredEmployees, expanded), [expanded, filteredEmployees]);
-  const transferReportees = useMemo(
-    () => employees.filter((employee) => employee.reportingManagerId === form.transferFromId),
-    [employees, form.transferFromId],
+
+  const toggleReporteeSelection = useCallback((id: string) => {
+    setSelectedReporteeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAllReportees = useCallback(
+    (selectAll: boolean) => {
+      if (selectAll) {
+        setSelectedReporteeIds(new Set(transferReportees.map((employee) => employee.id)));
+      } else {
+        setSelectedReporteeIds(new Set());
+      }
+    },
+    [transferReportees],
   );
  
   const updateManager = useCallback(
-    (reporteeId: string, managerId?: string) => {
-      const reportee = employees.find((employee) => employee.id === reporteeId);
-      if (!reportee) return;
-      if (managerId && getReporteeIds(employees, reporteeId).includes(managerId)) return;
-      dispatch(updateAdminEmployee({ ...reportee, reportingManagerId: managerId }));
-      if (managerId) {
-        setTopLevelIds((prev) => {
+    async (reporteeId: string, managerId?: string) => {
+      if (
+        managerId &&
+        (sameEmployeeId(reporteeId, managerId) ||
+          getReporteeIds(allEmployees, reporteeId).some((id) => sameEmployeeId(id, managerId)))
+      ) {
+        dispatch(addNotification({ type: "warning", message: "Invalid manager assignment (cycle detected)." }));
+        return false;
+      }
+
+      try {
+        await assignManagerMutation.mutateAsync({
+          employeeId: reporteeId,
+          managerId: managerId ?? null,
+        });
+        setExpanded((prev) => {
           const next = new Set(prev);
-          next.delete(reporteeId);
+          next.add(reporteeId);
+          if (managerId) next.add(managerId);
           return next;
         });
+        dispatch(addNotification({ type: "success", message: "Reporting manager updated." }));
+        return true;
+      } catch (error) {
+        dispatch(
+          addNotification({
+            type: "error",
+            message: extractOrgChartApiError(error, "Failed to update reporting manager."),
+          }),
+        );
+        return false;
       }
-      setExpanded((prev) => {
-        const next = new Set(prev);
-        next.add(reporteeId);
-        if (managerId) next.add(managerId);
-        return next;
-      });
     },
-    [dispatch, employees],
+    [allEmployees, assignManagerMutation, dispatch],
   );
  
   const handleDropReportee = useCallback(
     (reporteeId: string, managerId: string) => {
-      updateManager(reporteeId, managerId);
+      void updateManager(reporteeId, managerId);
     },
     [updateManager],
   );
  
+  const handleRemoveRequest = useCallback((employee: Employee) => {
+    setPendingRemoveEmployee(employee);
+  }, []);
+
   const removeFromTree = useCallback(
-    (employeeId: string) => {
-      const employee = employees.find((item) => item.id === employeeId);
-      if (!employee) return;
- 
-      dispatch(updateAdminEmployee({ ...employee, reportingManagerId: undefined }));
-      employees
-        .filter((item) => item.reportingManagerId === employeeId)
-        .forEach((reportee) => {
-          dispatch(updateAdminEmployee({ ...reportee, reportingManagerId: undefined }));
-        });
-      setTopLevelIds((prev) => {
-        const next = new Set(prev);
-        next.delete(employeeId);
-        employees
-          .filter((item) => item.reportingManagerId === employeeId)
-          .forEach((reportee) => next.delete(reportee.id));
-        return next;
-      });
-      setHighlightedId((current) => (current === employeeId ? null : current));
+    async (employee: Employee) => {
+      setIsRemoving(true);
+      try {
+        const directReporteesFromApi = await fetchDirectReportees(employee.id);
+        const directReportees =
+          directReporteesFromApi.length > 0
+            ? directReporteesFromApi
+            : allEmployees.filter((item) => sameEmployeeId(item.reportingManagerId, employee.id));
+
+        await assignManagerMutation.mutateAsync({ employeeId: employee.id, managerId: null });
+        for (const reportee of directReportees) {
+          await assignManagerMutation.mutateAsync({ employeeId: reportee.id, managerId: null });
+        }
+        await Promise.all([refetchTree(), refetchUnassigned()]);
+        setHighlightedId((current) => (sameEmployeeId(current, employee.id) ? null : current));
+        setPendingRemoveEmployee(null);
+        dispatch(addNotification({ type: "success", message: "Employee removed from org chart." }));
+      } catch (error) {
+        dispatch(
+          addNotification({
+            type: "error",
+            message: extractOrgChartApiError(error, "Failed to remove employee from org chart."),
+          }),
+        );
+      } finally {
+        setIsRemoving(false);
+      }
     },
-    [dispatch, employees],
+    [allEmployees, assignManagerMutation, dispatch, refetchTree, refetchUnassigned],
   );
- 
-  const pendingRemoveEmployee = useMemo(
-    () => employees.find((employee) => employee.id === pendingRemoveId) ?? null,
-    [employees, pendingRemoveId],
-  );
- 
+
   const toggleNode = useCallback((id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const isExpanded = [...next].some((entry) => sameEmployeeId(entry, id));
+      if (isExpanded) {
+        for (const entry of [...next]) {
+          if (sameEmployeeId(entry, id)) next.delete(entry);
+        }
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }, []);
@@ -868,15 +1101,21 @@ export function OrganizationChartPage() {
   );
  
   useEffect(() => {
-    const layout = layoutEmployees(chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, {
-      onToggle: toggleNode,
-      onOpen: openEmployee,
-      onDropReportee: handleDropReportee,
-      onRemoveFromTree: setPendingRemoveId,
-    });
-    setNodes(layout.nodes);
-    setEdges(layout.edges);
-  }, [chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, toggleNode, openEmployee, handleDropReportee, setNodes, setEdges]);
+    try {
+      const layout = layoutEmployees(chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, {
+        onToggle: toggleNode,
+        onOpen: openEmployee,
+        onDropReportee: handleDropReportee,
+        onRemoveFromTree: handleRemoveRequest,
+      });
+      setNodes(layout.nodes);
+      setEdges(layout.edges);
+    } catch (error) {
+      console.error("Org chart layout failed", error);
+      setNodes([]);
+      setEdges([]);
+    }
+  }, [chartEmployees, visibleEmployees, viewMode, isCompact, highlightedId, expanded, toggleNode, openEmployee, handleDropReportee, handleRemoveRequest, setNodes, setEdges]);
  
   useEffect(() => {
     if (!searchedEmployee) return;
@@ -887,11 +1126,35 @@ export function OrganizationChartPage() {
  
   const exportChart = async (type: "png" | "pdf") => {
     const flowElement = document.querySelector(".react-flow__viewport") as HTMLElement | null;
+    let image_base64: string | undefined;
+
+    if (type === "png" && flowElement) {
+      try {
+        const dataUrl = await toPng(flowElement, { backgroundColor: "#ffffff", pixelRatio: 2 });
+        image_base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+      } catch {
+        /* fallback below */
+      }
+    }
+
+    try {
+      const { blob, filename } = await exportMutation.mutateAsync({
+        format: type,
+        team: department !== "All" ? department : undefined,
+        image_base64,
+      });
+      downloadBlob(blob, filename);
+      setExportOpen(false);
+      return;
+    } catch {
+      /* client-side fallback */
+    }
+
     if (!flowElement) return;
- 
+
     const dataUrl = await toPng(flowElement, { backgroundColor: "#ffffff", pixelRatio: 2 });
     const fileName = `organization-chart-${new Date().toISOString().slice(0, 10)}`;
- 
+
     if (type === "png") {
       const link = document.createElement("a");
       link.download = `${fileName}.png`;
@@ -899,23 +1162,51 @@ export function OrganizationChartPage() {
       link.click();
       return;
     }
- 
+
     const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [1200, 760] });
     pdf.addImage(dataUrl, "PNG", 24, 24, 1152, 712);
     pdf.save(`${fileName}.pdf`);
+    setExportOpen(false);
   };
- 
-  const saveModal = () => {
-    if (modal === "top" && form.managerId) {
-      setTopLevelIds((prev) => new Set(prev).add(form.managerId));
-      updateManager(form.managerId, undefined);
+
+  const saveModal = async () => {
+    try {
+      if (modal === "top" && form.managerId) {
+        await setTopLevelMutation.mutateAsync(form.managerId);
+        dispatch(addNotification({ type: "success", message: "Top level manager updated." }));
+      } else if (modal === "assign") {
+        if (!form.reporteeId || !form.managerId) {
+          dispatch(addNotification({ type: "warning", message: "Select both reportee and manager." }));
+          return;
+        }
+        const ok = await updateManager(form.reporteeId, form.managerId);
+        if (!ok) return;
+      } else if (modal === "mass") {
+        if (!form.transferFromId || !form.transferToId || selectedReporteeIds.size === 0) {
+          dispatch(addNotification({ type: "warning", message: "Select managers and at least one reportee." }));
+          return;
+        }
+        await massTransferMutation.mutateAsync({
+          from_manager_id: form.transferFromId,
+          to_manager_id: form.transferToId,
+          employee_ids: Array.from(selectedReporteeIds),
+        });
+        dispatch(addNotification({ type: "success", message: "Reportees transferred successfully." }));
+      } else {
+        return;
+      }
+
+      setModal(null);
+      setForm({ managerId: "", reporteeId: "", transferFromId: "", transferToId: "" });
+      setSelectedReporteeIds(new Set());
+    } catch (error) {
+      dispatch(
+        addNotification({
+          type: "error",
+          message: extractOrgChartApiError(error, "Failed to save org chart changes."),
+        }),
+      );
     }
-    if (modal === "assign" && form.reporteeId && form.managerId) updateManager(form.reporteeId, form.managerId);
-    if (modal === "mass" && form.transferFromId && form.transferToId) {
-      transferReportees.forEach((employee) => updateManager(employee.id, form.transferToId));
-    }
-    setModal(null);
-    setForm({ managerId: "", reporteeId: "", transferFromId: "", transferToId: "" });
   };
  
   return (
@@ -1043,12 +1334,45 @@ export function OrganizationChartPage() {
         </div>
  
         <div className="relative min-h-0 flex-1">
+          {(treeLoading || unassignedLoading) && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
+              <div className="flex items-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Loading organization chart…
+              </div>
+            </div>
+          )}
+          {treeError && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
+              <div className="rounded-md border border-border bg-card px-5 py-4 text-center shadow-sm">
+                <p className="text-sm font-semibold text-foreground">Unable to load org chart</p>
+                <p className="mt-1 text-xs text-muted-foreground">Check your connection and try again.</p>
+                <button
+                  type="button"
+                  onClick={() => refetchTree()}
+                  className="mt-3 h-8 rounded-md bg-foreground px-4 text-xs font-semibold text-primary-foreground"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
           <ReactFlow
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+            }}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            panOnDrag
+            zoomOnScroll
+            proOptions={{ hideAttribution: true }}
             fitView
             minZoom={0.2}
             maxZoom={1.8}
@@ -1071,17 +1395,23 @@ export function OrganizationChartPage() {
         </div>
       </div>
  
+      {sidebarOpen ? (
       <aside className="flex w-[254px] shrink-0 flex-col border-l border-border bg-card">
         <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-          <button className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+            title="Minimize unassigned panel"
+          >
             <ChevronRight className="h-5 w-5 rotate-180" />
           </button>
           <h2 className="text-sm font-semibold text-foreground">
             Unassigned ({unassignedQuery.trim() ? filteredUnassigned.length : unassigned.length})
           </h2>
         </div>
- 
-        <div className="space-y-4 p-3">
+
+        <div className="flex min-h-0 flex-1 flex-col space-y-4 overflow-y-auto p-3">
           <div className="flex gap-2 rounded-md border border-border bg-secondary px-2.5 py-2 text-xs font-medium leading-5 text-foreground">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>Assign manager using drag and drop</span>
@@ -1102,8 +1432,10 @@ export function OrganizationChartPage() {
               <div
                 key={employee.id}
                 draggable
-                onDragStart={(event) => event.dataTransfer.setData("employee/id", employee.id)}
-                className="flex cursor-grab items-center gap-3 rounded-md border border-dashed border-border bg-background p-3 active:cursor-grabbing hover:bg-secondary"
+                onDragStart={(event) => {
+                  setDraggedEmployeeId(event.dataTransfer, employee.id);
+                }}
+                className="flex cursor-grab select-none items-center gap-3 rounded-md border border-dashed border-border bg-background p-3 active:cursor-grabbing hover:bg-secondary"
               >
                 <EmployeeAvatar employee={employee} size="sm" />
                 <div className="min-w-0 flex-1">
@@ -1121,16 +1453,42 @@ export function OrganizationChartPage() {
           </div>
         </div>
       </aside>
+      ) : (
+        <aside className="flex w-12 shrink-0 flex-col items-center border-l border-border bg-card py-4">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+            title="Show unassigned panel"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <span
+            className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground [writing-mode:vertical-rl] rotate-180"
+            title={`Unassigned (${unassigned.length})`}
+          >
+            Unassigned ({unassigned.length})
+          </span>
+        </aside>
+      )}
  
       <OrgModal
         type={modal}
-        employees={employees}
+        employees={modalEmployees.length ? modalEmployees : allEmployees}
         unassigned={unassigned}
         reportees={transferReportees}
+        reporteesLoading={reporteesLoading}
+        selectedReporteeIds={selectedReporteeIds}
+        onToggleReportee={toggleReporteeSelection}
+        onToggleAllReportees={toggleAllReportees}
         values={form}
         onChange={(next) => setForm((prev) => ({ ...prev, ...next }))}
-        onClose={() => setModal(null)}
-        onSave={saveModal}
+        onClose={() => {
+          setModal(null);
+          setSelectedReporteeIds(new Set());
+        }}
+        onSave={() => void saveModal()}
+        isSaving={isSaving}
       />
  
       {pendingRemoveEmployee && (
@@ -1140,7 +1498,7 @@ export function OrganizationChartPage() {
               <h3 className="text-base font-semibold text-foreground">Remove Employee</h3>
               <button
                 className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
-                onClick={() => setPendingRemoveId(null)}
+                onClick={() => setPendingRemoveEmployee(null)}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1164,18 +1522,18 @@ export function OrganizationChartPage() {
             <div className="flex justify-end gap-3 px-5 pb-5">
               <button
                 className="h-9 rounded-md border border-border px-5 text-sm font-medium text-foreground hover:bg-secondary"
-                onClick={() => setPendingRemoveId(null)}
+                onClick={() => setPendingRemoveEmployee(null)}
               >
                 Cancel
               </button>
               <button
-                className="h-9 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90"
+                className="h-9 rounded-md bg-foreground px-5 text-sm font-semibold text-primary-foreground hover:bg-foreground/90 disabled:opacity-60"
+                disabled={isRemoving}
                 onClick={() => {
-                  removeFromTree(pendingRemoveEmployee.id);
-                  setPendingRemoveId(null);
+                  void removeFromTree(pendingRemoveEmployee);
                 }}
               >
-                Remove
+                {isRemoving ? "Removing…" : "Remove"}
               </button>
             </div>
           </div>

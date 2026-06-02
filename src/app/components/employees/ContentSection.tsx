@@ -19,6 +19,10 @@ interface Props {
   employee: Employee;
   activeSection: SidebarSection;
   showAddButtons?: boolean;
+  /** ESS employee/manager — sections are view-only; edits via My Request */
+  essReadOnly?: boolean;
+  /** Allow "Add New Document" on admin views where other add buttons stay hidden */
+  allowDocumentTypeManagement?: boolean;
   disableBankEdit?: boolean;
   showAssetAccessActions?: boolean;
   showSalaryActions?: boolean;
@@ -29,38 +33,46 @@ export function ContentSection({
   employee,
   activeSection,
   showAddButtons = true,
+  essReadOnly = false,
+  allowDocumentTypeManagement = false,
   disableBankEdit = false,
   showAssetAccessActions = true,
   showSalaryActions = true,
   isFinalSubmitted = false,
 }: Props) {
+  const locked = essReadOnly || isFinalSubmitted;
   switch (activeSection) {
     case "profile":
-      return <EmployeeProfile employee={employee} isFinalSubmitted={isFinalSubmitted || !!employee.profileLocked} showAddButtons={showAddButtons} />;
+      return <EmployeeProfile employee={employee} isFinalSubmitted={locked} showAddButtons={showAddButtons && !essReadOnly} />;
     case "bank":
-      return <BankDetails employee={employee} disableEdit={disableBankEdit} showAddButton={showAddButtons} />;
+      return <BankDetails employee={employee} disableEdit={disableBankEdit || essReadOnly} showAddButton={showAddButtons && !essReadOnly} />;
     case "family":
-      return <FamilyDetails employee={employee} showAddButton={showAddButtons} />;
+      return <FamilyDetails employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "nominee":
-      return <NomineeDetails employee={employee} showAddButton={showAddButtons} />;
+      return <NomineeDetails employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "insurance":
-      return <InsuranceDetails employee={employee} showAddButton={showAddButtons} />;
+      return <InsuranceDetails employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "assets":
-      return <AssetManagement employee={employee} showActions={showAssetAccessActions} />;
+      return <AssetManagement employee={employee} showActions={showAssetAccessActions && !essReadOnly} />;
     case "passport":
-      return <PassportVisa employee={employee} showAddButton={showAddButtons} />;
+      return <PassportVisa employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "position":
-      return <PositionHistory employee={employee} showAddButton={showAddButtons} />;
+      return <PositionHistory employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "work":
-      return <WorkExperience employee={employee} showAddButton={showAddButtons} />;
+      return <WorkExperience employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "education":
-      return <EducationDetails employee={employee} showAddButton={showAddButtons} />;
+      return <EducationDetails employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "background":
-      return <BackgroundCheck employee={employee} showAddButton={showAddButtons} />;
+      return <BackgroundCheck employee={employee} showAddButton={showAddButtons && !essReadOnly} />;
     case "access":
       return <AccessCardDetails employee={employee} showActions={showAssetAccessActions} />;
     case "documents":
-      return <EmployeeDocumentsSection employee={employee} showAddButton={showAddButtons} />;
+      return (
+        <EmployeeDocumentsSection
+          employee={employee}
+          showAddButton={showAddButtons || allowDocumentTypeManagement}
+        />
+      );
     case "salary":
       return <SalarySummary employee={employee} showActions={showSalaryActions} />;
     default:
